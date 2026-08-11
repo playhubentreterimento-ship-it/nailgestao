@@ -28,6 +28,7 @@ export async function PUT(req: Request) {
       data: {
         ...(body.name ? { name: body.name } : {}),
         ...(body.slogan !== undefined ? { slogan: body.slogan } : {}),
+        ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
         ...(body.phone ? { phone: body.phone } : {}),
         ...(body.whatsapp ? { whatsapp: body.whatsapp } : {}),
         ...(body.instagram !== undefined ? { instagram: body.instagram } : {}),

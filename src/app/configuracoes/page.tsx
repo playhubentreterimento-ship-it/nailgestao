@@ -8,6 +8,7 @@ export default function ConfiguracoesPage() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [slogan, setSlogan] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#E0A96D");
@@ -32,6 +33,7 @@ export default function ConfiguracoesPage() {
         setSalon(data);
         setName(data.name || "");
         setSlogan(data.slogan || "");
+        setLogoUrl(data.logoUrl || "");
         setPhone(data.phone || "");
         setAddress(data.address || "");
         setPrimaryColor(data.primaryColor || "#E0A96D");
@@ -56,6 +58,7 @@ export default function ConfiguracoesPage() {
       body: JSON.stringify({
         name,
         slogan,
+        logoUrl,
         phone,
         address,
         primaryColor,
@@ -213,6 +216,25 @@ export default function ConfiguracoesPage() {
               <label className="block font-bold">Slogan / Descrição</label>
               <input type="text" value={slogan} onChange={(e) => setSlogan(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
             </div>
+          </div>
+
+          <div>
+            <label className="block font-bold">Foto / Logotipo do Salão (Link da Imagem)</label>
+            <div className="flex items-center space-x-3 mt-1">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover border" />
+              ) : (
+                <div className="h-12 w-12 rounded-xl bg-rose-100 dark:bg-slate-800 flex items-center justify-center font-bold text-rose-600 text-xs">💅 Logo</div>
+              )}
+              <input
+                type="text"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://exemplo.com/foto-do-salao.jpg"
+                className="w-full rounded-xl border p-3 font-medium dark:bg-slate-800"
+              />
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">Insira o link da foto da fachada ou logotipo do salão (ex: Imgur, ImgBB, Instagram ou Google).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
