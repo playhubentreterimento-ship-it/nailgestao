@@ -1,0 +1,16 @@
+{
+  "name": "NAILGESTÃO - Gestão para Salão de Nail Designer",
+  "short_name": "NailGestão",
+  "description": "Sistema de Gestão Completo, Agendamento & Financeiro para Studio de Unhas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2B1B2F",
+  "theme_color": "#E0A96D",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

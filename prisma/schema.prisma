@@ -1,0 +1,377 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Salon {
+  id                    String   @id @default(uuid())
+  name                  String   @default("Studio Luxe Nail Designer")
+  slogan                String?  @default("Especialistas em Alongamento & Estética de Unhas")
+  logoUrl               String?  @default("/logo.png")
+  phone                 String   @default("(11) 99999-8888")
+  whatsapp              String   @default("5511999998888")
+  instagram             String?  @default("@studioluxenails")
+  email                 String?  @default("contato@studioluxe.com.br")
+  cnpj                  String?  @default("12.345.678/0001-90")
+  address               String   @default("Av. Paulista, 1000 - Sala 402, São Paulo - SP")
+  primaryColor          String   @default("#E0A96D")
+  secondaryColor        String   @default("#2B1B2F")
+  buttonColor           String   @default("#C58B58")
+  themeMode             String   @default("light")
+  slotIntervalMinutes   Int      @default(30)
+  defaultDurationMinutes Int     @default(60)
+  minAdvanceHours       Int      @default(2)
+  cancelWindowHours     Int      @default(24)
+  requireDeposit        Boolean  @default(true)
+  defaultDepositAmount  Float    @default(50.0)
+  creditFeePercent      Float    @default(2.99)
+  debitFeePercent       Float    @default(1.49)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model User {
+  id           String   @id @default(uuid())
+  salonId      String   @default("default-salon")
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("ADMINISTRADOR")
+  phone        String?
+  active       Boolean  @default(true)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+}
+
+model Professional {
+  id                    String   @id @default(uuid())
+  salonId               String   @default("default-salon")
+  userId                String?
+  name                  String
+  phone                 String
+  email                 String?
+  bio                   String?
+  color                 String   @default("#E0A96D")
+  commissionRatePercent Float    @default(40.0)
+  active                Boolean  @default(true)
+  avatarUrl             String?
+  businessHours         String?
+  createdAt             DateTime @default(now())
+}
+
+model Client {
+  id                String        @id @default(uuid())
+  salonId           String        @default("default-salon")
+  name              String
+  phone             String
+  whatsapp          String
+  email             String?
+  birthDate         String?
+  instagram         String?
+  address           String?
+  notes             String?
+  referralSource    String?       @default("Instagram")
+  tag               String        @default("NOVO")
+  optOutWhatsApp    Boolean       @default(false)
+  totalSpent        Float         @default(0.0)
+  attendanceCount   Int           @default(0)
+  lastVisit         DateTime?
+  nailForm          String?       @default("Amendoado")
+  nailColor         String?       @default("Nude Rosado / Rendas")
+  nailMaterial      String?       @default("Gel MOLDADO")
+  nailSize          String?       @default("Médio (2)")
+  extensionType     String?       @default("Fibra de Vidro")
+  nailDecoration    String?       @default("Encapsulada com Glitter Dourado")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  photos            ClientPhoto[]
+}
+
+model ClientPhoto {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  photoUrl    String
+  type        String   @default("RESULTADO")
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model ServiceCategory {
+  id          String    @id @default(uuid())
+  salonId     String    @default("default-salon")
+  name        String
+  description String?
+  order       Int       @default(0)
+  services    Service[]
+}
+
+model Service {
+  id                String          @id @default(uuid())
+  salonId           String          @default("default-salon")
+  categoryId        String
+  category          ServiceCategory @relation(fields: [categoryId], references: [id])
+  name              String
+  description       String?
+  durationMinutes   Int             @default(60)
+  price             Float
+  promoPrice        Float?
+  commissionPercent Float           @default(40.0)
+  active            Boolean         @default(true)
+  photoUrl          String?
+  createdAt         DateTime        @default(now())
+}
+
+model Package {
+  id            String   @id @default(uuid())
+  salonId       String   @default("default-salon")
+  name          String
+  price         Float
+  totalSessions Int
+  validityDays  Int      @default(90)
+  description   String?
+  active        Boolean  @default(true)
+}
+
+model ClientPackage {
+  id            String   @id @default(uuid())
+  clientId      String
+  packageId     String
+  sessionsUsed  Int      @default(0)
+  totalSessions Int
+  purchaseDate  DateTime @default(now())
+  expiryDate    DateTime
+  active        Boolean  @default(true)
+}
+
+model GiftCard {
+  id             String   @id @default(uuid())
+  salonId        String   @default("default-salon")
+  code           String   @unique
+  initialValue   Float
+  remainingValue Float
+  buyerName      String
+  buyerPhone     String?
+  recipientName  String
+  recipientPhone String?
+  expiryDate     DateTime
+  status         String   @default("ATIVO")
+}
+
+model LoyaltyPoint {
+  id        String   @id @default(uuid())
+  clientId  String
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model Appointment {
+  id                   String               @id @default(uuid())
+  salonId              String               @default("default-salon")
+  clientId             String
+  professionalId       String
+  date                 String
+  startTime            String
+  endTime              String
+  totalDurationMinutes Int
+  subtotal             Float
+  discount             Float                @default(0.0)
+  depositPaid          Float                @default(0.0)
+  remainingAmount      Float
+  total                Float
+  paymentStatus        String               @default("PENDENTE")
+  status               String               @default("AGENDADO")
+  cancelReason         String?
+  notes                String?
+  confirmationSentAt   DateTime?
+  confirmedAt          DateTime?
+  rating               Int?
+  reviewComment        String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  services             AppointmentService[]
+}
+
+model AppointmentService {
+  id              String      @id @default(uuid())
+  appointmentId   String
+  appointment     Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceId       String
+  serviceName     String      @default("Serviço")
+  price           Float
+  durationMinutes Int
+}
+
+model Waitlist {
+  id                 String   @id @default(uuid())
+  salonId            String   @default("default-salon")
+  clientId           String
+  serviceId          String
+  preferredDate      String
+  preferredTimeRange String?
+  status             String   @default("AGUARDANDO")
+  createdAt          DateTime @default(now())
+}
+
+model CashRegister {
+  id             String            @id @default(uuid())
+  salonId        String            @default("default-salon")
+  openedByUserId String
+  closedByUserId String?
+  openedAt       DateTime          @default(now())
+  closedAt       DateTime?
+  initialAmount  Float             @default(0.0)
+  expectedAmount Float             @default(0.0)
+  finalAmount    Float?
+  difference     Float?
+  status         String            @default("ABERTO")
+  notes          String?
+  transactions   CashTransaction[]
+}
+
+model CashTransaction {
+  id             String        @id @default(uuid())
+  cashRegisterId String?
+  cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id])
+  salonId        String        @default("default-salon")
+  appointmentId  String?
+  type           String
+  category       String
+  amount         Float
+  paymentMethod  String
+  feeAmount      Float         @default(0.0)
+  netAmount      Float
+  description    String
+  createdAt      DateTime      @default(now())
+}
+
+model Expense {
+  id            String   @id @default(uuid())
+  salonId       String   @default("default-salon")
+  name          String
+  category      String
+  amount        Float
+  dueDate       String
+  paidDate      String?
+  paymentMethod String?  @default("PIX")
+  status        String   @default("PENDENTE")
+  isRecurring   Boolean  @default(false)
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Commission {
+  id             String    @id @default(uuid())
+  salonId        String    @default("default-salon")
+  professionalId String
+  appointmentId  String
+  serviceName    String    @default("Atendimento Unhas")
+  amount         Float
+  date           String
+  status         String    @default("PENDENTE")
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model Supplier {
+  id        String    @id @default(uuid())
+  salonId   String    @default("default-salon")
+  name      String
+  company   String
+  phone     String
+  whatsapp  String?
+  email     String?
+  cnpj      String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  salonId     String    @default("default-salon")
+  supplierId  String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  name        String
+  category    String
+  quantity    Int       @default(0)
+  minQuantity Int       @default(5)
+  costPrice   Float
+  salePrice   Float?
+  unit        String    @default("unidade")
+  createdAt   DateTime  @default(now())
+}
+
+model InventoryMovement {
+  id        String   @id @default(uuid())
+  productId String
+  type      String
+  quantity  Int
+  reason    String
+  date      DateTime @default(now())
+}
+
+model WhatsAppTemplate {
+  id      String  @id @default(uuid())
+  salonId String  @default("default-salon")
+  name    String
+  type    String
+  content String
+  active  Boolean @default(true)
+}
+
+model WhatsAppMessage {
+  id          String   @id @default(uuid())
+  salonId     String   @default("default-salon")
+  clientId    String?
+  phone       String
+  templateId  String?
+  messageText String
+  status      String   @default("ENVIADO")
+  errorReason String?
+  sentAt      DateTime @default(now())
+}
+
+model AutomationSetting {
+  id      String  @id @default(uuid())
+  salonId String  @default("default-salon")
+  key     String  @unique
+  enabled Boolean @default(true)
+  params  String?
+}
+
+model Review {
+  id            String   @id @default(uuid())
+  salonId       String   @default("default-salon")
+  appointmentId String
+  clientName    String
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  salonId   String   @default("default-salon")
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  salonId   String   @default("default-salon")
+  title     String
+  message   String
+  type      String   @default("INFO")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
