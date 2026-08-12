@@ -129,7 +129,9 @@ export default function AtendimentoPage() {
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     app.status === "EM_ATENDIMENTO"
                       ? "bg-rose-500 text-white animate-pulse"
-                      : "bg-amber-100 text-amber-800"
+                      : app.status === "CONCLUIDO"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                   }`}
                 >
                   {app.status}
@@ -163,25 +165,30 @@ export default function AtendimentoPage() {
                 </div>
               </div>
 
-              {/* Ações de Início / Fim */}
+              {/* Ações de Início / Fim / Concluído */}
               <div className="my-6 flex flex-col items-center justify-center space-y-4 rounded-2xl bg-rose-50/50 p-6 text-center dark:bg-slate-800/50">
-                {activeApp.status !== "EM_ATENDIMENTO" && activeApp.status !== "CONCLUIDO" ? (
-                  <button
-                    onClick={() => handleStartAttendance(activeApp.id)}
-                    className="flex items-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-emerald-200 transition hover:scale-105"
-                  >
-                    <PlayCircle className="h-6 w-6" />
-                    <span>INICIAR ATENDIMENTO AGORA</span>
-                  </button>
-                ) : (
+                {activeApp.status === "CONCLUIDO" ? (
+                  <div className="space-y-3 w-full">
+                    <div className="flex items-center justify-center space-x-2 text-emerald-600 font-bold text-base">
+                      <CheckCircle className="h-6 w-6 text-emerald-500" />
+                      <span>Atendimento Concluído com Sucesso! ✨</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      O atendimento da cliente <strong>{activeApp.clientName}</strong> foi finalizado e registrado no caixa do salão.
+                    </p>
+                    <div className="rounded-2xl bg-emerald-100/80 p-4 text-center text-xs font-bold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 shadow-sm border border-emerald-200">
+                      🎉 Atendimento finalizado com sucesso! Comissão gerada e caixa atualizado.
+                    </div>
+                  </div>
+                ) : activeApp.status === "EM_ATENDIMENTO" ? (
                   <div className="space-y-4 w-full">
-                    <div className="flex items-center justify-center space-x-2 text-rose-600 font-bold animate-pulse">
+                    <div className="flex items-center justify-center space-x-2 text-rose-600 font-bold animate-pulse text-base">
                       <Clock className="h-5 w-5" />
                       <span>Atendimento em Andamento...</span>
                     </div>
 
                     {/* Checkout & Pagamento */}
-                    <div className="rounded-2xl bg-white p-4 text-left shadow-sm dark:bg-slate-900 space-y-3">
+                    <div className="rounded-2xl bg-white p-4 text-left shadow-sm dark:bg-slate-900 space-y-3 border border-slate-100">
                       <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         💳 Checkout & Fechamento Financeiro
                       </h4>
@@ -192,7 +199,7 @@ export default function AtendimentoPage() {
                           <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="mt-1 w-full rounded-xl border p-2 font-bold outline-none dark:bg-slate-800"
+                            className="mt-1 w-full rounded-xl border p-2 font-bold outline-none dark:bg-slate-800 text-slate-900 dark:text-white"
                           >
                             <option value="PIX">Pix (Sem taxa)</option>
                             <option value="CREDITO">Cartão de Crédito</option>
@@ -207,7 +214,7 @@ export default function AtendimentoPage() {
                             type="number"
                             value={discount}
                             onChange={(e) => setDiscount(Number(e.target.value))}
-                            className="mt-1 w-full rounded-xl border p-2 font-bold outline-none dark:bg-slate-800"
+                            className="mt-1 w-full rounded-xl border p-2 font-bold outline-none dark:bg-slate-800 text-slate-900 dark:text-white"
                           />
                         </div>
                       </div>
@@ -220,14 +227,16 @@ export default function AtendimentoPage() {
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <button
+                    onClick={() => handleStartAttendance(activeApp.id)}
+                    className="flex items-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-emerald-200 transition hover:scale-105"
+                  >
+                    <PlayCircle className="h-6 w-6" />
+                    <span>INICIAR ATENDIMENTO AGORA</span>
+                  </button>
                 )}
               </div>
-
-              {finished && (
-                <div className="rounded-2xl bg-emerald-100 p-4 text-center text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  🎉 Atendimento finalizado com sucesso! Comissão gerada e caixa atualizado.
-                </div>
-              )}
             </div>
           ) : (
             <div className="flex h-64 items-center justify-center rounded-3xl border border-dashed border-slate-300 p-6 text-center text-slate-400">
