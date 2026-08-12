@@ -6,6 +6,7 @@ import { DollarSign, TrendingUp, TrendingDown, CreditCard, Award, Plus, CheckCir
 export default function FinanceiroPage() {
   const [data, setData] = useState<any>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [period, setPeriod] = useState<"today" | "week" | "month" | "all">("month");
 
   // Form de Despesa
   const [expName, setExpName] = useState("");
@@ -14,15 +15,15 @@ export default function FinanceiroPage() {
   const [expDueDate, setExpDueDate] = useState(new Date().toISOString().split("T")[0]);
   const [expRecurring, setExpRecurring] = useState(false);
 
-  const loadFinance = () => {
-    fetch("/api/finance")
+  const loadFinance = (targetPeriod = period) => {
+    fetch(`/api/finance?period=${targetPeriod}`)
       .then((r) => r.json())
       .then(setData);
   };
 
   useEffect(() => {
-    loadFinance();
-  }, []);
+    loadFinance(period);
+  }, [period]);
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,31 +154,100 @@ export default function FinanceiroPage() {
       </div>
 
       {/* COMISSÕES DAS PROFISSIONAIS */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white mb-4">
-          👑 Extrato de Comissões por Profissional
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {commissionsByProfessional?.map((prof: any) => (
-            <div key={prof.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60">
-              <div className="flex items-center justify-between">
-                <h4 className="font-serif font-bold text-slate-900 dark:text-white">{prof.name}</h4>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                  {prof.rate}% Comissão
-                </span>
-              </div>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Total Acumulado:</span>
-                  <span className="font-bold">R$ {prof.totalAmount?.toFixed(2)}</span>
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 dark:border-slate-800 gap-3">
+          <div>
+            <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <span>👑 Extrato de Comissões & Receita por Profissional</span>
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Contabilização por período de atendimentos realizados, faturamento bruto gerado e comissão a repassar.
+            </p>
+          </div>
+
+          {/* Seletor de Período (Hoje/Dia, Semana, Mês, Geral) */}
+          <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+            <button
+              onClick={() => setPeriod("today")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                period === "today" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
+              }`}
+            >
+              Hoje (Dia)
+            </button>
+            <button
+              onClick={() => setPeriod("week")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                period === "week" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
+              }`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setPeriod("month")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                period === "month" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
+              }`}
+            >
+              Mês
+            </button>
+            <button
+              onClick={() => setPeriod("all")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                period === "all" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
+              }`}
+            >
+              Geral
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {commissionsByProfessional?.map((prof: any) => {
+            const stats = prof[period] || prof.all || {};
+            return (
+              <div
+                key={prof.id}
+                className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60 space-y-3 shadow-sm"
+              >
+                <div className="flex items-center justify-between border-b pb-2 dark:border-slate-700">
+                  <div className="flex items-center space-x-2">
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: prof.color }}></span>
+                    <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm">{prof.name}</h4>
+                  </div>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    {prof.rate}% Comissão
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Pendente de Payout:</span>
-                  <span className="font-bold text-rose-600">R$ {prof.pendingAmount?.toFixed(2)}</span>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-xl border">
+                    <span className="text-slate-600 dark:text-slate-400 font-medium">💅 Atendimentos:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{stats.count || 0} clientes</span>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-xl border">
+                    <span className="text-slate-600 dark:text-slate-400 font-medium">📈 Receita Total Gerada:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">R$ {(stats.revenue || 0).toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200">
+                    <span className="text-amber-900 dark:text-amber-300 font-bold">💰 Comissão a Pagar:</span>
+                    <span className="font-serif font-bold text-base text-amber-700 dark:text-amber-300">
+                      R$ {(stats.commission || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/40 p-2 rounded-xl border border-emerald-200">
+                    <span className="text-emerald-900 dark:text-emerald-300 font-semibold">🏛️ Retido pelo Salão:</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                      R$ {(stats.salonKeep || 0).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
