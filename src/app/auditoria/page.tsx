@@ -10,26 +10,29 @@ export default function AuditoriaPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
           🛡️ Logs de Auditoria & Conformidade LGPD
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-rose-100/90 font-medium">
           Rastreabilidade completa de todas as ações de usuários, alterações financeiras e privacidade de dados.
         </p>
       </div>
 
       <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white mb-4">Registro de Ações no Salão</h3>
-        <div className="space-y-2 text-xs">
+        <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white mb-4">
+          Registro de Ações no Salão
+        </h3>
+        <div className="space-y-2.5 text-xs">
           {logs.map((log) => (
-            <div key={log.id} className="flex items-center justify-between border-b py-2.5 dark:border-slate-800">
-              <div>
-                <span className="font-mono text-slate-400 mr-3">{log.date}</span>
-                <span className="font-bold text-slate-800 dark:text-white">{log.user}:</span> {log.details}
+            <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2.5 border-slate-100 dark:border-slate-800 gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{log.date}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{log.user}:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{log.details}</span>
               </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <span className="self-start sm:self-auto rounded-full bg-rose-100 px-3 py-1 text-[10px] font-bold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
                 {log.action}
               </span>
             </div>

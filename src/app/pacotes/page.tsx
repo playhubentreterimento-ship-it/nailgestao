@@ -11,10 +11,10 @@ export default function PacotesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
           📦 Pacotes & Planos de Sessões
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-rose-100/90 font-medium">
           Venda pacotes recorrentes de manutenções e acompanhe o uso de sessões das clientes.
         </p>
       </div>

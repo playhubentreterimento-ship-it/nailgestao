@@ -34,10 +34,10 @@ export default function AniversariantesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
           🎂 Aniversariantes do Mês
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-rose-100/90 font-medium">
           Encante suas clientes com cupons e felicitações no dia do aniversário via WhatsApp.
         </p>
       </div>

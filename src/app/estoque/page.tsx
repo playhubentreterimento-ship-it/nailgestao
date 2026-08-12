@@ -49,10 +49,10 @@ export default function EstoquePage() {
     <div className="space-y-6">
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
             Estoque & Insumos do Salão
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-rose-100/90 font-medium">
             Controle de géis, fibras, lixas, esmaltes e alertas automáticos de estoque crítico.
           </p>
         </div>
