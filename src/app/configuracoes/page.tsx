@@ -262,38 +262,44 @@ export default function ConfiguracoesPage() {
       {/* FORMULÁRIO DE CONFIGURAÇÃO DO SALÃO & MASTER LOGIN */}
       <form onSubmit={handleSaveSettings} className="space-y-6 text-xs">
         {/* LOGIN DA ADMINISTRADORA MASTER */}
-        <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-white p-6 shadow-sm dark:border-amber-900/50 dark:bg-slate-900 space-y-4">
-          <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-            <Key className="h-5 w-5 text-amber-500" />
-            <span>👑 Seu E-mail & Senha de Administradora Master</span>
-          </h3>
-          <p className="text-slate-600 dark:text-slate-300">
-            Cadastre seu e-mail pessoal/profissional e defina sua senha para acessar o painel master do salão com total privacidade e controle.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-3xl border-2 border-amber-400 bg-white p-6 shadow-md dark:border-amber-600 dark:bg-slate-900 space-y-4">
+          <div className="flex items-center space-x-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 font-bold text-lg">
+              👑
+            </div>
             <div>
-              <label className="block font-extrabold text-slate-900 dark:text-slate-100">Seu E-mail de Administradora *</label>
+              <h3 className="font-serif text-lg font-extrabold text-slate-900 dark:text-white">
+                Seu E-mail & Senha de Administradora Master
+              </h3>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Cadastre seu e-mail pessoal/profissional e defina sua senha para acessar o painel master do salão com total privacidade e controle.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Seu E-mail de Administradora *</label>
               <input
                 type="email"
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 placeholder="seu.email@exemplo.com"
-                className="mt-1 w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-slate-50 p-3.5 font-bold text-slate-900 outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 required
               />
             </div>
 
             <div>
-              <label className="block font-extrabold text-slate-900 dark:text-slate-100">Alterar Sua Senha de Acesso</label>
+              <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Alterar Sua Senha de Acesso</label>
               <input
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 placeholder="Digite a nova senha (opcional)..."
-                className="mt-1 w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-2xl border-2 border-slate-300 bg-slate-50 p-3.5 font-bold text-slate-900 outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Deixe em branco se não desejar alterar sua senha atual.</p>
+              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">Deixe em branco se não desejar alterar sua senha atual.</p>
             </div>
           </div>
         </div>

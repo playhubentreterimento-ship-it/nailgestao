@@ -21,13 +21,22 @@ export async function POST(req: Request) {
       },
     });
 
-    // Se for e-mail master padrão (ou login admin rápido) e não constar no banco, garantir o acesso Master!
-    if (!user && (cleanEmail === "juliana@studioluxe.com.br" || cleanEmail === "admin@nailgestao.com" || cleanEmail === "admin")) {
+    // Tentar buscar o salão para comparar adminEmail cadastrado
+    const salon = await prisma.salon.findFirst().catch(() => null);
+    const configuredAdminEmail = (salon as any)?.adminEmail?.trim().toLowerCase();
+
+    // Se for e-mail master cadastrado ou e-mail padrão e não constar no banco, garantir o acesso Master!
+    if (!user && (
+      cleanEmail === "juliana@studioluxe.com.br" ||
+      cleanEmail === "admin@nailgestao.com" ||
+      cleanEmail === "admin" ||
+      (configuredAdminEmail && cleanEmail === configuredAdminEmail)
+    )) {
       user = {
         id: "usr-admin-default",
         salonId: "default-salon",
-        name: "Juliana Silva (Proprietária)",
-        email: "juliana@studioluxe.com.br",
+        name: salon?.ownerName || "Administradora Master",
+        email: cleanEmail,
         passwordHash: "123456",
         role: "ADMINISTRADOR",
         phone: "(11) 98765-4321",

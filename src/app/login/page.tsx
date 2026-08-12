@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Sparkles, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [configuredAdminEmail, setConfiguredAdminEmail] = useState("juliana@studioluxe.com.br");
   const [error, setError] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.adminEmail) {
+          setConfiguredAdminEmail(data.adminEmail);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +63,13 @@ export default function LoginPage() {
         </div>
 
         {/* Card Informativo com Credenciais Master */}
-        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-rose-500/10 p-3 text-center">
-          <p className="text-[11px] font-bold text-amber-300">👑 Credenciais de Acesso Master Administradora:</p>
-          <div className="mt-1 text-xs font-mono font-semibold text-white space-y-0.5">
-            <p>E-mail: <span className="text-amber-200">juliana@studioluxe.com.br</span></p>
-            <p>Senha: <span className="text-amber-200">123456</span></p>
+        <div className="mb-6 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-rose-500/20 p-3.5 text-center">
+          <p className="text-xs font-extrabold text-amber-300">👑 E-mail de Administradora Master Cadastrado:</p>
+          <div className="mt-1.5 text-xs font-mono font-bold text-white space-y-1">
+            <p className="bg-slate-900/60 py-1 px-2 rounded-lg border border-amber-400/30 text-amber-200 truncate">
+              {configuredAdminEmail}
+            </p>
+            <p className="text-[11px] text-slate-300 font-sans font-normal">Digite a sua senha cadastrada em Configurações</p>
           </div>
         </div>
 
@@ -107,11 +121,11 @@ export default function LoginPage() {
 
         {/* Atalhos Rápidos */}
         <div className="mt-6 border-t border-white/10 pt-4 text-center">
-          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Entrar rapidamente como:</p>
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Preencher e-mail rapidamente:</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => handleQuickLogin("juliana@studioluxe.com.br", "123456")}
+              onClick={() => handleQuickLogin(configuredAdminEmail, "")}
               className="rounded-xl border border-amber-400/40 bg-amber-500/10 py-2 font-bold text-amber-300 hover:bg-amber-500/20 transition"
             >
               👑 Administradora
