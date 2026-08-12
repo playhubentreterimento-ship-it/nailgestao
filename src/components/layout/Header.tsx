@@ -156,12 +156,20 @@ export function Header() {
 
         {/* Avatar do Usuário Logado */}
         <div className="flex items-center space-x-2 border-l border-slate-200 pl-3 dark:border-slate-700">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-rose-400 to-amber-300 font-semibold text-white">
-            JS
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-rose-400 to-amber-300 font-semibold text-white shadow-sm text-xs">
+            {salon?.ownerName
+              ? salon.ownerName
+                  .split(" ")
+                  .filter(Boolean)
+                  .map((n: string) => n[0])
+                  .join("")
+                  .substring(0, 2)
+                  .toUpperCase()
+              : "JS"}
           </div>
           <div className="hidden text-left xl:block">
-            <p className="text-xs font-bold text-slate-800 dark:text-white">Juliana Silva</p>
-            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Administradora</p>
+            <p className="text-xs font-bold text-white">{salon?.ownerName || "Juliana Silva"}</p>
+            <p className="text-[10px] text-amber-200/90 font-medium">Administradora</p>
           </div>
         </div>
       </div>

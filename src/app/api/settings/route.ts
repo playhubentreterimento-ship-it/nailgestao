@@ -25,6 +25,7 @@ export async function PUT(req: Request) {
       where: { id: salon?.id || "default-salon" },
       update: {
         ...(body.name ? { name: body.name } : {}),
+        ...(body.ownerName !== undefined ? { ownerName: body.ownerName } : {}),
         ...(body.slogan !== undefined ? { slogan: body.slogan } : {}),
         ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
         ...(body.phone ? { phone: body.phone } : {}),

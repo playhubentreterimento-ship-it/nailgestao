@@ -11,6 +11,7 @@ generator client {
 model Salon {
   id                    String   @id @default(uuid())
   name                  String   @default("Studio Luxe Nail Designer")
+  ownerName             String?  @default("Juliana Silva")
   slogan                String?  @default("Especialistas em Alongamento & Estética de Unhas")
   logoUrl               String?  @default("/logo.png")
   phone                 String   @default("(11) 99999-8888")

@@ -7,6 +7,7 @@ export default function ConfiguracoesPage() {
   const [salon, setSalon] = useState<any>(null);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [ownerName, setOwnerName] = useState("Juliana Silva");
   const [slogan, setSlogan] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [phone, setPhone] = useState("");
@@ -32,6 +33,7 @@ export default function ConfiguracoesPage() {
       .then((data) => {
         setSalon(data);
         setName(data.name || "");
+        setOwnerName(data.ownerName || "Juliana Silva");
         setSlogan(data.slogan || "");
         setLogoUrl(data.logoUrl || "");
         setPhone(data.phone || "");
@@ -57,6 +59,7 @@ export default function ConfiguracoesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
+        ownerName,
         slogan,
         logoUrl,
         phone,
@@ -258,13 +261,25 @@ export default function ConfiguracoesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="block font-bold">Nome da Administradora / Proprietária *</label>
+              <input
+                type="text"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                placeholder="Ex: Juliana Silva ou Seu Nome..."
+                className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800"
+                required
+              />
+            </div>
+            <div>
               <label className="block font-bold">Nome do Salão *</label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" required />
             </div>
-            <div>
-              <label className="block font-bold">Slogan / Descrição</label>
-              <input type="text" value={slogan} onChange={(e) => setSlogan(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
-            </div>
+          </div>
+
+          <div>
+            <label className="block font-bold">Slogan / Descrição do Salão</label>
+            <input type="text" value={slogan} onChange={(e) => setSlogan(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
           </div>
 
           <div>
