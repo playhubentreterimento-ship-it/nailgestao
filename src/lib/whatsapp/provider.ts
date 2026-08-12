@@ -96,7 +96,16 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
     const formattedPhone = formatPhoneWithDDI(client.whatsapp || client.phone);
     const serviceNames = app.services.map((s) => s.serviceName).join(", ");
     
-    const text = `Olá, ${client.name}! 💅\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Luxe"}.\n\n📅 Data: ${app.date}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
+    // Converter formato de data AAAA-MM-DD para DD/MM/AAAA
+    let formattedDate = app.date;
+    if (app.date && app.date.includes("-")) {
+      const parts = app.date.split("-");
+      if (parts.length === 3) {
+        formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+
+    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Luxe"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
 
     const sendRes = await this.sendMessage({
       to: formattedPhone,
@@ -166,10 +175,18 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
         },
       });
 
+      let formattedDate = app.date;
+      if (app.date && app.date.includes("-")) {
+        const parts = app.date.split("-");
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+
       // Enviar resposta automática
       await this.sendMessage({
         to: client.whatsapp || client.phone,
-        bodyText: `Muito obrigada, ${client.name}! 💖 Seu agendamento das ${app.startTime} do dia ${app.date} foi CONFIRMADO com sucesso! Te esperamos no salão.`,
+        bodyText: `Muito obrigada, ${client.name}! 💖 Seu agendamento das ${app.startTime} do dia ${formattedDate} foi CONFIRMADO com sucesso! Te esperamos no salão.`,
       });
 
       // Log de Auditoria
