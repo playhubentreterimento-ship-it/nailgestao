@@ -47,6 +47,61 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // Ação Especial: Bloqueio de Almoço (11:00 às 13:00) ou Bloqueio Personalizado
+    if (body.action === "BLOCK_LUNCH" || body.action === "BLOCK_SLOT") {
+      const { date, professionalId, startTime = "11:00", endTime = "13:00", notes = "🍱 Pausa de Almoço" } = body;
+      if (!date) return NextResponse.json({ error: "Data é obrigatória." }, { status: 400 });
+
+      let targetProfId = professionalId;
+      if (!targetProfId || targetProfId === "all") {
+        const firstProf = await prisma.professional.findFirst({ where: { salonId: "default-salon" } });
+        targetProfId = firstProf?.id || "prof-default";
+      }
+
+      // Buscar ou criar cliente especial de bloqueio
+      let blockClient = await prisma.client.findFirst({
+        where: { name: "🍱 Pausa de Almoço / Bloqueio" },
+      });
+      if (!blockClient) {
+        blockClient = await prisma.client.create({
+          data: {
+            salonId: "default-salon",
+            name: "🍱 Pausa de Almoço / Bloqueio",
+            phone: "0000000000",
+            whatsapp: "0000000000",
+            tag: "SISTEMA",
+          },
+        });
+      }
+
+      const [sH, sM] = startTime.split(":").map(Number);
+      const [eH, eM] = endTime.split(":").map(Number);
+      const durationMins = (eH * 60 + eM) - (sH * 60 + sM);
+
+      const blockApp = await prisma.appointment.create({
+        data: {
+          salonId: "default-salon",
+          clientId: blockClient.id,
+          professionalId: targetProfId,
+          date,
+          startTime,
+          endTime,
+          totalDurationMinutes: durationMins > 0 ? durationMins : 120,
+          subtotal: 0,
+          discount: 0,
+          depositPaid: 0,
+          remainingAmount: 0,
+          total: 0,
+          paymentStatus: "ISENTO",
+          status: "BLOQUEADO",
+          notes,
+        },
+      });
+
+      return NextResponse.json(blockApp);
+    }
+
     const {
       clientId,
       professionalId,

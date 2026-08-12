@@ -193,6 +193,41 @@ export default function AgendaPage() {
     }
   };
 
+  const handleToggleLunchBlock = async () => {
+    const existingBlock = appointments.find(
+      (a) => a.status === "BLOQUEADO" && a.startTime === "11:00" && a.date === selectedDate
+    );
+
+    if (existingBlock) {
+      if (confirm(`Remover o bloqueio de almoço do dia ${selectedDate}? O horário (11:00 às 13:00) voltará a ficar totalmente livre!`)) {
+        await fetch(`/api/appointments?id=${existingBlock.id}`, { method: "DELETE" });
+        alert("✨ Bloqueio de almoço removido! Horários das 11h às 13h liberados.");
+        loadAgenda();
+      }
+    } else {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "BLOCK_LUNCH",
+          date: selectedDate,
+          professionalId: filterProf,
+          startTime: "11:00",
+          endTime: "13:00",
+          notes: "🍱 Pausa de Almoço",
+        }),
+      });
+
+      if (res.ok) {
+        alert("✨ Horário de Almoço (11h às 13h) bloqueado com sucesso na agenda!");
+        loadAgenda();
+      } else {
+        const err = await res.json();
+        alert("Erro ao bloquear horário: " + (err.error || "Erro no servidor"));
+      }
+    }
+  };
+
   // Cálculos do modal
   const selectedServicesObjects = services.filter((s) => formSelectedServices.includes(s.id));
   const calcSubtotal = selectedServicesObjects.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
@@ -206,6 +241,7 @@ export default function AgendaPage() {
     AGUARDANDO_CONFIRMACAO: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200",
     EM_ATENDIMENTO: "bg-rose-100 text-rose-900 border-rose-400 animate-pulse dark:bg-rose-950 dark:text-rose-200",
     CONCLUIDO: "bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950 dark:text-teal-200",
+    BLOQUEADO: "bg-slate-800 text-amber-300 border-amber-400 font-bold dark:bg-slate-900 dark:text-amber-200",
     CANCELADO: "bg-slate-200 text-slate-600 line-through dark:bg-slate-800 dark:text-slate-400",
     NAO_COMPARECEU: "bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950 dark:text-orange-200",
   };
@@ -299,6 +335,26 @@ export default function AgendaPage() {
               Mês
             </button>
           </div>
+
+          {/* Botão de Bloqueio/Liberação de Almoço */}
+          {(() => {
+            const isLunchBlocked = appointments.some(
+              (a) => a.status === "BLOQUEADO" && a.startTime === "11:00" && a.date === selectedDate
+            );
+            return (
+              <button
+                onClick={handleToggleLunchBlock}
+                className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+                  isLunchBlocked
+                    ? "bg-slate-800 text-amber-300 border border-amber-400 hover:bg-slate-700"
+                    : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-200"
+                }`}
+                title="Bloquear ou Liberar o horário de almoço (11:00 às 13:00) nesta data"
+              >
+                <span>{isLunchBlocked ? "🔓 Liberar Almoço (11h-13h)" : "🍱 Bloquear Almoço (11h-13h)"}</span>
+              </button>
+            );
+          })()}
 
           <button
             onClick={() => handleOpenModal()}
