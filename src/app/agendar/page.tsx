@@ -57,6 +57,13 @@ export default function AgendarPublicPage() {
     return h * 60 + m;
   };
 
+  // Obter o dia da semana (0 = Domingo, 1 = Segunda, ..., 6 = Sábado)
+  const getDayOfWeek = (dateStr: string) => {
+    if (!dateStr || !dateStr.includes("-")) return 1;
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d).getDay();
+  };
+
   // Verificar se o almoço foi liberado manualmente pelo admin nesta data
   const isLunchUnlockedOnDate = () => {
     return existingAppointments.some(
@@ -71,14 +78,28 @@ export default function AgendarPublicPage() {
     const slotStart = timeToMins(slot);
     const slotEnd = slotStart + duration;
 
-    // 1. Horários passados para o dia de hoje no fuso local
+    const dayOfWeek = getDayOfWeek(selectedDate);
+
+    // 1. Domingo é fechado (sem atendimentos)
+    if (dayOfWeek === 0) {
+      return false;
+    }
+
+    // 2. Sábado funciona somente até as 15:00 (900 minutos)
+    if (dayOfWeek === 6) {
+      if (slotStart >= 900 || slotEnd > 900) {
+        return false;
+      }
+    }
+
+    // 3. Horários passados para o dia de hoje no fuso local
     const todayStr = getBrowserTodayString();
     if (selectedDate === todayStr) {
       const currentMins = getBrowserCurrentMins();
       if (slotStart <= currentMins) return false;
     }
 
-    // 2. Horário de Almoço (11:00 = 660 mins, 13:00 = 780 mins)
+    // 4. Horário de Almoço (11:00 = 660 mins, 13:00 = 780 mins)
     // Bloqueado por padrão em TODOS OS DIAS, exceto se houver liberação manual do salão
     const isLunchUnlocked = isLunchUnlockedOnDate();
     if (!isLunchUnlocked) {
@@ -87,7 +108,7 @@ export default function AgendarPublicPage() {
       }
     }
 
-    // 3. Verificar choque com agendamentos ativos da profissional
+    // 5. Verificar choque com agendamentos ativos da profissional
     const hasConflict = existingAppointments.some((app) => {
       if (app.status === "CANCELADO") return false;
       if (app.notes?.includes("LIBERADO_ALMOCO") || app.status === "ALMOCO_LIBERADO") return false;
@@ -261,19 +282,42 @@ export default function AgendarPublicPage() {
               </div>
 
               {(() => {
+                const dayOfWeek = getDayOfWeek(selectedDate);
+
+                if (dayOfWeek === 0) {
+                  return (
+                    <div className="rounded-2xl bg-amber-50 p-4 text-center text-xs font-bold text-amber-900 border border-amber-200">
+                      😴 O salão não realiza atendimentos aos domingos. Por favor, escolha uma data de Segunda a Sábado no calendário acima!
+                    </div>
+                  );
+                }
+
                 const todayStr = getBrowserTodayString();
                 const isToday = selectedDate === todayStr;
                 const currentMins = getBrowserCurrentMins();
 
                 const visibleSlots = timeSlots.filter((slot) => {
-                  if (!isToday) return true;
-                  return timeToMins(slot) > currentMins;
+                  const slotStart = timeToMins(slot);
+
+                  // Se for sábado, só exibe horários de início antes das 15:00 (900 minutos)
+                  if (dayOfWeek === 6 && slotStart >= 900) {
+                    return false;
+                  }
+
+                  // Se for hoje, só exibe horários no futuro no fuso local
+                  if (isToday && slotStart <= currentMins) {
+                    return false;
+                  }
+
+                  return true;
                 });
 
                 if (visibleSlots.length === 0) {
                   return (
                     <div className="rounded-2xl bg-amber-50 p-4 text-center text-xs font-bold text-amber-900 border border-amber-200">
-                      ⏰ Os horários de atendimento para hoje ({selectedDate.split("-").reverse().join("/")}) já encerraram. Por favor, selecione uma nova data a partir de amanhã no calendário acima!
+                      {dayOfWeek === 6
+                        ? `⏰ Os horários de atendimento de sábado (até as 15:00) para hoje já encerraram. Por favor, selecione outra data de Segunda a Sábado!`
+                        : `⏰ Os horários de atendimento para hoje (${selectedDate.split("-").reverse().join("/")}) já encerraram. Por favor, selecione uma nova data no calendário acima!`}
                     </div>
                   );
                 }
