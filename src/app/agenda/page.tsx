@@ -176,6 +176,23 @@ export default function AgendaPage() {
     }).then(() => loadAgenda());
   };
 
+  const handleCancelAppointment = async (app: any) => {
+    if (
+      confirm(
+        `⚠️ Tem certeza que deseja CANCELAR e EXCLUIR o agendamento da cliente "${app.clientName}" do dia ${app.date} às ${app.startTime}?\n\nEste horário será liberado imediatamente para novas clientes agendarem!`
+      )
+    ) {
+      const res = await fetch(`/api/appointments?id=${app.id}`, { method: "DELETE" });
+      if (res.ok) {
+        alert("✨ Agendamento cancelado e excluído com sucesso! Horário liberado na agenda.");
+        loadAgenda();
+      } else {
+        const err = await res.json();
+        alert("Erro ao excluir agendamento: " + err.error);
+      }
+    }
+  };
+
   // Cálculos do modal
   const selectedServicesObjects = services.filter((s) => formSelectedServices.includes(s.id));
   const calcSubtotal = selectedServicesObjects.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
@@ -348,12 +365,23 @@ export default function AgendaPage() {
 
                             <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-2 text-[11px] font-bold text-slate-800">
                               <span>Sinal: R$ {app.depositPaid?.toFixed(2)}</span>
-                              <button
-                                onClick={() => handleFinishAppointment(app.id)}
-                                className="underline hover:opacity-80 text-rose-700 dark:text-rose-300"
-                              >
-                                Finalizar &rarr;
-                              </button>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleCancelAppointment(app)}
+                                  className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline font-bold"
+                                  title="Cancelar e liberar este horário"
+                                >
+                                  🗑️ Excluir
+                                </button>
+                                {app.status !== "CONCLUIDO" && (
+                                  <button
+                                    onClick={() => handleFinishAppointment(app.id)}
+                                    className="underline hover:opacity-80 text-emerald-800 dark:text-emerald-300 font-bold"
+                                  >
+                                    Finalizar &rarr;
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -470,14 +498,23 @@ export default function AgendaPage() {
                         </p>
                         <div className="flex items-center justify-between pt-1 border-t border-black/10 text-[9px] font-bold">
                           <span>👩 {app.professionalName}</span>
-                          {app.status !== "CONCLUIDO" && (
+                          <div className="flex items-center space-x-1.5">
                             <button
-                              onClick={() => handleFinishAppointment(app.id)}
-                              className="text-rose-800 dark:text-rose-300 underline"
+                              onClick={() => handleCancelAppointment(app)}
+                              className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline font-bold"
+                              title="Excluir e liberar horário"
                             >
-                              Finalizar
+                              🗑️ Excluir
                             </button>
-                          )}
+                            {app.status !== "CONCLUIDO" && (
+                              <button
+                                onClick={() => handleFinishAppointment(app.id)}
+                                className="text-emerald-800 dark:text-emerald-300 underline font-bold"
+                              >
+                                Finalizar
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -687,7 +724,24 @@ export default function AgendaPage() {
                             </p>
                             <div className="flex items-center justify-between pt-2 border-t border-black/10 text-[11px] font-bold text-slate-900 dark:text-white">
                               <span>👩 {app.professionalName}</span>
-                              <span className="text-emerald-700 dark:text-emerald-300">R$ {app.total?.toFixed(2)}</span>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-emerald-700 dark:text-emerald-300 font-bold mr-1">R$ {app.total?.toFixed(2)}</span>
+                                <button
+                                  onClick={() => handleCancelAppointment(app)}
+                                  className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline font-bold"
+                                  title="Excluir e liberar horário"
+                                >
+                                  🗑️ Excluir
+                                </button>
+                                {app.status !== "CONCLUIDO" && (
+                                  <button
+                                    onClick={() => handleFinishAppointment(app.id)}
+                                    className="text-emerald-700 dark:text-emerald-300 underline font-bold"
+                                  >
+                                    Finalizar
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
