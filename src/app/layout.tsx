@@ -25,7 +25,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="flex min-h-screen flex-col bg-rose-50/20 font-sans text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100">
+      <body className="flex min-h-screen flex-col bg-[#831d1c] font-sans text-slate-800 antialiased dark:bg-[#5c1312] dark:text-slate-100">
         <Header />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />

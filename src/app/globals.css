@@ -2,22 +2,23 @@
 
 @layer base {
   :root {
-    --primary: #E0A96D;
-    --primary-hover: #C58B58;
+    --primary: #831D1C;
+    --primary-hover: #6B1615;
     --secondary: #2B1B2F;
     --accent: #FAF0EE;
+    --burgundy: #831D1C;
   }
 }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #FFFDFD;
-  color: #1E293B;
+  background-color: #831D1C;
+  color: #F8FAFC;
   -webkit-tap-highlight-color: transparent;
 }
 
 .dark body {
-  background-color: #0F172A;
+  background-color: #5C1312;
   color: #F8FAFC;
 }
 

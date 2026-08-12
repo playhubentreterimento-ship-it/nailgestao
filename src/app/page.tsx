@@ -36,13 +36,17 @@ const COLORS = ["#E0A96D", "#9B51E0", "#27AE60", "#F2994A", "#EB5757"];
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
+  const [salon, setSalon] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((res) => res.json())
-      .then((res) => {
-        setData(res);
+    Promise.all([
+      fetch("/api/dashboard").then((res) => res.json()),
+      fetch("/api/settings").then((res) => res.json()),
+    ])
+      .then(([dashData, settingsData]) => {
+        setData(dashData);
+        setSalon(settingsData);
         setLoading(false);
       })
       .catch((err) => {
@@ -55,8 +59,8 @@ export default function DashboardPage() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center space-y-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-rose-400 border-t-transparent"></div>
-          <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">Carregando painel do salão...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-400 border-t-transparent"></div>
+          <p className="text-xs font-semibold text-amber-200">Carregando painel do salão...</p>
         </div>
       </div>
     );
@@ -66,20 +70,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header da Dashboard */}
-      <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
-        <div>
-          <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-            Resumo Operacional & Financeiro
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Acompanhamento em tempo real das metas, agendamentos e faturamento do salão.
-          </p>
+      {/* Banner Principal do Salão com Logotipo */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-[#6b1615] via-[#831d1c] to-[#9b2423] p-5 text-white shadow-xl border border-rose-300/30">
+        <div className="flex items-center space-x-4">
+          {salon?.logoUrl ? (
+            <img
+              src={salon.logoUrl}
+              alt={salon.name || "Logo do Salão"}
+              className="h-16 w-16 rounded-2xl object-cover border-2 border-amber-300/80 shadow-lg"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-400 font-bold text-2xl text-slate-900 shadow-lg">
+              💅
+            </div>
+          )}
+          <div>
+            <h1 className="font-serif text-2xl font-bold tracking-tight text-amber-200">
+              {salon?.name || "Studio Luxe Nail Designer"}
+            </h1>
+            <p className="text-xs text-rose-100/90 font-medium">
+              {salon?.slogan || "Especialistas em Alongamento & Estética de Alta Performance"}
+            </p>
+            {salon?.phone && (
+              <p className="text-[11px] text-amber-300/80 mt-1">📞 {salon.phone} {salon?.address ? `• 📍 ${salon.address}` : ""}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           <Link
             href="/agenda?modal=new"
-            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-200 transition hover:opacity-95 dark:shadow-none"
+            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-lg hover:brightness-110 transition"
           >
             <Plus className="h-4 w-4" />
             <span>Novo Agendamento</span>
