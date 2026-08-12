@@ -58,7 +58,10 @@ export default function AgendarPublicPage() {
     } catch (err) {}
   };
 
-  const times = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+  const times = [
+    "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-amber-50/50 px-4 py-8 dark:from-slate-950 dark:to-slate-900">

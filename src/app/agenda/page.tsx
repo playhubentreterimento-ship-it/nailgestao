@@ -18,9 +18,17 @@ import {
   Sparkles,
 } from "lucide-react";
 
+const getTodayString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export default function AgendaPage() {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
@@ -32,7 +40,7 @@ export default function AgendaPage() {
   // Form de Agendamento
   const [formClient, setFormClient] = useState("");
   const [formProf, setFormProf] = useState("");
-  const [formDate, setFormDate] = useState(selectedDate);
+  const [formDate, setFormDate] = useState(getTodayString());
   const [formTime, setFormTime] = useState("10:00");
   const [formSelectedServices, setFormSelectedServices] = useState<string[]>([]);
   const [formDiscount, setFormDiscount] = useState<number>(0);
@@ -81,6 +89,8 @@ export default function AgendaPage() {
     if (res.ok) {
       alert("✨ Agendamento criado com sucesso! Lembrete enviado via WhatsApp.");
       setShowModal(false);
+      // Atualizar a data selecionada para a data do agendamento criado para visualizar imediatamente
+      setSelectedDate(formDate);
       loadAgenda();
     } else {
       const err = await res.json();
@@ -106,9 +116,10 @@ export default function AgendaPage() {
   };
 
   const timeSlots = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"
+    "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+    "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+    "18:00", "18:30", "19:00"
   ];
 
   return (

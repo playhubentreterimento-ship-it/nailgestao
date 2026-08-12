@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
 
     const whereClause: any = { salonId: "default-salon" };
-    if (date) whereClause.date = date;
+    if (date && date !== "all") whereClause.date = date;
     if (professionalId && professionalId !== "all") whereClause.professionalId = professionalId;
     if (status && status !== "all") whereClause.status = status;
 

@@ -13,8 +13,16 @@ export default function AtendimentoPage() {
   const [notes, setNotes] = useState("");
   const [finished, setFinished] = useState(false);
 
+  const getTodayString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const loadAppointments = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayString();
     fetch(`/api/appointments?date=${today}`)
       .then((r) => r.json())
       .then((data) => {
