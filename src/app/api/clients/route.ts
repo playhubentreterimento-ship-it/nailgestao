@@ -35,6 +35,26 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // Adicionar foto na galeria da cliente
+    if (body.action === "ADD_PHOTO") {
+      const { clientId, photoUrl, type = "RESULTADO", description } = body;
+      if (!clientId || !photoUrl) {
+        return NextResponse.json({ error: "ID da cliente e URL da foto são obrigatórios." }, { status: 400 });
+      }
+
+      const photo = await prisma.clientPhoto.create({
+        data: {
+          clientId,
+          photoUrl,
+          type,
+          description,
+        },
+      });
+
+      return NextResponse.json(photo);
+    }
+
     const {
       name,
       phone,
@@ -89,7 +109,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, ...data } = body;
+    const { id, appointments, photos, lastAppointment, nextAppointment, ...data } = body;
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
@@ -108,6 +128,12 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const photoId = searchParams.get("photoId");
+
+    if (photoId) {
+      await prisma.clientPhoto.delete({ where: { id: photoId } });
+      return NextResponse.json({ success: true });
+    }
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 

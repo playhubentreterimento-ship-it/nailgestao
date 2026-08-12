@@ -16,6 +16,9 @@ import {
   X,
   Camera,
   CheckCircle,
+  Edit,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 export default function ClientesPage() {
@@ -24,13 +27,15 @@ export default function ClientesPage() {
   const [filterTag, setFilterTag] = useState("all");
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  // Form de cadastro
+  // Form de cadastro (Novo)
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [notes, setNotes] = useState("");
   const [tag, setTag] = useState("NOVO");
   const [nailForm, setNailForm] = useState("Amendoado");
   const [nailColor, setNailColor] = useState("Nude Rosado");
@@ -39,10 +44,32 @@ export default function ClientesPage() {
   const [extensionType, setExtensionType] = useState("Fibra de Vidro");
   const [nailDecoration, setNailDecoration] = useState("Francesa Reversa");
 
+  // Form de Edição
+  const [editId, setEditId] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
+  const [editInstagram, setEditInstagram] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editTag, setEditTag] = useState("NOVO");
+  const [editNailForm, setEditNailForm] = useState("Amendoado");
+  const [editNailColor, setEditNailColor] = useState("Nude Rosado");
+  const [editNailMaterial, setEditNailMaterial] = useState("Gel Moldado");
+  const [editNailSize, setEditNailSize] = useState("Médio (2)");
+  const [editExtensionType, setEditExtensionType] = useState("Fibra de Vidro");
+  const [editNailDecoration, setEditNailDecoration] = useState("Francesa Reversa");
+
   const loadClients = () => {
     fetch("/api/clients", { cache: "no-store" })
       .then((res) => res.json())
-      .then(setClients)
+      .then((data) => {
+        setClients(data);
+        if (selectedClient) {
+          const updated = data.find((c: any) => c.id === selectedClient.id);
+          if (updated) setSelectedClient(updated);
+        }
+      })
       .catch(() => {});
   };
 
@@ -64,6 +91,7 @@ export default function ClientesPage() {
         email,
         birthDate,
         instagram,
+        notes,
         tag,
         nailForm,
         nailColor,
@@ -77,20 +105,124 @@ export default function ClientesPage() {
     if (res.ok) {
       alert("✨ Cliente cadastrada com sucesso!");
       setShowNewModal(false);
+      setName("");
+      setPhone("");
+      setEmail("");
+      setNotes("");
       loadClients();
     } else {
       alert("Erro ao cadastrar cliente.");
     }
   };
 
+  const handleStartEdit = (client: any) => {
+    setEditId(client.id);
+    setEditName(client.name || "");
+    setEditPhone(client.phone || client.whatsapp || "");
+    setEditEmail(client.email || "");
+    setEditBirthDate(client.birthDate || "");
+    setEditInstagram(client.instagram || "");
+    setEditNotes(client.notes || "");
+    setEditTag(client.tag || "NOVO");
+    setEditNailForm(client.nailForm || "Amendoado");
+    setEditNailColor(client.nailColor || "Nude Rosado");
+    setEditNailMaterial(client.nailMaterial || "Gel Moldado");
+    setEditNailSize(client.nailSize || "Médio (2)");
+    setEditExtensionType(client.extensionType || "Fibra de Vidro");
+    setEditNailDecoration(client.nailDecoration || "Francesa Reversa");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch("/api/clients", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editId,
+        name: editName,
+        phone: editPhone,
+        whatsapp: editPhone,
+        email: editEmail,
+        birthDate: editBirthDate,
+        instagram: editInstagram,
+        notes: editNotes,
+        tag: editTag,
+        nailForm: editNailForm,
+        nailColor: editNailColor,
+        nailMaterial: editNailMaterial,
+        nailSize: editNailSize,
+        extensionType: editExtensionType,
+        nailDecoration: editNailDecoration,
+      }),
+    });
+
+    if (res.ok) {
+      alert("✨ Dados e anotações da cliente atualizados com sucesso!");
+      setShowEditModal(false);
+      loadClients();
+    } else {
+      alert("Erro ao atualizar dados da cliente.");
+    }
+  };
+
+  const handlePhotoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedClient) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("A imagem excede o tamanho máximo de 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ADD_PHOTO",
+          clientId: selectedClient.id,
+          photoUrl: base64,
+          type: "RESULTADO",
+          description: "Foto enviada da galeria",
+        }),
+      });
+
+      if (res.ok) {
+        alert("✨ Foto adicionada à galeria da cliente!");
+        loadClients();
+      } else {
+        alert("Erro ao salvar foto da cliente.");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm("Deseja apagar esta foto da galeria da cliente?")) return;
+
+    const res = await fetch(`/api/clients?photoId=${photoId}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      alert("Foto removida!");
+      loadClients();
+    } else {
+      alert("Erro ao remover foto.");
+    }
+  };
+
   const filteredClients = clients.filter((c) => {
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search);
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
     const matchTag = filterTag === "all" || c.tag === filterTag;
     return matchSearch && matchTag;
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header & Controles */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
@@ -104,7 +236,7 @@ export default function ClientesPage() {
 
         <button
           onClick={() => setShowNewModal(true)}
-          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-200 hover:opacity-95 dark:shadow-none"
+          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
         >
           <Plus className="h-4 w-4" />
           <span>Cadastrar Nova Cliente</span>
@@ -124,12 +256,12 @@ export default function ClientesPage() {
           />
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1">
           {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
             <button
               key={t}
               onClick={() => setFilterTag(t)}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
                 filterTag === t
                   ? "bg-rose-500 text-white shadow-sm"
                   : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
@@ -183,31 +315,36 @@ export default function ClientesPage() {
                   <div>Cor: <span className="font-semibold text-slate-900 dark:text-white">{client.nailColor || "Nude"}</span></div>
                   <div>Tamanho: <span className="font-semibold text-slate-900 dark:text-white">{client.nailSize || "Médio"}</span></div>
                 </div>
+                {client.notes && (
+                  <p className="mt-2 border-t border-rose-200/60 pt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 italic truncate">
+                    📝 {client.notes}
+                  </p>
+                )}
               </div>
 
               {/* Métricas do Cliente */}
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
                   <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {client.totalSpent?.toFixed(0)}</span>
+                  <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
                   <span className="block text-[10px] text-slate-400">VISITAS</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount}x</span>
+                  <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
                   <span className="block text-[10px] text-slate-400">TICKET MÉDIO</span>
                   <span className="font-serif font-bold text-slate-900 dark:text-white">
-                    R$ {client.attendanceCount > 0 ? (client.totalSpent / client.attendanceCount).toFixed(0) : "0"}
+                    R$ {client.attendanceCount > 0 ? ((client.totalSpent || 0) / client.attendanceCount).toFixed(0) : "0"}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Ações */}
+            {/* Ações do Card */}
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
               <a
-                href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}`}
+                href={`https://wa.me/${(client.whatsapp || client.phone || "").replace(/\D/g, "")}`}
                 target="_blank"
                 className="flex items-center space-x-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
               >
@@ -215,12 +352,22 @@ export default function ClientesPage() {
                 <span>WhatsApp</span>
               </a>
 
-              <button
-                onClick={() => setSelectedClient(client)}
-                className="rounded-xl bg-slate-900 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-              >
-                Ver Ficha Completa &rarr;
-              </button>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => handleStartEdit(client)}
+                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <Edit className="h-3.5 w-3.5 text-amber-600" />
+                  <span>Editar</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedClient(client)}
+                  className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                >
+                  Ver Ficha &rarr;
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -232,23 +379,39 @@ export default function ClientesPage() {
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <div className="flex items-center space-x-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 to-amber-300 font-serif text-xl font-bold text-white">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 to-amber-300 font-serif text-xl font-bold text-white shadow-md">
                   {selectedClient.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-white">{selectedClient.name}</h3>
-                  <p className="text-xs text-slate-500">{selectedClient.whatsapp} | {selectedClient.email || "Sem e-mail"}</p>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-white">{selectedClient.name}</h3>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">{selectedClient.tag}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">{selectedClient.phone} | {selectedClient.email || "Sem e-mail"}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedClient(null)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="h-5 w-5" />
-              </button>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    handleStartEdit(selectedClient);
+                  }}
+                  className="flex items-center space-x-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-600"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Editar Dados & Anotações</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedClient(null)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Abas de Detalhes */}
+            {/* Detalhes da Cliente */}
             <div className="space-y-6 text-xs">
               {/* Ficha Técnica de Unhas Expandida */}
               <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80">
@@ -266,7 +429,7 @@ export default function ClientesPage() {
                   </div>
                   <div>
                     <span className="block text-[10px] text-slate-500">COR PREFERIDA</span>
-                    <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailColor || "Nude Rendado"}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailColor || "Nude Rosado"}</span>
                   </div>
                   <div>
                     <span className="block text-[10px] text-slate-500">TAMANHO HABITUAL</span>
@@ -278,32 +441,74 @@ export default function ClientesPage() {
                   </div>
                   <div>
                     <span className="block text-[10px] text-slate-500">DECORAÇÃO FAVORITA</span>
-                    <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailDecoration || "Encapsulada"}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailDecoration || "Francesa Reversa"}</span>
                   </div>
                 </div>
+
                 {selectedClient.notes && (
-                  <p className="mt-3 border-t border-rose-200 pt-2 text-[11px] font-semibold text-rose-900 dark:border-slate-700 dark:text-rose-200">
-                    ⚠️ Observação Técnica: {selectedClient.notes}
-                  </p>
+                  <div className="mt-3 border-t border-rose-200/80 pt-2 dark:border-slate-700">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                      📝 Anotações & Observações da Cliente:
+                    </p>
+                    <p className="mt-1 rounded-xl bg-white/80 p-2.5 font-medium text-slate-800 shadow-inner dark:bg-slate-900 dark:text-slate-200">
+                      {selectedClient.notes}
+                    </p>
+                  </div>
                 )}
               </div>
 
-              {/* Galeria de Fotos Antes & Depois */}
+              {/* Galeria de Fotos e Trabalhos da Cliente */}
               <div>
-                <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white">
-                  📸 Galeria de Trabalhos (Resultado Final)
-                </h4>
-                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&auto=format&fit=crop&q=80"
-                    alt="Manutenção Fibra"
-                    className="h-32 w-full rounded-xl object-cover shadow-sm"
-                  />
-                  <img
-                    src="https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=400&auto=format&fit=crop&q=80"
-                    alt="Nail Art Encapsulada"
-                    className="h-32 w-full rounded-xl object-cover shadow-sm"
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                    <Camera className="h-4 w-4 text-rose-500" />
+                    <span>Galeria de Trabalhos da Cliente ({selectedClient.photos?.length || 0})</span>
+                  </h4>
+
+                  <label className="cursor-pointer inline-flex items-center space-x-1.5 rounded-xl bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-rose-600 transition">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>+ Adicionar Foto da Galeria</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {selectedClient.photos && selectedClient.photos.length > 0 ? (
+                    selectedClient.photos.map((photo: any) => (
+                      <div key={photo.id} className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 dark:border-slate-800">
+                        <img
+                          src={photo.photoUrl}
+                          alt="Foto do Trabalho"
+                          className="h-36 w-full object-cover"
+                        />
+                        <button
+                          onClick={() => handleDeletePhoto(photo.id)}
+                          className="absolute top-2 right-2 rounded-full bg-rose-600 p-1.5 text-white opacity-90 shadow-md hover:opacity-100 hover:scale-105 transition"
+                          title="Apagar Foto"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <img
+                        src="https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&auto=format&fit=crop&q=80"
+                        alt="Exemplo Unhas Gel"
+                        className="h-32 w-full rounded-xl object-cover shadow-sm opacity-80"
+                      />
+                      <img
+                        src="https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=400&auto=format&fit=crop&q=80"
+                        alt="Exemplo Nail Art"
+                        className="h-32 w-full rounded-xl object-cover shadow-sm opacity-80"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -321,7 +526,7 @@ export default function ClientesPage() {
                           <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
                         </div>
                         <div className="text-right">
-                          <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {app.total?.toFixed(2)}</span>
+                          <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
                           <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
                         </div>
                       </div>
@@ -332,6 +537,173 @@ export default function ClientesPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIÇÃO DE DADOS & ANOTAÇÕES DA CLIENTE */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <Edit className="h-5 w-5 text-amber-500" />
+                <span>✏️ Editar Cliente & Anotações</span>
+              </h3>
+              <button onClick={() => setShowEditModal(false)} className="rounded-full p-2 text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateClient} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome Completo *</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">WhatsApp / Telefone *</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Perfil / Tag</label>
+                  <select
+                    value={editTag}
+                    onChange={(e) => setEditTag(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value="NOVO">NOVO</option>
+                    <option value="VIP">VIP</option>
+                    <option value="FREQUENTE">FREQUENTE</option>
+                    <option value="INATIVO">INATIVO</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">E-mail</label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={editBirthDate}
+                    onChange={(e) => setEditBirthDate(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Ficha Técnica de Unhas */}
+              <div className="rounded-2xl bg-rose-50/60 p-3.5 border border-rose-100 space-y-3 dark:bg-slate-800 dark:border-slate-700">
+                <h4 className="font-serif font-bold text-rose-800 dark:text-rose-300 text-xs">💅 Ficha Técnica de Unhas</h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Formato da Unha</label>
+                    <select
+                      value={editNailForm}
+                      onChange={(e) => setEditNailForm(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    >
+                      <option value="Amendoado">Amendoado</option>
+                      <option value="Stiletto">Stiletto</option>
+                      <option value="Quadrado">Quadrado</option>
+                      <option value="Bailarina">Bailarina</option>
+                      <option value="Coffin">Coffin</option>
+                      <option value="Oval">Oval</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Material Utilizado</label>
+                    <select
+                      value={editNailMaterial}
+                      onChange={(e) => setEditNailMaterial(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    >
+                      <option value="Gel Moldado">Gel Moldado</option>
+                      <option value="Fibra de Vidro">Fibra de Vidro</option>
+                      <option value="Banho de Gel">Banho de Gel</option>
+                      <option value="Acrigel">Acrigel</option>
+                      <option value="Esmaltação em Gel">Esmaltação em Gel</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Cor Preferida</label>
+                    <input
+                      type="text"
+                      value={editNailColor}
+                      onChange={(e) => setEditNailColor(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Tamanho Habitual</label>
+                    <input
+                      type="text"
+                      value={editNailSize}
+                      onChange={(e) => setEditNailSize(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Anotações e Observações Técnicas */}
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">📝 Anotações & Observações da Cliente</label>
+                <textarea
+                  rows={3}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Ex: Cliente prefere cuticulagem funda; alérgica a esmalte tradicional; gosta de nail art delicada..."
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-medium text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2 font-bold text-white shadow-md hover:opacity-95"
+                >
+                  Salvar Alterações &rarr;
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -349,82 +721,76 @@ export default function ClientesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateClient} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateClient} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300">Nome Completo *</label>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome Completo *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-medium outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800"
+                  placeholder="Ex: Maria Eduarda Silva..."
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">WhatsApp / Telefone *</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">WhatsApp / Telefone *</label>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="(11) 99999-8888"
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-medium outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="(67) 99999-8888"
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Data Nasc.</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data Nasc.</label>
                   <input
                     type="date"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 font-medium outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800"
+                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Formato da Unha</label>
-                  <select
-                    value={nailForm}
-                    onChange={(e) => setNailForm(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800"
-                  >
-                    <option value="Amendoado">Amendoado</option>
-                    <option value="Stiletto">Stiletto</option>
-                    <option value="Quadrado">Quadrado</option>
-                    <option value="Bailarina">Bailarina</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Material</label>
-                  <select
-                    value={nailMaterial}
-                    onChange={(e) => setNailMaterial(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 outline-none dark:border-slate-700 dark:bg-slate-800"
-                  >
-                    <option value="Fibra de Vidro">Fibra de Vidro</option>
-                    <option value="Gel Moldado">Gel Moldado</option>
-                    <option value="Banho de Gel">Banho de Gel</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">E-mail</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex: cliente@email.com"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3">
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">📝 Anotações & Observações</label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Ex: Prefere esmaltação em gel nude, cutículas sensíveis..."
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-medium text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t">
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="rounded-xl border p-2.5 font-bold"
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-rose-500 px-6 p-2.5 font-bold text-white shadow-md hover:bg-rose-600"
+                  className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2 font-bold text-white shadow-md hover:opacity-95"
                 >
                   Salvar Cliente &rarr;
                 </button>
