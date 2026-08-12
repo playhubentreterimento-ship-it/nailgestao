@@ -339,10 +339,32 @@ export default function AgendarPublicPage() {
 
             <div className="pt-4 flex justify-center">
               {(() => {
-                const rawTarget = salon?.activeWhatsApp || salon?.whatsapp || salon?.phone || selectedProf?.phone || "";
-                const digits = rawTarget.replace(/\D/g, "");
+                const isDummy = (p?: string) => {
+                  if (!p) return true;
+                  const d = p.replace(/\D/g, "");
+                  return !d || d.length < 10 || d.includes("999998888") || d.includes("987654321") || d.includes("0000000000");
+                };
+
+                const candidates = [
+                  salon?.activeWhatsApp,
+                  salon?.whatsapp,
+                  salon?.phone,
+                  selectedProf?.phone,
+                  professionals.find((p: any) => !isDummy(p.phone))?.phone,
+                ];
+
+                const validPhone = candidates.find((p) => !isDummy(p)) || "";
+                const digits = validPhone.replace(/\D/g, "");
                 const targetPhone = digits.length >= 10 && !digits.startsWith("55") ? `55${digits}` : digits;
-                
+
+                if (!targetPhone) {
+                  return (
+                    <div className="rounded-2xl bg-amber-100 p-3 text-center text-xs font-bold text-amber-900 border border-amber-300">
+                      📱 Agendamento gravado com sucesso! Cadastre seu número de WhatsApp em Configurações para habilitar o botão direto de conversa.
+                    </div>
+                  );
+                }
+
                 let formattedDateStr = selectedDate;
                 if (selectedDate && selectedDate.includes("-")) {
                   const parts = selectedDate.split("-");

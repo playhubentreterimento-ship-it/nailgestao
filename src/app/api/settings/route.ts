@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { formatPhoneWithDDI } from "@/lib/whatsapp/provider";
 
+function isDummyPhone(phone?: string | null): boolean {
+  if (!phone) return true;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits || digits.length < 10) return true;
+  if (
+    digits.includes("999998888") ||
+    digits.includes("987654321") ||
+    digits.includes("0000000000") ||
+    digits.includes("123456789")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function GET() {
   try {
     let salon = await prisma.salon.findFirst().catch(() => null);
@@ -11,18 +26,30 @@ export async function GET() {
       }).catch(() => null);
     }
 
-    const firstProf = await prisma.professional.findFirst({
+    const professionals = await prisma.professional.findMany({
       where: { salonId: "default-salon" },
       orderBy: { createdAt: "asc" },
     });
 
-    let rawPhone = salon?.whatsapp || salon?.phone || firstProf?.phone || "";
-    // Se o telefone do salao ainda for o valor inicial de teste, usar o telefone cadastrado da profissional
-    if ((!rawPhone || rawPhone.includes("987654321") || rawPhone.includes("999998888")) && firstProf?.phone) {
-      rawPhone = firstProf.phone;
+    let realPhone = "";
+
+    // 1. Tentar WhatsApp do salão se não for número de teste
+    if (salon?.whatsapp && !isDummyPhone(salon.whatsapp)) {
+      realPhone = salon.whatsapp;
+    }
+    // 2. Tentar Telefone comercial do salão se não for número de teste
+    else if (salon?.phone && !isDummyPhone(salon.phone)) {
+      realPhone = salon.phone;
+    }
+    // 3. Tentar Telefone das profissionais cadastradas
+    else {
+      const validProf = professionals.find((p) => p.phone && !isDummyPhone(p.phone));
+      if (validProf) {
+        realPhone = validProf.phone;
+      }
     }
 
-    const activeWhatsApp = formatPhoneWithDDI(rawPhone);
+    const activeWhatsApp = realPhone ? formatPhoneWithDDI(realPhone) : "";
 
     return NextResponse.json({
       ...(salon || { id: "default-salon", name: "Studio Selma Gloor" }),
@@ -74,7 +101,7 @@ export async function PUT(req: Request) {
           slogan: body.slogan || "Seja Bem-Vinda",
           logoUrl: body.logoUrl || null,
           phone: body.phone || null,
-          whatsapp: formattedWhatsApp || "5511999998888",
+          whatsapp: formattedWhatsApp || "",
           address: body.address || null,
           primaryColor: body.primaryColor || "#E0A96D",
         },
@@ -90,7 +117,7 @@ export async function PUT(req: Request) {
           slogan: body.slogan || "Seja Bem-Vinda",
           logoUrl: body.logoUrl || null,
           phone: body.phone || null,
-          whatsapp: formattedWhatsApp || "5511999998888",
+          whatsapp: formattedWhatsApp || "",
           address: body.address || null,
           primaryColor: body.primaryColor || "#E0A96D",
         },
