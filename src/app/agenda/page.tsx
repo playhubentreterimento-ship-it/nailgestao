@@ -16,6 +16,9 @@ import {
   Filter,
   X,
   Sparkles,
+  Eye,
+  Phone,
+  Check,
 } from "lucide-react";
 
 const getTodayString = () => {
@@ -25,6 +28,48 @@ const getTodayString = () => {
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+// Auxiliar para obter o intervalo da semana (Segunda a Domingo)
+function getWeekDays(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const curr = new Date(y, m - 1, d);
+  const dayOfWeek = curr.getDay(); // 0 = Domingo, 1 = Segunda...
+  const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  
+  const monday = new Date(curr);
+  monday.setDate(curr.getDate() + distanceToMonday);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const temp = new Date(monday);
+    temp.setDate(monday.getDate() + i);
+    const yyyy = temp.getFullYear();
+    const mm = String(temp.getMonth() + 1).padStart(2, "0");
+    const dd = String(temp.getDate()).padStart(2, "0");
+    days.push(`${yyyy}-${mm}-${dd}`);
+  }
+  return days;
+}
+
+// Auxiliar para obter a grade de dias do mês
+function getMonthCalendar(dateStr: string) {
+  const [y, m] = dateStr.split("-").map(Number);
+  const firstDay = new Date(y, m - 1, 1);
+  const lastDay = new Date(y, m, 0);
+  
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay(); // 0 = Dom, 1 = Seg...
+  const mondayOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+  const days: string[] = [];
+  for (let i = 1; i <= daysInMonth; i++) {
+    const mm = String(m).padStart(2, "0");
+    const dd = String(i).padStart(2, "0");
+    days.push(`${y}-${mm}-${dd}`);
+  }
+
+  return { year: y, month: m, daysInMonth, mondayOffset, days };
+}
 
 export default function AgendaPage() {
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
@@ -49,12 +94,25 @@ export default function AgendaPage() {
 
   const loadAgenda = () => {
     setLoading(true);
-    fetch(`/api/appointments?date=${selectedDate}&professionalId=${filterProf}`, { cache: "no-store" })
+    let url = `/api/appointments?professionalId=${filterProf}`;
+    
+    if (viewMode === "day") {
+      url += `&date=${selectedDate}`;
+    } else if (viewMode === "week") {
+      const weekDays = getWeekDays(selectedDate);
+      url += `&startDate=${weekDays[0]}&endDate=${weekDays[6]}`;
+    } else if (viewMode === "month") {
+      const monthPrefix = selectedDate.substring(0, 7);
+      url += `&month=${monthPrefix}`;
+    }
+
+    fetch(url, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        setAppointments(data);
+        setAppointments(Array.isArray(data) ? data : []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   };
 
   const refreshAllData = () => {
@@ -68,11 +126,12 @@ export default function AgendaPage() {
     refreshAllData();
     window.addEventListener("focus", refreshAllData);
     return () => window.removeEventListener("focus", refreshAllData);
-  }, [selectedDate, filterProf]);
+  }, [selectedDate, filterProf, viewMode]);
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (presetDate?: string, presetTime?: string) => {
     refreshAllData();
-    setFormDate(selectedDate);
+    setFormDate(presetDate || selectedDate);
+    if (presetTime) setFormTime(presetTime);
     setShowModal(true);
   };
 
@@ -101,13 +160,20 @@ export default function AgendaPage() {
     if (res.ok) {
       alert("✨ Agendamento criado com sucesso! Lembrete enviado via WhatsApp.");
       setShowModal(false);
-      // Atualizar a data selecionada para a data do agendamento criado para visualizar imediatamente
       setSelectedDate(formDate);
       loadAgenda();
     } else {
       const err = await res.json();
       alert("Erro ao agendar: " + err.error);
     }
+  };
+
+  const handleFinishAppointment = (id: string) => {
+    fetch(`/api/appointments`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "CONCLUIDO" }),
+    }).then(() => loadAgenda());
   };
 
   // Cálculos do modal
@@ -118,13 +184,13 @@ export default function AgendaPage() {
   const calcDuration = selectedServicesObjects.reduce((acc, s) => acc + s.durationMinutes, 0);
 
   const statusColors: any = {
-    AGENDADO: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-300",
-    CONFIRMADO: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300",
-    AGUARDANDO_CONFIRMACAO: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-300",
-    EM_ATENDIMENTO: "bg-rose-100 text-rose-800 border-rose-300 animate-pulse dark:bg-rose-950 dark:text-rose-300",
-    CONCLUIDO: "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950 dark:text-teal-300",
-    CANCELADO: "bg-slate-100 text-slate-500 line-through dark:bg-slate-800 dark:text-slate-400",
-    NAO_COMPARECEU: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950 dark:text-orange-300",
+    AGENDADO: "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950 dark:text-blue-200",
+    CONFIRMADO: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200",
+    AGUARDANDO_CONFIRMACAO: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200",
+    EM_ATENDIMENTO: "bg-rose-100 text-rose-900 border-rose-400 animate-pulse dark:bg-rose-950 dark:text-rose-200",
+    CONCLUIDO: "bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950 dark:text-teal-200",
+    CANCELADO: "bg-slate-200 text-slate-600 line-through dark:bg-slate-800 dark:text-slate-400",
+    NAO_COMPARECEU: "bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950 dark:text-orange-200",
   };
 
   const timeSlots = [
@@ -133,6 +199,25 @@ export default function AgendaPage() {
     "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
     "18:00", "18:30", "19:00"
   ];
+
+  // Dados para Semana e Mês
+  const weekDays = getWeekDays(selectedDate);
+  const monthInfo = getMonthCalendar(selectedDate);
+
+  // Totais da Semana
+  const totalWeekApps = appointments.length;
+  const totalWeekRevenue = appointments.reduce((acc, a) => acc + (a.total || 0), 0);
+
+  // Agrupar agendamentos por dia do mês (para visualização mensal)
+  const appointmentsByDate: { [dateStr: string]: any[] } = {};
+  appointments.forEach((app) => {
+    if (!appointmentsByDate[app.date]) {
+      appointmentsByDate[app.date] = [];
+    }
+    appointmentsByDate[app.date].push(app);
+  });
+
+  const datesWithApps = Object.keys(appointmentsByDate).sort();
 
   return (
     <div className="space-y-6">
@@ -143,7 +228,7 @@ export default function AgendaPage() {
             Agenda Interativa
           </h2>
           <p className="text-xs text-rose-100/90 font-medium">
-            Gerenciamento visual de atendimentos, confirmações e bloqueios de horários.
+            Gerenciamento visual de atendimentos, confirmações e resumos por período.
           </p>
         </div>
 
@@ -175,7 +260,7 @@ export default function AgendaPage() {
             <button
               onClick={() => setViewMode("day")}
               className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                viewMode === "day" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-500"
+                viewMode === "day" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
               }`}
             >
               Dia
@@ -183,7 +268,7 @@ export default function AgendaPage() {
             <button
               onClick={() => setViewMode("week")}
               className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                viewMode === "week" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-500"
+                viewMode === "week" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
               }`}
             >
               Semana
@@ -191,7 +276,7 @@ export default function AgendaPage() {
             <button
               onClick={() => setViewMode("month")}
               className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                viewMode === "month" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-500"
+                viewMode === "month" ? "bg-white text-rose-600 shadow dark:bg-slate-900 dark:text-rose-400" : "text-slate-600"
               }`}
             >
               Mês
@@ -199,7 +284,7 @@ export default function AgendaPage() {
           </div>
 
           <button
-            onClick={handleOpenModal}
+            onClick={() => handleOpenModal()}
             className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
           >
             <Plus className="h-4 w-4" />
@@ -208,99 +293,417 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Grade Horária do Dia */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
-          <h3 className="font-serif text-lg font-bold text-slate-800 dark:text-white">
-            Grade de Horários &mdash; {new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </h3>
-          <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-            {appointments.length} agendamentos na grade
-          </span>
-        </div>
+      {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
+      {viewMode === "day" && (
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
+            <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+              Grade de Horários &mdash; {new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            </h3>
+            <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+              {appointments.length} agendamentos na grade
+            </span>
+          </div>
 
-        {/* Linha do Tempo Visual */}
-        <div className="space-y-3">
-          {timeSlots.map((slot) => {
-            const slotApps = appointments.filter((a) => a.startTime === slot);
-            const isBusy = slotApps.length > 0;
+          {/* Linha do Tempo Visual */}
+          <div className="space-y-3">
+            {timeSlots.map((slot) => {
+              const slotApps = appointments.filter((a) => a.startTime === slot);
+              const isBusy = slotApps.length > 0;
 
-            return (
-              <div
-                key={slot}
-                className={`flex items-start rounded-2xl border p-3 transition ${
-                  isBusy
-                    ? "border-rose-200 bg-rose-50/30 dark:border-slate-800 dark:bg-slate-800/40"
-                    : "border-slate-100 bg-slate-50/40 hover:bg-rose-50/40 dark:border-slate-800/60 dark:bg-slate-900/60"
-                }`}
-              >
-                {/* Horário */}
-                <div className="w-20 shrink-0">
-                  <span className="font-serif text-sm font-bold text-slate-700 dark:text-slate-300">{slot}</span>
-                </div>
+              return (
+                <div
+                  key={slot}
+                  className={`flex items-start rounded-2xl border p-3 transition ${
+                    isBusy
+                      ? "border-rose-200 bg-rose-50/30 dark:border-slate-800 dark:bg-slate-800/40"
+                      : "border-slate-100 bg-slate-50/40 hover:bg-rose-50/40 dark:border-slate-800/60 dark:bg-slate-900/60"
+                  }`}
+                >
+                  <div className="w-20 shrink-0">
+                    <span className="font-serif text-sm font-bold text-slate-800 dark:text-slate-200">{slot}</span>
+                  </div>
 
-                {/* Agendamentos no Horário */}
-                <div className="flex-1">
-                  {isBusy ? (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {slotApps.map((app) => (
-                        <div
-                          key={app.id}
-                          className={`flex flex-col justify-between rounded-xl border p-3 shadow-sm ${statusColors[app.status] || "bg-white"}`}
-                        >
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold uppercase tracking-wider">{app.status}</span>
-                              <span className="text-xs font-bold">R$ {app.total?.toFixed(2)}</span>
+                  <div className="flex-1">
+                    {isBusy ? (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {slotApps.map((app) => (
+                          <div
+                            key={app.id}
+                            className={`flex flex-col justify-between rounded-xl border p-3 shadow-sm ${statusColors[app.status] || "bg-white"}`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold uppercase tracking-wider">{app.status}</span>
+                                <span className="text-xs font-bold">R$ {app.total?.toFixed(2)}</span>
+                              </div>
+                              <h4 className="mt-1 font-serif text-sm font-bold text-slate-900 dark:text-white">{app.clientName}</h4>
+                              <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                                💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
+                              </p>
+                              <p className="mt-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                                👩 {app.professionalName} ({app.totalDurationMinutes} min)
+                              </p>
                             </div>
-                            <h4 className="mt-1 font-serif text-sm font-bold">{app.clientName}</h4>
-                            <p className="text-xs opacity-90">
-                              💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
-                            </p>
-                            <p className="mt-1 text-[11px] font-medium opacity-80">
-                              👩 {app.professionalName} ({app.totalDurationMinutes} min)
-                            </p>
-                          </div>
 
-                          <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-2 text-[11px]">
-                            <span>Sinal: R$ {app.depositPaid?.toFixed(2)}</span>
-                            <button
-                              onClick={() => {
-                                fetch(`/api/appointments`, {
-                                  method: "PUT",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ id: app.id, status: "CONCLUIDO" }),
-                                }).then(() => loadAgenda());
-                              }}
-                              className="font-bold underline hover:opacity-80"
-                            >
-                              Finalizar &rarr;
-                            </button>
+                            <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-2 text-[11px] font-bold text-slate-800">
+                              <span>Sinal: R$ {app.depositPaid?.toFixed(2)}</span>
+                              <button
+                                onClick={() => handleFinishAppointment(app.id)}
+                                className="underline hover:opacity-80 text-rose-700 dark:text-rose-300"
+                              >
+                                Finalizar &rarr;
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Horário Livre</span>
-                      <button
-                        onClick={() => {
-                          setFormTime(slot);
-                          setFormDate(selectedDate);
-                          setShowModal(true);
-                        }}
-                        className="rounded-lg bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-200 dark:bg-slate-800 dark:text-rose-300"
-                      >
-                        + Encaixar Agendamento
-                      </button>
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <span>Horário Livre</span>
+                        <button
+                          onClick={() => handleOpenModal(selectedDate, slot)}
+                          className="rounded-lg bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 hover:bg-rose-200 dark:bg-slate-800 dark:text-rose-300"
+                        >
+                          + Encaixar Agendamento
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 2. VISUALIZAÇÃO SEMANA (RESUMO DA SEMANA) ==================== */}
+      {viewMode === "week" && (
+        <div className="space-y-6">
+          {/* Card Resumo da Semana */}
+          <div className="rounded-3xl border border-rose-200/60 bg-gradient-to-r from-rose-900/90 via-rose-800/90 to-amber-900/90 p-6 text-white shadow-lg">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <span className="rounded-full bg-amber-400/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+                  Resumo Semanal
+                </span>
+                <h3 className="mt-2 font-serif text-xl font-bold">
+                  Semana de {new Date(weekDays[0] + "T00:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} a {new Date(weekDays[6] + "T00:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" })}
+                </h3>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md text-right">
+                  <span className="block text-[10px] uppercase font-bold text-rose-200">Atendimentos na Semana</span>
+                  <span className="font-serif text-2xl font-bold text-amber-200">{totalWeekApps} Clientes</span>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md text-right">
+                  <span className="block text-[10px] uppercase font-bold text-rose-200">Faturamento Previsto</span>
+                  <span className="font-serif text-2xl font-bold text-emerald-300">R$ {totalWeekRevenue.toFixed(2)}</span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          </div>
+
+          {/* Grid Semanal dos 7 Dias */}
+          <div className="grid gap-4 md:grid-cols-7">
+            {weekDays.map((dayStr) => {
+              const dayDate = new Date(dayStr + "T00:00:00");
+              const dayApps = appointments.filter((a) => a.date === dayStr);
+              const isSelected = dayStr === selectedDate;
+              const isToday = dayStr === getTodayString();
+
+              return (
+                <div
+                  key={dayStr}
+                  className={`flex flex-col rounded-3xl border p-4 transition shadow-sm bg-white dark:bg-slate-900 ${
+                    isSelected
+                      ? "border-rose-400 ring-2 ring-rose-400/30 dark:border-rose-400"
+                      : "border-slate-100 dark:border-slate-800"
+                  }`}
+                >
+                  {/* Cabeçalho do Dia */}
+                  <div className="flex items-center justify-between border-b pb-2.5 dark:border-slate-800">
+                    <div>
+                      <span className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                        {dayDate.toLocaleDateString("pt-BR", { weekday: "short" })}
+                      </span>
+                      <span className="font-serif text-base font-bold text-slate-900 dark:text-white">
+                        {dayDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </span>
+                    </div>
+                    {isToday && (
+                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white uppercase">
+                        Hoje
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Contador de Clientes do Dia */}
+                  <div className="my-3">
+                    {dayApps.length > 0 ? (
+                      <span className="rounded-xl bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 block text-center">
+                        🟢 {dayApps.length} {dayApps.length === 1 ? "Cliente" : "Clientes"}
+                      </span>
+                    ) : (
+                      <span className="rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400 block text-center">
+                        ⚪ Dia Livre
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Lista de Clientes do Dia */}
+                  <div className="flex-1 space-y-2.5">
+                    {dayApps.map((app) => (
+                      <div
+                        key={app.id}
+                        className={`rounded-2xl border p-2.5 text-xs space-y-1 shadow-sm ${statusColors[app.status] || "bg-slate-50"}`}
+                      >
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="text-slate-900 dark:text-white">⏰ {app.startTime}</span>
+                          <span className="text-[10px]">R$ {app.total?.toFixed(2)}</span>
+                        </div>
+                        <p className="font-serif font-bold text-slate-900 dark:text-white truncate" title={app.clientName}>
+                          👤 {app.clientName}
+                        </p>
+                        <p className="text-[10px] text-slate-800 dark:text-slate-200 line-clamp-1" title={app.services?.map((s: any) => s.serviceName).join(", ")}>
+                          💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
+                        </p>
+                        <div className="flex items-center justify-between pt-1 border-t border-black/10 text-[9px] font-bold">
+                          <span>👩 {app.professionalName}</span>
+                          {app.status !== "CONCLUIDO" && (
+                            <button
+                              onClick={() => handleFinishAppointment(app.id)}
+                              className="text-rose-800 dark:text-rose-300 underline"
+                            >
+                              Finalizar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {dayApps.length === 0 && (
+                      <div className="py-6 text-center text-[11px] text-slate-600 font-medium">
+                        Nenhum agendamento marcado.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ação rápida para o dia */}
+                  <button
+                    onClick={() => {
+                      setSelectedDate(dayStr);
+                      handleOpenModal(dayStr);
+                    }}
+                    className="mt-3 w-full rounded-xl border border-rose-200 bg-rose-50 py-1.5 text-[11px] font-bold text-rose-800 hover:bg-rose-100 dark:border-slate-800 dark:bg-slate-800 dark:text-rose-300"
+                  >
+                    + Agendar neste dia
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ==================== 3. VISUALIZAÇÃO MÊS (RESUMO MENSAL DAS CLIENTES E DIAS MARCADOS) ==================== */}
+      {viewMode === "month" && (
+        <div className="space-y-6">
+          {/* Card Resumo do Mês */}
+          <div className="rounded-3xl border border-rose-200/60 bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 p-6 text-white shadow-lg">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <span className="rounded-full bg-amber-400/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+                  Visão Geral do Mês
+                </span>
+                <h3 className="mt-2 font-serif text-2xl font-bold">
+                  {new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                </h3>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md text-right">
+                  <span className="block text-[10px] uppercase font-bold text-rose-200">Total de Atendimentos</span>
+                  <span className="font-serif text-2xl font-bold text-amber-200">{appointments.length} Agendamentos</span>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md text-right">
+                  <span className="block text-[10px] uppercase font-bold text-rose-200">Faturamento Previsto</span>
+                  <span className="font-serif text-2xl font-bold text-emerald-300">
+                    R$ {appointments.reduce((acc, a) => acc + (a.total || 0), 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-3.5 backdrop-blur-md text-right">
+                  <span className="block text-[10px] uppercase font-bold text-rose-200">Dias Marcados</span>
+                  <span className="font-serif text-2xl font-bold text-teal-300">{datesWithApps.length} Dias</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendário Mensal de Ocupação */}
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+              📅 Calendário de Agendamentos & Ocupação do Mês
+            </h3>
+
+            {/* Cabeçalho dos Dias da Semana */}
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-slate-800 dark:text-slate-200 uppercase pb-2 border-b">
+              <div>Seg</div>
+              <div>Ter</div>
+              <div>Qua</div>
+              <div>Qui</div>
+              <div>Sex</div>
+              <div>Sáb</div>
+              <div>Dom</div>
+            </div>
+
+            {/* Grid dos Dias do Mês */}
+            <div className="grid grid-cols-7 gap-2">
+              {/* Células vazias de offset */}
+              {Array.from({ length: monthInfo.mondayOffset }).map((_, idx) => (
+                <div key={`empty-${idx}`} className="h-24 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30" />
+              ))}
+
+              {/* Dias do mês */}
+              {monthInfo.days.map((dayStr) => {
+                const dayNum = parseInt(dayStr.split("-")[2], 10);
+                const dayApps = appointmentsByDate[dayStr] || [];
+                const isSelected = dayStr === selectedDate;
+                const isToday = dayStr === getTodayString();
+
+                return (
+                  <div
+                    key={dayStr}
+                    onClick={() => {
+                      setSelectedDate(dayStr);
+                      setViewMode("day");
+                    }}
+                    className={`h-28 flex flex-col justify-between rounded-2xl border p-2 cursor-pointer transition hover:shadow-md ${
+                      isSelected
+                        ? "border-rose-400 bg-rose-50/40 ring-2 ring-rose-400/40 dark:border-rose-400 dark:bg-slate-800"
+                        : dayApps.length > 0
+                        ? "border-emerald-200 bg-emerald-50/30 dark:border-slate-800 dark:bg-slate-800/60"
+                        : "border-slate-100 bg-slate-50/40 dark:border-slate-800 dark:bg-slate-900"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-serif text-sm font-bold ${isToday ? "rounded-full bg-rose-500 text-white px-2 py-0.5 text-xs" : "text-slate-900 dark:text-white"}`}>
+                        {dayNum}
+                      </span>
+                      {dayApps.length > 0 && (
+                        <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-bold text-white">
+                          {dayApps.length} cli
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Resumo compacto de clientes no dia */}
+                    <div className="flex-1 my-1 overflow-hidden space-y-1">
+                      {dayApps.slice(0, 2).map((app) => (
+                        <div key={app.id} className="text-[10px] truncate font-semibold text-slate-800 dark:text-slate-200 bg-white/80 dark:bg-slate-900/80 p-1 rounded">
+                          ⏰ {app.startTime} {app.clientName}
+                        </div>
+                      ))}
+                      {dayApps.length > 2 && (
+                        <span className="block text-[9px] font-bold text-rose-600 dark:text-rose-400">
+                          + {dayApps.length - 2} mais...
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-[9px] font-bold text-slate-600 text-right">
+                      👁️ Ver dia
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* LISTA COMPLETA DOS DIAS COM AGENDAMENTOS NO MÊS */}
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+              📋 Resumo Detalhado dos Dias Marcados no Mês ({datesWithApps.length} dias com clientes)
+            </h3>
+
+            {datesWithApps.length > 0 ? (
+              <div className="space-y-4">
+                {datesWithApps.map((dayStr) => {
+                  const dayDate = new Date(dayStr + "T00:00:00");
+                  const dayApps = appointmentsByDate[dayStr];
+                  const dayRevenue = dayApps.reduce((acc, a) => acc + (a.total || 0), 0);
+
+                  return (
+                    <div
+                      key={dayStr}
+                      className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/50 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 dark:border-slate-700 gap-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="rounded-xl bg-amber-400 px-3 py-1 font-serif text-sm font-bold text-slate-900">
+                            {dayDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                          </span>
+                          <span className="font-serif text-sm font-bold text-slate-900 dark:text-white capitalize">
+                            ({dayDate.toLocaleDateString("pt-BR", { weekday: "long" })})
+                          </span>
+                        </div>
+
+                        <div className="flex items-center space-x-3 text-xs font-bold">
+                          <span className="text-emerald-700 dark:text-emerald-300">
+                            🟢 {dayApps.length} {dayApps.length === 1 ? "Atendimento" : "Atendimentos"}
+                          </span>
+                          <span className="text-slate-900 dark:text-white">
+                            Total: R$ {dayRevenue.toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedDate(dayStr);
+                              setViewMode("day");
+                            }}
+                            className="rounded-lg bg-rose-500 px-3 py-1 text-white hover:bg-rose-600 text-[11px]"
+                          >
+                            Ir para o Dia &rarr;
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Lista de Clientes do Dia */}
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {dayApps.map((app) => (
+                          <div
+                            key={app.id}
+                            className={`rounded-xl border p-3 text-xs space-y-1.5 shadow-sm ${statusColors[app.status] || "bg-white"}`}
+                          >
+                            <div className="flex items-center justify-between font-bold">
+                              <span className="text-slate-900 dark:text-white">⏰ {app.startTime} - {app.endTime}</span>
+                              <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-slate-900 dark:bg-slate-900 dark:text-white">
+                                {app.status}
+                              </span>
+                            </div>
+                            <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white">
+                              👤 {app.clientName}
+                            </h4>
+                            <p className="font-medium text-slate-800 dark:text-slate-200">
+                              💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
+                            </p>
+                            <div className="flex items-center justify-between pt-2 border-t border-black/10 text-[11px] font-bold text-slate-900 dark:text-white">
+                              <span>👩 {app.professionalName}</span>
+                              <span className="text-emerald-700 dark:text-emerald-300">R$ {app.total?.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-xs text-slate-500 font-medium">
+                Nenhum agendamento cadastrado para o mês selecionado.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE NOVO AGENDAMENTO */}
       {showModal && (
@@ -325,7 +728,7 @@ export default function AgendaPage() {
                 <select
                   value={formClient}
                   onChange={(e) => setFormClient(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 >
                   <option value="">Selecione a cliente...</option>
@@ -344,7 +747,7 @@ export default function AgendaPage() {
                   <select
                     value={formProf}
                     onChange={(e) => setFormProf(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -362,7 +765,7 @@ export default function AgendaPage() {
                     type="date"
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   />
                 </div>
@@ -372,7 +775,7 @@ export default function AgendaPage() {
                   <select
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   >
                     {timeSlots.map((t) => (
@@ -396,7 +799,7 @@ export default function AgendaPage() {
                       <label
                         key={s.id}
                         className={`flex items-center justify-between rounded-lg p-2 transition ${
-                          isChecked ? "bg-rose-50 text-rose-700 font-bold dark:bg-slate-800 dark:text-rose-400" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                          isChecked ? "bg-rose-50 text-rose-700 font-bold dark:bg-slate-800 dark:text-rose-400" : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200"
                         }`}
                       >
                         <div className="flex items-center space-x-2">
@@ -435,7 +838,7 @@ export default function AgendaPage() {
                       type="number"
                       value={formDiscount}
                       onChange={(e) => setFormDiscount(Number(e.target.value))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none dark:border-slate-700 dark:bg-slate-900"
+                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                     />
                   </div>
                   <div>
@@ -444,7 +847,7 @@ export default function AgendaPage() {
                       type="number"
                       value={formDeposit}
                       onChange={(e) => setFormDeposit(Number(e.target.value))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none dark:border-slate-700 dark:bg-slate-900"
+                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                     />
                   </div>
                   <div>
@@ -467,7 +870,7 @@ export default function AgendaPage() {
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   placeholder="Ex: Pediu esmalte vermelho especial..."
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   rows={2}
                 />
               </div>

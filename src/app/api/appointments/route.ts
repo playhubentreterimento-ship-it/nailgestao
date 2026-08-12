@@ -6,11 +6,16 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
+    const monthParam = searchParams.get("month");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
     const professionalId = searchParams.get("professionalId");
     const status = searchParams.get("status");
 
     const whereClause: any = { salonId: "default-salon" };
     if (date && date !== "all") whereClause.date = date;
+    if (monthParam) whereClause.date = { startsWith: monthParam };
+    if (startDate && endDate) whereClause.date = { gte: startDate, lte: endDate };
     if (professionalId && professionalId !== "all") whereClause.professionalId = professionalId;
     if (status && status !== "all") whereClause.status = status;
 
