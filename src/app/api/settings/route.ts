@@ -19,13 +19,11 @@ export async function GET() {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const salon = await prisma.salon.findFirst();
+    let salon = await prisma.salon.findFirst();
 
-    if (!salon) return NextResponse.json({ error: "Salão não encontrado." }, { status: 404 });
-
-    const updated = await prisma.salon.update({
-      where: { id: salon.id },
-      data: {
+    const updated = await prisma.salon.upsert({
+      where: { id: salon?.id || "default-salon" },
+      update: {
         ...(body.name ? { name: body.name } : {}),
         ...(body.slogan !== undefined ? { slogan: body.slogan } : {}),
         ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
@@ -40,6 +38,15 @@ export async function PUT(req: Request) {
         ...(body.creditFeePercent !== undefined ? { creditFeePercent: Number(body.creditFeePercent) } : {}),
         ...(body.debitFeePercent !== undefined ? { debitFeePercent: Number(body.debitFeePercent) } : {}),
         ...(body.defaultDepositAmount !== undefined ? { defaultDepositAmount: Number(body.defaultDepositAmount) } : {}),
+      },
+      create: {
+        id: "default-salon",
+        name: body.name || "Meu Salão de Unhas",
+        slogan: body.slogan || "Seja Bem-Vinda",
+        logoUrl: body.logoUrl || null,
+        phone: body.phone || null,
+        address: body.address || null,
+        primaryColor: body.primaryColor || "#E0A96D",
       },
     });
 

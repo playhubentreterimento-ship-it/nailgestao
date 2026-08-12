@@ -52,7 +52,7 @@ export default function ConfiguracoesPage() {
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/settings", {
+    const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -66,8 +66,15 @@ export default function ConfiguracoesPage() {
         debitFeePercent: debitFee,
       }),
     });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+
+    if (res.ok) {
+      setSaved(true);
+      loadData();
+      setTimeout(() => setSaved(false), 4000);
+    } else {
+      const err = await res.json();
+      alert("Erro ao salvar configurações do salão: " + (err.error || "Erro no servidor"));
+    }
   };
 
   const handleSaveProf = async (e: React.FormEvent) => {
