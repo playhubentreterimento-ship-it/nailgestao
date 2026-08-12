@@ -1,35 +1,83 @@
 import { prisma } from "../prisma";
 
 export interface WhatsAppMessagePayload {
-  to: string; // E.164 phone format e.g. 5511999998888
+  to: string; // Formato E.164 e.g. 5567992684748
   templateName?: string;
   bodyText: string;
   buttons?: Array<{ id: string; title: string }>;
 }
 
+export function formatPhoneWithDDI(phone: string): string {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  
+  // Se já possui DDI 55 e tamanho de 12 ou 13 dígitos (ex: 5567992684748)
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    return digits;
+  }
+  
+  // Se possui 10 ou 11 dígitos (ex: 67992684748), insere DDI 55
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+  
+  return digits;
+}
+
 export interface WhatsAppProvider {
-  sendMessage(payload: WhatsAppMessagePayload): Promise<{ success: boolean; messageId: string }>;
-  sendAppointmentReminder(appointmentId: string, hoursBefore: number): Promise<boolean>;
-  sendConfirmationRequest(appointmentId: string): Promise<boolean>;
+  sendMessage(payload: WhatsAppMessagePayload): Promise<{ success: boolean; messageId: string; whatsappUrl: string }>;
+  sendAppointmentReminder(appointmentId: string, hoursBefore: number): Promise<{ success: boolean; whatsappUrl?: string; clientName?: string; phone?: string }>;
+  sendConfirmationRequest(appointmentId: string): Promise<any>;
   handleClientResponse(phone: string, textResponse: string): Promise<{ actionTaken: string; appointmentId?: string }>;
 }
 
-export class MockWhatsAppProvider implements WhatsAppProvider {
+export class HybridWhatsAppProvider implements WhatsAppProvider {
   async sendMessage(payload: WhatsAppMessagePayload) {
-    console.log(`[WhatsApp Mock Driver] Enviando para ${payload.to}: "${payload.bodyText}"`);
-    
+    const formattedPhone = formatPhoneWithDDI(payload.to);
+    console.log(`[WhatsApp Gateway Driver] Enviando para ${formattedPhone}: "${payload.bodyText}"`);
+
+    // Gerar link direto wa.me para abertura manual rápida
+    const encodedText = encodeURIComponent(payload.bodyText);
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedText}`;
+
+    // Tentar disparo via API externa configurada (Evolution API / Z-API / WhatsApp Cloud API)
+    const apiUrl = process.env.WHATSAPP_API_URL;
+    const apiKey = process.env.WHATSAPP_API_KEY;
+
+    let apiSent = false;
+    if (apiUrl && apiKey) {
+      try {
+        await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": apiKey,
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            number: formattedPhone,
+            message: payload.bodyText,
+          }),
+        });
+        apiSent = true;
+      } catch (err) {
+        console.error("Erro ao enviar mensagem via Gateway WhatsApp:", err);
+      }
+    }
+
     // Registrar mensagem enviada no banco
     const msg = await prisma.whatsAppMessage.create({
       data: {
         salonId: "default-salon",
-        phone: payload.to,
+        phone: formattedPhone,
         messageText: payload.bodyText,
-        status: "ENTREGUE",
+        status: apiSent ? "ENVIADO_API" : "ENTREGUE",
         sentAt: new Date(),
       },
     });
 
-    return { success: true, messageId: msg.id };
+    return { success: true, messageId: msg.id, whatsappUrl };
   }
 
   async sendAppointmentReminder(appointmentId: string, hoursBefore: number) {
@@ -37,19 +85,21 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
       where: { id: appointmentId },
       include: { services: true },
     });
-    if (!app) return false;
+    if (!app) return { success: false };
 
     const client = await prisma.client.findUnique({ where: { id: app.clientId } });
     const prof = await prisma.professional.findUnique({ where: { id: app.professionalId } });
     const salon = await prisma.salon.findUnique({ where: { id: app.salonId } });
 
-    if (!client || client.optOutWhatsApp) return false;
+    if (!client || client.optOutWhatsApp) return { success: false };
 
+    const formattedPhone = formatPhoneWithDDI(client.whatsapp || client.phone);
     const serviceNames = app.services.map((s) => s.serviceName).join(", ");
+    
     const text = `Olá, ${client.name}! 💅\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Luxe"}.\n\n📅 Data: ${app.date}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
 
-    await this.sendMessage({
-      to: client.whatsapp,
+    const sendRes = await this.sendMessage({
+      to: formattedPhone,
       templateName: `LEMBRETE_${hoursBefore}H`,
       bodyText: text,
       buttons: [
@@ -63,7 +113,12 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
       data: { confirmationSentAt: new Date() },
     });
 
-    return true;
+    return {
+      success: true,
+      whatsappUrl: sendRes.whatsappUrl,
+      clientName: client.name,
+      phone: formattedPhone,
+    };
   }
 
   async sendConfirmationRequest(appointmentId: string) {
@@ -71,12 +126,17 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
   }
 
   async handleClientResponse(phone: string, textResponse: string) {
-    const cleanPhone = phone.replace(/\D/g, "");
+    const formattedPhone = formatPhoneWithDDI(phone);
     const normalizedText = textResponse.trim().toUpperCase();
 
     // Procurar agendamento pendente ou aguardando confirmação do cliente
     const client = await prisma.client.findFirst({
-      where: { whatsapp: { contains: cleanPhone.slice(-8) } },
+      where: {
+        OR: [
+          { whatsapp: { contains: formattedPhone.slice(-8) } },
+          { phone: { contains: formattedPhone.slice(-8) } },
+        ],
+      },
     });
 
     if (!client) {
@@ -108,8 +168,8 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
 
       // Enviar resposta automática
       await this.sendMessage({
-        to: client.whatsapp,
-        bodyText: `Muito obrigada, ${client.name}! 💖 Seu agendamento das ${app.startTime} do dia ${app.date} foi CONFIRMADO com sucesso! Te esperamos no Studio Luxe.`,
+        to: client.whatsapp || client.phone,
+        bodyText: `Muito obrigada, ${client.name}! 💖 Seu agendamento das ${app.startTime} do dia ${app.date} foi CONFIRMADO com sucesso! Te esperamos no salão.`,
       });
 
       // Log de Auditoria
@@ -135,8 +195,8 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
       });
 
       await this.sendMessage({
-        to: client.whatsapp,
-        bodyText: `Sem problemas, ${client.name}! 💅 Acesse nosso link de agendamento online para escolher seu novo horário: http://localhost:3000/agendar`,
+        to: client.whatsapp || client.phone,
+        bodyText: `Sem problemas, ${client.name}! 💅 Acesse nosso link de agendamento online para escolher seu novo horário.`,
       });
 
       return { actionTaken: "RESCHEDULE_REQUESTED", appointmentId: app.id };
@@ -146,4 +206,4 @@ export class MockWhatsAppProvider implements WhatsAppProvider {
   }
 }
 
-export const whatsAppService = new MockWhatsAppProvider();
+export const whatsAppService = new HybridWhatsAppProvider();

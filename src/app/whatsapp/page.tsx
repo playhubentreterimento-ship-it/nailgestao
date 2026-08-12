@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Send, CheckCheck, RefreshCw, AlertCircle, Bot, Zap, Plus, Sparkles } from "lucide-react";
+import { MessageSquare, Send, CheckCheck, RefreshCw, AlertCircle, Bot, Zap, Plus, Sparkles, ExternalLink, CheckCircle } from "lucide-react";
 
 export default function WhatsAppHubPage() {
   const [data, setData] = useState<any>(null);
-  const [testPhone, setTestPhone] = useState("5511991112233");
+  const [testPhone, setTestPhone] = useState("5567992684748");
   const [testMessage, setTestMessage] = useState("CONFIRMAR");
   const [webhookLog, setWebhookLog] = useState<string[]>([]);
+  const [reminderResults, setReminderResults] = useState<any[]>([]);
 
   const loadWhatsApp = () => {
     fetch("/api/whatsapp")
@@ -18,6 +19,23 @@ export default function WhatsAppHubPage() {
   useEffect(() => {
     loadWhatsApp();
   }, []);
+
+  const handleDispatchReminders = async () => {
+    if (confirm("Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para amanhã?")) {
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "SEND_TOMORROW_REMINDERS" }),
+      });
+      const resData = await res.json();
+      if (resData.items && resData.items.length > 0) {
+        setReminderResults(resData.items);
+      } else {
+        alert(`✨ ${resData.count || 0} lembrete(s) processado(s) para o dia ${resData.date}.`);
+      }
+      loadWhatsApp();
+    }
+  };
 
   const handleSimulateClientReply = async () => {
     const res = await fetch("/api/whatsapp", {
@@ -41,31 +59,21 @@ export default function WhatsAppHubPage() {
   const { templates, messages } = data || {};
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
             WhatsApp Automation Hub
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Conexão com WhatsApp Cloud API, envio de lembretes automáticos e bot de confirmações de presença.
+          <p className="text-xs text-rose-100/90 font-medium">
+            Conexão com WhatsApp API, disparo com DDI 55 automático e confirmações de presença.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={async () => {
-              if (confirm("Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para amanhã?")) {
-                const res = await fetch("/api/whatsapp", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "SEND_TOMORROW_REMINDERS" }),
-                });
-                const data = await res.json();
-                alert(`✨ Sucesso! ${data.count} lembrete(s) enviado(s) via WhatsApp para o dia ${data.date}.`);
-                loadWhatsApp();
-              }
-            }}
+            onClick={handleDispatchReminders}
             className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md hover:opacity-95"
           >
             <Send className="h-4 w-4" />
@@ -79,6 +87,47 @@ export default function WhatsAppHubPage() {
         </div>
       </div>
 
+      {/* PAINEL DE LINKS DIRETOS PARA WHATSAPP WEB */}
+      {reminderResults.length > 0 && (
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-800 dark:bg-slate-900 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-base font-bold text-emerald-900 dark:text-emerald-300 flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              <span>✨ Lembretes de Amanhã Processados com DDI 55 ({reminderResults.length})</span>
+            </h3>
+            <button
+              onClick={() => setReminderResults([])}
+              className="text-xs font-bold text-slate-500 hover:underline"
+            >
+              Fechar Painel
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {reminderResults.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between rounded-2xl bg-white p-3.5 shadow-sm dark:bg-slate-800">
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs">{item.clientName}</p>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    📞 WhatsApp: {item.phone}
+                  </p>
+                </div>
+
+                <a
+                  href={item.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Abrir no WhatsApp</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* SIMULADOR INTERATIVO DE WEBHOOK / CONFIRMAÇÕES */}
       <div className="rounded-3xl border border-rose-200 bg-gradient-to-r from-rose-50/80 via-amber-50/50 to-rose-50/80 p-6 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
         <div className="flex items-center space-x-3 mb-4">
@@ -90,7 +139,7 @@ export default function WhatsAppHubPage() {
               Simulador de Confirmação em Tempo Real (Webhook Test)
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Digite a resposta do cliente para testar a alteração automática de status no sistema (ex: "CONFIRMAR" ou "REAGENDAR").
+              Digite o WhatsApp da cliente com ou sem 55 (ex: 67992684748) e a resposta para testar o robô alterando para "CONFIRMADO".
             </p>
           </div>
         </div>

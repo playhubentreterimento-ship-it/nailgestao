@@ -64,13 +64,21 @@ export async function POST(req: Request) {
         },
       });
 
-      let count = 0;
+      const items: any[] = [];
       for (const app of tomorrowApps) {
-        const sent = await whatsAppService.sendAppointmentReminder(app.id, 24);
-        if (sent) count++;
+        const res = await whatsAppService.sendAppointmentReminder(app.id, 24);
+        if (res.success) {
+          items.push(res);
+        }
       }
 
-      return NextResponse.json({ success: true, count, total: tomorrowApps.length, date: tomorrowStr });
+      return NextResponse.json({
+        success: true,
+        count: items.length,
+        total: tomorrowApps.length,
+        date: tomorrowStr,
+        items,
+      });
     }
 
     // SIMULAÇÃO DE RESPOSTA DO CLIENTE VIA WEBHOOK
