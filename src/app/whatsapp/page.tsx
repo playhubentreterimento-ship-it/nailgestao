@@ -52,8 +52,27 @@ export default function WhatsAppHubPage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="flex items-center space-x-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={async () => {
+              if (confirm("Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para amanhã?")) {
+                const res = await fetch("/api/whatsapp", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "SEND_TOMORROW_REMINDERS" }),
+                });
+                const data = await res.json();
+                alert(`✨ Sucesso! ${data.count} lembrete(s) enviado(s) via WhatsApp para o dia ${data.date}.`);
+                loadWhatsApp();
+              }
+            }}
+            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md hover:opacity-95"
+          >
+            <Send className="h-4 w-4" />
+            <span>📲 Disparar Lembretes de Amanhã (24h)</span>
+          </button>
+
+          <span className="flex items-center space-x-1.5 rounded-full bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>API Oficial / Conectado</span>
           </span>

@@ -47,6 +47,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: ok });
     }
 
+    // Disparar lembretes para TODOS os agendamentos de amanhã (24h antes)
+    if (action === "SEND_TOMORROW_REMINDERS") {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const year = tomorrow.getFullYear();
+      const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+      const day = String(tomorrow.getDate()).padStart(2, "0");
+      const tomorrowStr = `${year}-${month}-${day}`;
+
+      const tomorrowApps = await prisma.appointment.findMany({
+        where: {
+          salonId: "default-salon",
+          date: tomorrowStr,
+          status: { in: ["AGENDADO", "AGUARDANDO_CONFIRMACAO"] },
+        },
+      });
+
+      let count = 0;
+      for (const app of tomorrowApps) {
+        const sent = await whatsAppService.sendAppointmentReminder(app.id, 24);
+        if (sent) count++;
+      }
+
+      return NextResponse.json({ success: true, count, total: tomorrowApps.length, date: tomorrowStr });
+    }
+
     // SIMULAÇÃO DE RESPOSTA DO CLIENTE VIA WEBHOOK
     if (action === "WEBHOOK_REPLY") {
       if (!phone || !replyText) {
