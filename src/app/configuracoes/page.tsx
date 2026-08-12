@@ -120,6 +120,24 @@ export default function ConfiguracoesPage() {
     setShowProfModal(true);
   };
 
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("A foto selecionada é superior a 5MB. Escolha uma imagem menor.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setLogoUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDeleteProf = async (p: any) => {
     if (confirm(`Tem certeza que deseja APAGAR a atendente "${p.name}"?`)) {
       const res = await fetch(`/api/professionals?id=${p.id}`, { method: "DELETE" });
@@ -250,22 +268,46 @@ export default function ConfiguracoesPage() {
           </div>
 
           <div>
-            <label className="block font-bold">Foto / Logotipo do Salão (Link da Imagem)</label>
-            <div className="flex items-center space-x-3 mt-1">
+            <label className="block font-bold">Foto / Logotipo do Salão</label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-2">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover border" />
+                <img src={logoUrl} alt="Logo Preview" className="h-16 w-16 rounded-2xl object-cover border border-rose-200 shadow-sm" />
               ) : (
-                <div className="h-12 w-12 rounded-xl bg-rose-100 dark:bg-slate-800 flex items-center justify-center font-bold text-rose-600 text-xs">💅 Logo</div>
+                <div className="h-16 w-16 rounded-2xl bg-rose-100 dark:bg-slate-800 flex items-center justify-center font-bold text-rose-600 text-xs shadow-inner">💅 Logo</div>
               )}
-              <input
-                type="text"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://exemplo.com/foto-do-salao.jpg"
-                className="w-full rounded-xl border p-3 font-medium dark:bg-slate-800"
-              />
+
+              <div className="flex-1 space-y-2 w-full">
+                <div className="flex items-center space-x-2">
+                  <label className="cursor-pointer inline-flex items-center space-x-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-600 transition">
+                    <span>📁 Escolher da Galeria / Computador</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl("")}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      Remover Foto
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  type="text"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder="Ou cole o link da imagem (URL)..."
+                  className="w-full rounded-xl border p-2.5 font-medium text-xs dark:bg-slate-800"
+                />
+              </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Insira o link da foto da fachada ou logotipo do salão (ex: Imgur, ImgBB, Instagram ou Google).</p>
+            <p className="text-[10px] text-slate-400 mt-1.5">Escolha uma foto da galeria do seu celular/computador (até 5MB) ou cole o link de uma imagem da internet.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
