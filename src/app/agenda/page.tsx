@@ -49,7 +49,7 @@ export default function AgendaPage() {
 
   const loadAgenda = () => {
     setLoading(true);
-    fetch(`/api/appointments?date=${selectedDate}&professionalId=${filterProf}`)
+    fetch(`/api/appointments?date=${selectedDate}&professionalId=${filterProf}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         setAppointments(data);
@@ -57,12 +57,24 @@ export default function AgendaPage() {
       });
   };
 
-  useEffect(() => {
+  const refreshAllData = () => {
     loadAgenda();
-    fetch("/api/professionals").then((r) => r.json()).then(setProfessionals);
-    fetch("/api/services").then((r) => r.json()).then((res) => setServices(res.services || []));
-    fetch("/api/clients").then((r) => r.json()).then(setClients);
+    fetch("/api/professionals", { cache: "no-store" }).then((r) => r.json()).then(setProfessionals).catch(() => {});
+    fetch("/api/services", { cache: "no-store" }).then((r) => r.json()).then((res) => setServices(res.services || [])).catch(() => {});
+    fetch("/api/clients", { cache: "no-store" }).then((r) => r.json()).then(setClients).catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshAllData();
+    window.addEventListener("focus", refreshAllData);
+    return () => window.removeEventListener("focus", refreshAllData);
   }, [selectedDate, filterProf]);
+
+  const handleOpenModal = () => {
+    refreshAllData();
+    setFormDate(selectedDate);
+    setShowModal(true);
+  };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,10 +199,7 @@ export default function AgendaPage() {
           </div>
 
           <button
-            onClick={() => {
-              setFormDate(selectedDate);
-              setShowModal(true);
-            }}
+            onClick={handleOpenModal}
             className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
           >
             <Plus className="h-4 w-4" />

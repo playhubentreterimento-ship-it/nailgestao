@@ -23,17 +23,20 @@ export default function AtendimentoPage() {
 
   const loadAppointments = () => {
     const today = getTodayString();
-    fetch(`/api/appointments?date=${today}`)
+    fetch(`/api/appointments?date=${today}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setAppointments(data);
         const inProgress = data.find((a: any) => a.status === "EM_ATENDIMENTO" || a.status === "CONFIRMADO");
         if (inProgress) setActiveApp(inProgress);
-      });
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadAppointments();
+    window.addEventListener("focus", loadAppointments);
+    return () => window.removeEventListener("focus", loadAppointments);
   }, []);
 
   const handleStartAttendance = async (appId: string) => {

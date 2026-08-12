@@ -39,10 +39,10 @@ export default function DashboardPage() {
   const [salon, setSalon] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadDashData = () => {
     Promise.all([
-      fetch("/api/dashboard").then((res) => res.json()),
-      fetch("/api/settings").then((res) => res.json()),
+      fetch("/api/dashboard", { cache: "no-store" }).then((res) => res.json()),
+      fetch("/api/settings", { cache: "no-store" }).then((res) => res.json()),
     ])
       .then(([dashData, settingsData]) => {
         setData(dashData);
@@ -53,6 +53,12 @@ export default function DashboardPage() {
         console.error(err);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadDashData();
+    window.addEventListener("focus", loadDashData);
+    return () => window.removeEventListener("focus", loadDashData);
   }, []);
 
   if (loading) {

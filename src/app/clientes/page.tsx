@@ -40,13 +40,16 @@ export default function ClientesPage() {
   const [nailDecoration, setNailDecoration] = useState("Francesa Reversa");
 
   const loadClients = () => {
-    fetch("/api/clients")
+    fetch("/api/clients", { cache: "no-store" })
       .then((res) => res.json())
-      .then(setClients);
+      .then(setClients)
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadClients();
+    window.addEventListener("focus", loadClients);
+    return () => window.removeEventListener("focus", loadClients);
   }, []);
 
   const handleCreateClient = async (e: React.FormEvent) => {
