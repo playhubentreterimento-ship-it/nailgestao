@@ -371,7 +371,22 @@ export default function AgendarPublicPage() {
                   if (parts.length === 3) formattedDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
 
-                const waText = encodeURIComponent(`Olá! ✨ Fiz meu agendamento online de ${selectedService?.name || "serviço"} no ${salon?.name || "salão"} para o dia ${formattedDateStr} às ${selectedTime}.`);
+                const messageText = [
+                  `Olá, equipe do ${salon?.name || "Salão"}! ✨💖`,
+                  ``,
+                  `Acabei de realizar meu agendamento online pelo site! 💅🏼`,
+                  ``,
+                  `📌 *DETALHES DO AGENDAMENTO:*`,
+                  `💅 *Serviço:* ${selectedService?.name || "Procedimento"}`,
+                  `📅 *Data:* ${formattedDateStr}`,
+                  `⏰ *Horário:* ${selectedTime}h`,
+                  `👩‍🎨 *Profissional:* ${selectedProf?.name || "Nail Designer"}`,
+                  `👤 *Cliente:* ${name}`,
+                  ``,
+                  `Aguardando a confirmação! Muito obrigada! 🥰✨`
+                ].join("\n");
+
+                const waText = encodeURIComponent(messageText);
 
                 return (
                   <a
