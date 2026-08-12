@@ -17,6 +17,17 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Regra Global: Forçar texto escuro visível em todos os quadros de preenchimento (inputs, selects e textareas) */
+input, select, textarea {
+  color: #0F172A !important;
+  background-color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
 .dark body {
   background-color: #5C1312;
   color: #F8FAFC;

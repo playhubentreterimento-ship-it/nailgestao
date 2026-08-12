@@ -101,10 +101,10 @@ export default function AtendimentoPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
           💅 Tela de Atendimento ao Vivo
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-rose-100/90 font-medium">
           Inicie o cronômetro do atendimento da cliente e realize o fechamento no caixa em 1 clique.
         </p>
       </div>
