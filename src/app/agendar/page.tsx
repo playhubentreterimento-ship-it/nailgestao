@@ -431,18 +431,18 @@ export default function AgendarPublicPage() {
                 }
 
                 const messageText = [
-                  `Olá, equipe do ${salon?.name || "Salão"}! ✨💖`,
+                  `Olá, equipe do ${salon?.name || "Salão"}! \u2728\u{1F496}`,
                   ``,
-                  `Acabei de realizar meu agendamento online pelo site! 💅🏼`,
+                  `Acabei de realizar meu agendamento online pelo site! \u{1F485}`,
                   ``,
-                  `📌 *DETALHES DO AGENDAMENTO:*`,
-                  `💅 *Serviço:* ${selectedService?.name || "Procedimento"}`,
-                  `📅 *Data:* ${formattedDateStr}`,
-                  `⏰ *Horário:* ${selectedTime}h`,
-                  `👩‍🎨 *Profissional:* ${selectedProf?.name || "Nail Designer"}`,
-                  `👤 *Cliente:* ${name}`,
+                  `\u{1F4CC} *DETALHES DO AGENDAMENTO:*`,
+                  `\u{1F485} *Serviço:* ${selectedService?.name || "Procedimento"}`,
+                  `\u{1F4C5} *Data:* ${formattedDateStr}`,
+                  `\u23F0 *Horário:* ${selectedTime}h`,
+                  `\u{1F469} *Profissional:* ${selectedProf?.name || "Nail Designer"}`,
+                  `\u{1F464} *Cliente:* ${name}`,
                   ``,
-                  `Aguardando a confirmação! Muito obrigada! 🥰✨`
+                  `Aguardando a confirmação! Muito obrigada! \u{1F970}\u2728`
                 ].join("\n");
 
                 const waText = encodeURIComponent(messageText);
