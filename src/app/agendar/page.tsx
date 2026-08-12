@@ -237,14 +237,31 @@ export default function AgendarPublicPage() {
             </p>
 
             <div className="pt-4 flex justify-center">
-              <a
-                href={`https://wa.me/${salon?.whatsapp}?text=Olá! Fiz meu agendamento online de ${selectedService?.name} para o dia ${selectedDate} às ${selectedTime}.`}
-                target="_blank"
-                className="flex items-center space-x-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700"
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>Falar no WhatsApp do Salão</span>
-              </a>
+              {(() => {
+                const rawTarget = salon?.whatsapp || salon?.phone || "";
+                const cleanDigits = rawTarget.replace(/\D/g, "");
+                const targetPhone = cleanDigits.length >= 10 && !cleanDigits.startsWith("55") ? `55${cleanDigits}` : cleanDigits || "5511999998888";
+                
+                let formattedDateStr = selectedDate;
+                if (selectedDate && selectedDate.includes("-")) {
+                  const parts = selectedDate.split("-");
+                  if (parts.length === 3) formattedDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+
+                const waText = encodeURIComponent(`Olá! ✨ Fiz meu agendamento online de ${selectedService?.name || "serviço"} para o dia ${formattedDateStr} às ${selectedTime}.`);
+
+                return (
+                  <a
+                    href={`https://wa.me/${targetPhone}?text=${waText}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 transition"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>📱 Falar no WhatsApp do Salão</span>
+                  </a>
+                );
+              })()}
             </div>
           </div>
         )}

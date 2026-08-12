@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { formatPhoneWithDDI } from "@/lib/whatsapp/provider";
 
 export async function GET() {
   try {
@@ -21,12 +22,15 @@ export async function PUT(req: Request) {
     const body = await req.json();
     let salon = await prisma.salon.findFirst().catch(() => null);
 
+    const rawPhone = body.whatsapp || body.phone;
+    const formattedWhatsApp = rawPhone ? formatPhoneWithDDI(rawPhone) : undefined;
+
     const updateData: any = {
       ...(body.name ? { name: body.name } : {}),
       ...(body.slogan !== undefined ? { slogan: body.slogan } : {}),
       ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
       ...(body.phone ? { phone: body.phone } : {}),
-      ...(body.whatsapp ? { whatsapp: body.whatsapp } : {}),
+      ...(formattedWhatsApp ? { whatsapp: formattedWhatsApp } : {}),
       ...(body.instagram !== undefined ? { instagram: body.instagram } : {}),
       ...(body.address ? { address: body.address } : {}),
       ...(body.primaryColor ? { primaryColor: body.primaryColor } : {}),
@@ -54,12 +58,12 @@ export async function PUT(req: Request) {
           slogan: body.slogan || "Seja Bem-Vinda",
           logoUrl: body.logoUrl || null,
           phone: body.phone || null,
+          whatsapp: formattedWhatsApp || "5511999998888",
           address: body.address || null,
           primaryColor: body.primaryColor || "#E0A96D",
         },
       });
     } catch (err: any) {
-      // Fallback caso a coluna ownerName ainda não exista no banco
       delete updateData.ownerName;
       updated = await prisma.salon.upsert({
         where: { id: salon?.id || "default-salon" },
@@ -70,6 +74,7 @@ export async function PUT(req: Request) {
           slogan: body.slogan || "Seja Bem-Vinda",
           logoUrl: body.logoUrl || null,
           phone: body.phone || null,
+          whatsapp: formattedWhatsApp || "5511999998888",
           address: body.address || null,
           primaryColor: body.primaryColor || "#E0A96D",
         },

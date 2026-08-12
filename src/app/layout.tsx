@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { MobileNav } from "@/components/layout/MobileNav";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export const metadata: Metadata = {
   title: "NAILGESTÃO - Sistema Profissional de Gestão para Salão de Nail Designer",
-  description: "Plataforma completa de agendamento, clientes, financeiro, caixa e automação WhatsApp para estúdios de manicures e alongamento de unhas.",
+  description: "Plataforma completa de agendamento, clientes, financeiro, caixa e automação WhatsApp para estúdios de manicures e junto de unhas.",
   manifest: "/manifest.json",
 };
 
@@ -26,14 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-screen flex-col bg-[#831d1c] font-sans text-slate-800 antialiased dark:bg-[#5c1312] dark:text-slate-100">
-        <Header />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 md:pb-6">
-            {children}
-          </main>
-        </div>
-        <MobileNav />
+        <AppLayout>{children}</AppLayout>
       </body>
     </html>
   );
