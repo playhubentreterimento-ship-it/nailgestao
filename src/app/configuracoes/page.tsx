@@ -15,6 +15,8 @@ export default function ConfiguracoesPage() {
   const [primaryColor, setPrimaryColor] = useState("#E0A96D");
   const [creditFee, setCreditFee] = useState(2.99);
   const [debitFee, setDebitFee] = useState(1.49);
+  const [adminEmail, setAdminEmail] = useState("juliana@studioluxe.com.br");
+  const [adminPassword, setAdminPassword] = useState("");
   const [saved, setSaved] = useState(false);
 
   // Form de Nova Atendente / Profissional
@@ -41,6 +43,9 @@ export default function ConfiguracoesPage() {
         setPrimaryColor(data.primaryColor || "#E0A96D");
         setCreditFee(data.creditFeePercent || 2.99);
         setDebitFee(data.debitFeePercent || 1.49);
+        if (data.adminEmail) {
+          setAdminEmail(data.adminEmail);
+        }
       });
 
     fetch("/api/professionals")
@@ -67,11 +72,14 @@ export default function ConfiguracoesPage() {
         primaryColor,
         creditFeePercent: creditFee,
         debitFeePercent: debitFee,
+        adminEmail,
+        adminPassword: adminPassword || undefined,
       }),
     });
 
     if (res.ok) {
       setSaved(true);
+      setAdminPassword("");
       loadData();
       setTimeout(() => setSaved(false), 4000);
     } else {
@@ -251,8 +259,45 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
 
-      {/* FORMULÁRIO DE CONFIGURAÇÃO DO SALÃO */}
+      {/* FORMULÁRIO DE CONFIGURAÇÃO DO SALÃO & MASTER LOGIN */}
       <form onSubmit={handleSaveSettings} className="space-y-6 text-xs">
+        {/* LOGIN DA ADMINISTRADORA MASTER */}
+        <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-white p-6 shadow-sm dark:border-amber-900/50 dark:bg-slate-900 space-y-4">
+          <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+            <Key className="h-5 w-5 text-amber-500" />
+            <span>👑 Seu E-mail & Senha de Administradora Master</span>
+          </h3>
+          <p className="text-slate-600 dark:text-slate-300">
+            Cadastre seu e-mail pessoal/profissional e defina sua senha para acessar o painel master do salão com total privacidade e controle.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-extrabold text-slate-900 dark:text-slate-100">Seu E-mail de Administradora *</label>
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="seu.email@exemplo.com"
+                className="mt-1 w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block font-extrabold text-slate-900 dark:text-slate-100">Alterar Sua Senha de Acesso</label>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Digite a nova senha (opcional)..."
+                className="mt-1 w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Deixe em branco se não desejar alterar sua senha atual.</p>
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
           <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
             <Store className="h-5 w-5 text-amber-500" />

@@ -31,6 +31,11 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
+    // Buscar usuário Administrador Master
+    const adminUser = await prisma.user.findFirst({
+      where: { role: "ADMINISTRADOR" },
+    }).catch(() => null);
+
     let realPhone = "";
 
     // 1. Tentar WhatsApp do salão se não for número de teste
@@ -54,6 +59,7 @@ export async function GET() {
     return NextResponse.json({
       ...(salon || { id: "default-salon", name: "Studio Selma Gloor" }),
       activeWhatsApp,
+      adminEmail: adminUser?.email || "juliana@studioluxe.com.br",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -122,6 +128,37 @@ export async function PUT(req: Request) {
           primaryColor: body.primaryColor || "#E0A96D",
         },
       });
+    }
+
+    // Se informou email ou senha para a Administradora Master, atualizar usuário no banco!
+    if (body.adminEmail || body.adminPassword) {
+      const adminEmailToUse = body.adminEmail ? body.adminEmail.trim().toLowerCase() : "juliana@studioluxe.com.br";
+      const existingAdmin = await prisma.user.findFirst({
+        where: { role: "ADMINISTRADOR" },
+      }).catch(() => null);
+
+      if (existingAdmin) {
+        await prisma.user.update({
+          where: { id: existingAdmin.id },
+          data: {
+            email: adminEmailToUse,
+            ...(body.adminPassword ? { passwordHash: body.adminPassword } : {}),
+            ...(body.ownerName ? { name: body.ownerName } : {}),
+          },
+        }).catch(() => {});
+      } else {
+        await prisma.user.create({
+          data: {
+            id: "usr-admin-master",
+            salonId: "default-salon",
+            name: body.ownerName || "Juliana Silva (Proprietária)",
+            email: adminEmailToUse,
+            passwordHash: body.adminPassword || "123456",
+            role: "ADMINISTRADOR",
+            active: true,
+          },
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json(updated);
