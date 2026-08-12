@@ -57,12 +57,21 @@ export async function POST(req: Request) {
 
     // ADICIONAR MOVIMENTAÇÃO (SANGRIA / SUPRIMENTO / ENTRADA)
     if (action === "TRANSACTION") {
-      const activeRegister = await prisma.cashRegister.findFirst({
+      let activeRegister = await prisma.cashRegister.findFirst({
         where: { salonId: "default-salon", status: "ABERTO" },
       });
 
       if (!activeRegister) {
-        return NextResponse.json({ error: "Nenhum caixa aberto para registrar a transação." }, { status: 400 });
+        activeRegister = await prisma.cashRegister.create({
+          data: {
+            salonId: "default-salon",
+            openedByUserId: "usr-admin",
+            initialAmount: 0,
+            expectedAmount: 0,
+            status: "ABERTO",
+            notes: "Caixa aberto automaticamente no checkout de atendimento",
+          },
+        });
       }
 
       const numAmount = Number(amount);

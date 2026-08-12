@@ -113,6 +113,19 @@ export default function ConfiguracoesPage() {
     setShowProfModal(true);
   };
 
+  const handleDeleteProf = async (p: any) => {
+    if (confirm(`Tem certeza que deseja APAGAR a atendente "${p.name}"?`)) {
+      const res = await fetch(`/api/professionals?id=${p.id}`, { method: "DELETE" });
+      if (res.ok) {
+        alert("Atendente excluída com sucesso!");
+        loadData();
+      } else {
+        const err = await res.json();
+        alert("Erro ao excluir atendente: " + err.error);
+      }
+    }
+  };
+
   const handleResetDemo = async (action: "RESEED" | "CLEAR_ALL") => {
     const confirmMsg =
       action === "CLEAR_ALL"
@@ -187,13 +200,24 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
 
-              <button
-                onClick={() => handleEditProfClick(p)}
-                className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-              >
-                <Edit className="h-3.5 w-3.5" />
-                <span>Editar / Senha</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleEditProfClick(p)}
+                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  <span>Editar</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteProf(p)}
+                  className="flex items-center space-x-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+                  title="Apagar Atendente"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Apagar</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>

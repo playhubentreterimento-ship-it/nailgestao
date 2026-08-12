@@ -40,37 +40,51 @@ export default function AtendimentoPage() {
   const handleFinishAttendance = async () => {
     if (!activeApp) return;
 
-    // Concluir agendamento
-    await fetch("/api/appointments", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: activeApp.id,
-        status: "CONCLUIDO",
-        notes: (activeApp.notes || "") + ` | Finalizado com pgto ${paymentMethod}`,
-      }),
-    });
-
-    // Lançar no caixa
-    await fetch("/api/cash", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "TRANSACTION",
-        category: "ATENDIMENTO",
-        amount: activeApp.total - discount,
-        paymentMethod,
-        description: `Checkout do atendimento: ${activeApp.clientName}`,
-      }),
-    });
-
-    // Efeito visual de celebração
     try {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    } catch (e) {}
+      // 1. Concluir agendamento no banco
+      const resApp = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: activeApp.id,
+          status: "CONCLUIDO",
+          paymentStatus: "PAGO",
+          notes: (activeApp.notes || "") + ` | Finalizado com pgto ${paymentMethod}`,
+        }),
+      });
 
-    setFinished(true);
-    loadAppointments();
+      if (!resApp.ok) {
+        const err = await resApp.json();
+        alert("Erro ao concluir agendamento: " + (err.error || "Erro desconhecido"));
+        return;
+      }
+
+      // 2. Lançar recebimento no caixa do dia
+      await fetch("/api/cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "TRANSACTION",
+          category: "ATENDIMENTO",
+          amount: Math.max(0, activeApp.total - discount),
+          paymentMethod,
+          description: `Checkout do atendimento: ${activeApp.clientName}`,
+        }),
+      });
+
+      // 3. Atualizar estado local da tela
+      setActiveApp((prev: any) => (prev ? { ...prev, status: "CONCLUIDO", paymentStatus: "PAGO" } : null));
+      setFinished(true);
+
+      // Efeito visual de celebração
+      try {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      } catch (e) {}
+
+      loadAppointments();
+    } catch (error: any) {
+      alert("Erro ao finalizar atendimento: " + error.message);
+    }
   };
 
   return (

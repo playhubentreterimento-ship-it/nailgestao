@@ -747,5 +747,16 @@ export async function clearDatabase() {
   await prisma.professional.deleteMany();
   await prisma.user.deleteMany();
   await prisma.salon.deleteMany();
-  console.log("✨ Banco de dados zerado com sucesso!");
+
+  // Criar um salão padrão limpo e sem dados fictícios
+  await prisma.salon.create({
+    data: {
+      id: "default-salon",
+      name: "Meu Salão de Unhas",
+      slogan: "Cadastre a descrição e serviços nas configurações",
+      primaryColor: "#E0A96D",
+    },
+  });
+
+  console.log("✨ Banco de dados zerado e salão pronto para uso!");
 }
