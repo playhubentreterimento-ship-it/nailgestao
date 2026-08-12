@@ -837,16 +837,16 @@ export default function AgendaPage() {
             <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               {/* Cliente */}
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300">Cliente *</label>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
                 <select
                   value={formClient}
                   onChange={(e) => setFormClient(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 >
-                  <option value="">Selecione a cliente...</option>
+                  <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
                   {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
                       {c.name} - {c.whatsapp} ({c.tag})
                     </option>
                   ))}
@@ -856,16 +856,16 @@ export default function AgendaPage() {
               {/* Profissional & Data & Horário */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Profissional *</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Profissional *</label>
                   <select
                     value={formProf}
                     onChange={(e) => setFormProf(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   >
-                    <option value="">Selecione...</option>
+                    <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione...</option>
                     {professionals.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
                         {p.name}
                       </option>
                     ))}
@@ -873,26 +873,26 @@ export default function AgendaPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Data *</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Data *</label>
                   <input
                     type="date"
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300">Horário *</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Horário *</label>
                   <select
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   >
                     {timeSlots.map((t) => (
-                      <option key={t} value={t}>
+                      <option key={t} value={t} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
                         {t}
                       </option>
                     ))}
@@ -902,20 +902,22 @@ export default function AgendaPage() {
 
               {/* Multi-Serviços */}
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300">
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
                   Serviços (Selecione um ou mais) *
                 </label>
-                <div className="mt-1 max-h-40 space-y-1.5 overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <div className="max-h-44 space-y-2 overflow-y-auto rounded-2xl border border-slate-300 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/80">
                   {services.map((s) => {
                     const isChecked = formSelectedServices.includes(s.id);
                     return (
                       <label
                         key={s.id}
-                        className={`flex items-center justify-between rounded-lg p-2 transition ${
-                          isChecked ? "bg-rose-50 text-rose-700 font-bold dark:bg-slate-800 dark:text-rose-400" : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-200"
+                        className={`flex items-center justify-between rounded-xl p-2.5 transition border ${
+                          isChecked
+                            ? "bg-rose-100 text-rose-900 border-rose-300 font-extrabold dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800"
+                            : "bg-white text-slate-900 font-bold border-slate-200 hover:bg-rose-50 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                         }`}
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2.5">
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -926,11 +928,13 @@ export default function AgendaPage() {
                                 setFormSelectedServices(formSelectedServices.filter((id) => id !== s.id));
                               }
                             }}
-                            className="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-400"
+                            className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-400"
                           />
-                          <span>{s.name} ({s.durationMinutes} min)</span>
+                          <span className="text-xs">{s.name} ({s.durationMinutes} min)</span>
                         </div>
-                        <span className="font-bold">R$ {(s.promoPrice || s.price).toFixed(2)}</span>
+                        <span className="text-xs font-serif font-extrabold text-rose-600 dark:text-rose-400">
+                          R$ {(s.promoPrice || s.price).toFixed(2)}
+                        </span>
                       </label>
                     );
                   })}
@@ -938,52 +942,52 @@ export default function AgendaPage() {
               </div>
 
               {/* Resumo Financeiro do Agendamento */}
-              <div className="rounded-2xl bg-rose-50/70 p-4 dark:bg-slate-800">
-                <div className="grid grid-cols-2 gap-3 font-semibold text-slate-700 dark:text-slate-300">
-                  <div>Duração Total: <span className="font-bold text-rose-600">{calcDuration} min</span></div>
-                  <div>Subtotal: <span className="font-bold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
+                <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <div>Duração Total: <span className="font-extrabold text-rose-600 dark:text-rose-400">{calcDuration} min</span></div>
+                  <div>Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Desconto (R$)</label>
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
                     <input
                       type="number"
                       value={formDiscount}
                       onChange={(e) => setFormDiscount(Number(e.target.value))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Sinal Cobrado (R$)</label>
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
                     <input
                       type="number"
                       value={formDeposit}
                       onChange={(e) => setFormDeposit(Number(e.target.value))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 p-2 font-bold outline-none text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400">Restante no Salão</label>
-                    <div className="mt-1 p-2 font-serif text-sm font-bold text-emerald-600">
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
+                    <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
                       R$ {calcRemaining.toFixed(2)}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-bold text-slate-900 dark:border-slate-700 dark:text-white">
+                <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
                   Valor Total: R$ {calcTotal.toFixed(2)}
                 </div>
               </div>
 
               {/* Observações */}
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300">Observações Internas</label>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Observações Internas</label>
                 <textarea
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   placeholder="Ex: Pediu esmalte vermelho especial..."
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-medium text-slate-800 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   rows={2}
                 />
               </div>
@@ -993,7 +997,7 @@ export default function AgendaPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   Cancelar
                 </button>
