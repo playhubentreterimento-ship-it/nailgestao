@@ -21,16 +21,27 @@ import {
   Settings,
 } from "lucide-react";
 
-export function MobileNav() {
+interface MobileNavProps {
+  userRole?: string | null;
+}
+
+export function MobileNav({ userRole }: MobileNavProps) {
   const pathname = usePathname();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  const mainItems = [
-    { href: "/", label: "Início", icon: LayoutDashboard },
-    { href: "/agenda", label: "Agenda", icon: Calendar },
-    { href: "/clientes", label: "Clientes", icon: Users },
-    { href: "/caixa", label: "Caixa", icon: Receipt },
-  ];
+  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+
+  const mainItems = isCollaborator
+    ? [
+        { href: "/agenda", label: "Agenda", icon: Calendar },
+        { href: "/caixa", label: "Caixa", icon: Receipt },
+      ]
+    : [
+        { href: "/", label: "Início", icon: LayoutDashboard },
+        { href: "/agenda", label: "Agenda", icon: Calendar },
+        { href: "/clientes", label: "Clientes", icon: Users },
+        { href: "/caixa", label: "Caixa", icon: Receipt },
+      ];
 
   const extraItems = [
     { href: "/atendimento", label: "Atendimento", icon: PlayCircle },
@@ -55,7 +66,7 @@ export function MobileNav() {
       </Link>
 
       {/* Modal / Sheet do Menu Mais */}
-      {showMoreMenu && (
+      {showMoreMenu && !isCollaborator && (
         <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/60 backdrop-blur-sm md:hidden">
           <div className="mt-auto rounded-t-3xl bg-white p-6 dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
@@ -108,13 +119,15 @@ export function MobileNav() {
           );
         })}
 
-        <button
-          onClick={() => setShowMoreMenu(true)}
-          className="flex flex-col items-center justify-center space-y-1 py-1 text-slate-400 hover:text-slate-600"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Mais</span>
-        </button>
+        {!isCollaborator && (
+          <button
+            onClick={() => setShowMoreMenu(true)}
+            className="flex flex-col items-center justify-center space-y-1 py-1 text-slate-400 hover:text-slate-600"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Mais</span>
+          </button>
+        )}
       </nav>
     </>
   );

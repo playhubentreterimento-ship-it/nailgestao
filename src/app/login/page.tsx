@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Lock, Mail, Sparkles, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("juliana@studioluxe.com.br");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -21,10 +21,16 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.push("/");
+      const data = await res.json();
+      const role = data.user?.role;
+      if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
+        router.push("/agenda");
+      } else {
+        router.push("/");
+      }
     } else {
       const err = await res.json();
-      setError(err.error || "Erro ao efetuar login.");
+      setError(err.error || "Credenciais inválidas. Verifique seu e-mail e senha cadastrados no painel.");
     }
   };
 

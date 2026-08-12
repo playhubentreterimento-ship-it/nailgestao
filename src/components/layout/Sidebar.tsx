@@ -23,10 +23,16 @@ import {
   Settings,
 } from "lucide-react";
 
-export function Sidebar() {
+interface SidebarProps {
+  userRole?: string | null;
+}
+
+export function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
 
-  const menuGroups = [
+  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+
+  const adminMenuGroups = [
     {
       title: "PRINCIPAL",
       items: [
@@ -72,6 +78,18 @@ export function Sidebar() {
     },
   ];
 
+  const collaboratorMenuGroups = [
+    {
+      title: "PAINEL DA COLABORADORA",
+      items: [
+        { href: "/agenda", label: "Agenda Visual", icon: Calendar },
+        { href: "/caixa", label: "Caixa do Dia", icon: Receipt },
+      ],
+    },
+  ];
+
+  const menuGroups = isCollaborator ? collaboratorMenuGroups : adminMenuGroups;
+
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-rose-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex">
       <div className="flex flex-1 flex-col space-y-6 overflow-y-auto pr-1">
@@ -105,7 +123,9 @@ export function Sidebar() {
       {/* Card Suporte / PWA */}
       <div className="mt-4 rounded-2xl bg-gradient-to-br from-rose-50 to-amber-50 p-3 text-center dark:from-slate-800 dark:to-slate-800/80">
         <p className="text-xs font-bold text-slate-800 dark:text-white">NAILGESTÃO Pro 💅</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400">PWA Instalado & Ativo</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+          {isCollaborator ? "Acesso Restrito Colaboradora" : "Painel Master Salão"}
+        </p>
       </div>
     </aside>
   );

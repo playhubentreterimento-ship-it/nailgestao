@@ -15,8 +15,15 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export function Header() {
+import { LogOut } from "lucide-react";
+
+interface HeaderProps {
+  userRole?: string | null;
+}
+
+export function Header({ userRole }: HeaderProps) {
   const [salon, setSalon] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
@@ -27,13 +34,26 @@ export function Header() {
       .then((data) => setSalon(data))
       .catch(() => {});
 
-    // Carregar notificações fictícias/iniciais
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+
     setNotifications([
       { id: "1", title: "⚠️ Estoque Baixo", message: "Gel Pink Hard está com 3 unidades.", type: "WARNING", time: "Há 10 min" },
       { id: "2", title: "🔔 Novo Agendamento", message: "Maria Fernanda agendou Fibra de Vidro.", type: "SUCCESS", time: "Há 25 min" },
       { id: "3", title: "🎂 Aniversariante Hoje", message: "Fernanda Lima completa ano hoje!", type: "INFO", time: "Hoje" },
     ]);
   }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  };
 
   const toggleTheme = () => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -44,6 +64,18 @@ export function Header() {
       document.documentElement.classList.remove("dark");
     }
   };
+
+  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+
+  const displayName = currentUser?.name || salon?.ownerName || "Juliana Silva";
+  const displayRole = isCollaborator ? "Colaboradora" : "Administradora";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-rose-200/40 bg-[#6b1615]/95 px-4 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 shadow-md">
@@ -73,14 +105,16 @@ export function Header() {
       {/* Busca & Ações */}
       <div className="flex items-center space-x-2 sm:space-x-4">
         {/* Barra de Busca Rápida */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar cliente, serviço..."
-            className="h-9 w-60 rounded-full bg-slate-100 pl-9 pr-4 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
-          />
-        </div>
+        {!isCollaborator && (
+          <div className="relative hidden md:block">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar cliente, serviço..."
+              className="h-9 w-60 rounded-full bg-slate-100 pl-9 pr-4 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
+            />
+          </div>
+        )}
 
         {/* Botão Agendamento Rápido (Desktop) */}
         <Link
@@ -103,7 +137,7 @@ export function Header() {
         {/* Alternar Tema */}
         <button
           onClick={toggleTheme}
-          className="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="rounded-full p-2 text-slate-200 transition hover:bg-white/10 dark:text-slate-300 dark:hover:bg-slate-800"
           title="Alternar Tema Claro/Escuro"
         >
           {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5 text-amber-400" />}
@@ -113,7 +147,7 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative rounded-full p-2 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="relative rounded-full p-2 text-slate-200 transition hover:bg-white/10 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <Bell className="h-5 w-5" />
             {notifications.length > 0 && (
@@ -154,23 +188,26 @@ export function Header() {
           )}
         </div>
 
-        {/* Avatar do Usuário Logado */}
-        <div className="flex items-center space-x-2 border-l border-slate-200 pl-3 dark:border-slate-700">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-rose-400 to-amber-300 font-semibold text-white shadow-sm text-xs">
-            {salon?.ownerName
-              ? salon.ownerName
-                  .split(" ")
-                  .filter(Boolean)
-                  .map((n: string) => n[0])
-                  .join("")
-                  .substring(0, 2)
-                  .toUpperCase()
-              : "JS"}
+        {/* Avatar do Usuário Logado + Logout */}
+        <div className="flex items-center space-x-3 border-l border-white/20 pl-3 dark:border-slate-700">
+          <div className="flex items-center space-x-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 font-bold text-white shadow-sm text-xs border border-white/30">
+              {initials}
+            </div>
+            <div className="hidden text-left xl:block">
+              <p className="text-xs font-bold text-white leading-tight">{displayName}</p>
+              <p className="text-[10px] text-amber-200 font-medium leading-tight">{displayRole}</p>
+            </div>
           </div>
-          <div className="hidden text-left xl:block">
-            <p className="text-xs font-bold text-white">{salon?.ownerName || "Juliana Silva"}</p>
-            <p className="text-[10px] text-amber-200/90 font-medium">Administradora</p>
-          </div>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-1 rounded-xl bg-white/10 px-2.5 py-1.5 text-xs font-bold text-rose-100 hover:bg-rose-600 hover:text-white transition"
+            title="Sair da Conta"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
         </div>
       </div>
     </header>
