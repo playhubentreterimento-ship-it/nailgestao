@@ -23,6 +23,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    if (body.action === "CATEGORY") {
+      const { categoryName, description } = body;
+      if (!categoryName) {
+        return NextResponse.json({ error: "Nome da categoria é obrigatório." }, { status: 400 });
+      }
+
+      const category = await prisma.serviceCategory.create({
+        data: {
+          salonId: "default-salon",
+          name: categoryName,
+          description: description || null,
+        },
+      });
+
+      return NextResponse.json(category);
+    }
+
     const { categoryId, name, description, durationMinutes, price, promoPrice, commissionPercent } = body;
 
     if (!categoryId || !name || !price || !durationMinutes) {
