@@ -142,7 +142,7 @@ export async function PUT(req: Request) {
           where: { id: existingAdmin.id },
           data: {
             email: adminEmailToUse,
-            ...(body.adminPassword ? { passwordHash: body.adminPassword } : {}),
+            ...(body.adminPassword && body.adminPassword.trim() !== "" ? { passwordHash: body.adminPassword.trim() } : {}),
             ...(body.ownerName ? { name: body.ownerName } : {}),
           },
         }).catch(() => {});
@@ -153,7 +153,7 @@ export async function PUT(req: Request) {
             salonId: "default-salon",
             name: body.ownerName || "Juliana Silva (Proprietária)",
             email: adminEmailToUse,
-            passwordHash: body.adminPassword || "123456",
+            passwordHash: body.adminPassword && body.adminPassword.trim() !== "" ? body.adminPassword.trim() : "123456",
             role: "ADMINISTRADOR",
             active: true,
           },

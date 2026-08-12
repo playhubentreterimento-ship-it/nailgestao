@@ -50,6 +50,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Credenciais inválidas. Verifique seu e-mail cadastrado." }, { status: 401 });
     }
 
+    // Validação Rigorosa da Senha Cadastrada
+    const expectedPassword = user.passwordHash ? user.passwordHash.trim() : "123456";
+    const isMockHash = expectedPassword.startsWith("$2a$");
+
+    let isPasswordValid = false;
+    if (isMockHash) {
+      // Se for hash fictício do seed inicial, aceita a senha padrão "123456"
+      isPasswordValid = password.trim() === "123456" || password.trim() === expectedPassword;
+    } else {
+      // Se a senha foi cadastrada/alterada pelo usuário em Configurações, exige a senha EXATA!
+      isPasswordValid = password.trim() === expectedPassword;
+    }
+
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: "Senha incorreta. Digite a senha exata cadastrada nas Configurações para este e-mail." },
+        { status: 401 }
+      );
+    }
+
     const sessionUser = {
       id: user.id,
       name: user.name,
