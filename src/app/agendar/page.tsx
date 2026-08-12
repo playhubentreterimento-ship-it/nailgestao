@@ -339,9 +339,9 @@ export default function AgendarPublicPage() {
 
             <div className="pt-4 flex justify-center">
               {(() => {
-                const rawTarget = salon?.whatsapp || salon?.phone || "";
-                const cleanDigits = rawTarget.replace(/\D/g, "");
-                const targetPhone = cleanDigits.length >= 10 && !cleanDigits.startsWith("55") ? `55${cleanDigits}` : cleanDigits || "5511999998888";
+                const rawTarget = salon?.activeWhatsApp || salon?.whatsapp || salon?.phone || selectedProf?.phone || "";
+                const digits = rawTarget.replace(/\D/g, "");
+                const targetPhone = digits.length >= 10 && !digits.startsWith("55") ? `55${digits}` : digits;
                 
                 let formattedDateStr = selectedDate;
                 if (selectedDate && selectedDate.includes("-")) {
@@ -349,7 +349,7 @@ export default function AgendarPublicPage() {
                   if (parts.length === 3) formattedDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
 
-                const waText = encodeURIComponent(`Olá! ✨ Fiz meu agendamento online de ${selectedService?.name || "serviço"} para o dia ${formattedDateStr} às ${selectedTime}.`);
+                const waText = encodeURIComponent(`Olá! ✨ Fiz meu agendamento online de ${selectedService?.name || "serviço"} no ${salon?.name || "salão"} para o dia ${formattedDateStr} às ${selectedTime}.`);
 
                 return (
                   <a

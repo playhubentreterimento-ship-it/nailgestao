@@ -7,11 +7,27 @@ export async function GET() {
     let salon = await prisma.salon.findFirst().catch(() => null);
     if (!salon) {
       salon = await prisma.salon.create({
-        data: { id: "default-salon", name: "Studio Luxe Nail Designer" },
+        data: { id: "default-salon", name: "Studio Selma Gloor" },
       }).catch(() => null);
     }
 
-    return NextResponse.json(salon || { id: "default-salon", name: "Studio Luxe Nail Designer", ownerName: "Juliana Silva" });
+    const firstProf = await prisma.professional.findFirst({
+      where: { salonId: "default-salon" },
+      orderBy: { createdAt: "asc" },
+    });
+
+    let rawPhone = salon?.whatsapp || salon?.phone || firstProf?.phone || "";
+    // Se o telefone do salao ainda for o valor inicial de teste, usar o telefone cadastrado da profissional
+    if ((!rawPhone || rawPhone.includes("987654321") || rawPhone.includes("999998888")) && firstProf?.phone) {
+      rawPhone = firstProf.phone;
+    }
+
+    const activeWhatsApp = formatPhoneWithDDI(rawPhone);
+
+    return NextResponse.json({
+      ...(salon || { id: "default-salon", name: "Studio Selma Gloor" }),
+      activeWhatsApp,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
