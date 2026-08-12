@@ -1,31 +1,83 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Calendar, Clock, User, CheckCircle, MessageSquare, QrCode } from "lucide-react";
+import { Sparkles, Calendar, Clock, User, CheckCircle, MessageSquare, QrCode, AlertCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 
 export default function AgendarPublicPage() {
   const [salon, setSalon] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
+  const [existingAppointments, setExistingAppointments] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [selectedProf, setSelectedProf] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedTime, setSelectedTime] = useState("14:00");
+  const [selectedTime, setSelectedTime] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<number>(1);
   const [confirmedApp, setConfirmedApp] = useState<any>(null);
+  const [bookingError, setBookingError] = useState<string>("");
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSalon);
     fetch("/api/services").then((r) => r.json()).then((res) => setServices(res.services || []));
-    fetch("/api/professionals").then((r) => r.json()).then(setProfessionals);
+    fetch("/api/professionals").then((r) => r.json()).then((res) => {
+      setProfessionals(res || []);
+      if (res && res.length > 0) setSelectedProf(res[0]);
+    });
   }, []);
+
+  // Buscar agendamentos existentes quando a data ou a profissional selecionada muda
+  useEffect(() => {
+    if (!selectedDate) return;
+    const profId = selectedProf?.id || "all";
+    fetch(`/api/appointments?date=${selectedDate}&professionalId=${profId}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => setExistingAppointments(Array.isArray(data) ? data : []))
+      .catch(() => setExistingAppointments([]));
+  }, [selectedDate, selectedProf]);
+
+  // Converter horário "HH:mm" para minutos desde 00:00
+  const timeToMins = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  // Verificar se o slot (e sua duração) está 100% livre sem sobreposição
+  const isSlotAvailable = (slot: string) => {
+    if (!selectedProf) return true;
+    const duration = selectedService?.durationMinutes || 60;
+    const slotStart = timeToMins(slot);
+    const slotEnd = slotStart + duration;
+
+    // Verificar choque com agendamentos ativos da profissional
+    const hasConflict = existingAppointments.some((app) => {
+      if (app.status === "CANCELADO") return false;
+      if (app.professionalId !== selectedProf.id) return false;
+
+      const appStart = timeToMins(app.startTime);
+      const appEnd = app.endTime ? timeToMins(app.endTime) : appStart + (app.totalDurationMinutes || 60);
+
+      // Duas faixas de tempo [slotStart, slotEnd) e [appStart, appEnd) colidem se:
+      return slotStart < appEnd && slotEnd > appStart;
+    });
+
+    return !hasConflict;
+  };
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !selectedProf || !name || !phone) return;
+    setBookingError("");
+    if (!selectedService || !selectedProf || !name || !phone || !selectedTime) {
+      setBookingError("Por favor, preencha todos os campos e selecione um horário válido.");
+      return;
+    }
+
+    if (!isSlotAvailable(selectedTime)) {
+      setBookingError("🛑 Este horário já foi reservado ou entra em conflito com outro agendamento. Escolha outro horário livre.");
+      return;
+    }
 
     // Criar cliente ou buscar existente
     const cliRes = await fetch("/api/clients", {
@@ -49,18 +101,24 @@ export default function AgendarPublicPage() {
       }),
     });
 
-    const app = await appRes.json();
-    setConfirmedApp(app);
-    setStep(4);
-
-    try {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    } catch (err) {}
+    if (appRes.ok) {
+      const app = await appRes.json();
+      setConfirmedApp(app);
+      setStep(4);
+      try {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      } catch (err) {}
+    } else {
+      const err = await appRes.json();
+      setBookingError(err.error || "Erro ao realizar agendamento.");
+    }
   };
 
-  const times = [
-    "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
-    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+  const timeSlots = [
+    "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+    "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+    "18:00", "18:30", "19:00"
   ];
 
   return (
@@ -89,6 +147,7 @@ export default function AgendarPublicPage() {
                   key={srv.id}
                   onClick={() => {
                     setSelectedService(srv);
+                    setSelectedTime("");
                     setStep(2);
                   }}
                   className={`cursor-pointer flex items-center justify-between rounded-2xl border p-4 transition ${
@@ -114,62 +173,94 @@ export default function AgendarPublicPage() {
             <button onClick={() => setStep(1)} className="text-xs font-bold text-rose-600 hover:underline">
               &larr; Voltar para Escolha de Serviço
             </button>
+
+            <div className="rounded-2xl bg-rose-50 p-3 text-xs font-semibold text-rose-900 flex justify-between items-center">
+              <span>💅 Serviço: <strong>{selectedService?.name}</strong></span>
+              <span>⏱️ <strong>{selectedService?.durationMinutes} min</strong></span>
+            </div>
+
             <h2 className="font-serif text-lg font-bold text-slate-900 dark:text-white text-center">
-              Passo 2 de 3: Profissional & Horário
+              Passo 2 de 3: Profissional, Data & Horário
             </h2>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Escolha a Profissional</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {professionals.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => setSelectedProf(p)}
+                    onClick={() => {
+                      setSelectedProf(p);
+                      setSelectedTime("");
+                    }}
                     className={`rounded-2xl border p-3 text-center transition text-xs font-bold ${
-                      selectedProf?.id === p.id ? "border-rose-500 bg-rose-50 text-rose-800 dark:bg-slate-800 dark:text-rose-300" : "border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800"
+                      selectedProf?.id === p.id ? "border-rose-500 bg-rose-50 text-rose-900 font-bold dark:bg-slate-800 dark:text-rose-300" : "border-slate-100 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
                     }`}
                   >
-                    {p.name}
+                    👩‍🎨 {p.name}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Data</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Data do Atendimento</label>
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full rounded-2xl border p-3 text-xs font-bold dark:bg-slate-800"
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setSelectedTime("");
+                }}
+                className="w-full rounded-2xl border border-slate-200 p-3 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Horários Disponíveis</label>
-              <div className="grid grid-cols-4 gap-2">
-                {times.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setSelectedTime(t)}
-                    className={`rounded-xl border p-2.5 text-xs font-bold transition ${
-                      selectedTime === t ? "border-amber-500 bg-amber-500 text-white" : "border-slate-100 bg-slate-50 dark:bg-slate-800"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Horários Disponíveis (Necessário {selectedService?.durationMinutes || 60} min vagos)
+                </label>
+                <span className="text-[10px] font-bold text-slate-400">🟢 Livre | 🔴 Ocupado</span>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1">
+                {timeSlots.map((slot) => {
+                  const available = isSlotAvailable(slot);
+                  const isSelected = selectedTime === slot;
+
+                  return (
+                    <button
+                      key={slot}
+                      disabled={!available}
+                      onClick={() => setSelectedTime(slot)}
+                      className={`rounded-xl border p-2.5 text-xs font-bold transition flex flex-col items-center justify-center ${
+                        !available
+                          ? "border-slate-200 bg-slate-100 text-slate-400 line-through cursor-not-allowed opacity-60"
+                          : isSelected
+                          ? "border-amber-500 bg-amber-500 text-white shadow-md"
+                          : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-300"
+                      }`}
+                    >
+                      <span>{slot}</span>
+                      <span className="text-[9px] font-normal">
+                        {available ? "🟢 Livre" : "🔴 Ocupado"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <button
               onClick={() => {
                 if (!selectedProf) return alert("Selecione a profissional.");
+                if (!selectedTime) return alert("Por favor, clique e selecione um horário livre verde.");
                 setStep(3);
               }}
-              className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-xs font-bold text-white shadow-lg"
+              className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3 text-xs font-bold text-white shadow-lg hover:opacity-95"
             >
-              Continuar para Seus Dados &rarr;
+              Continuar para Seus Dados ({selectedTime || "Selecione o horário"}) &rarr;
             </button>
           </div>
         )}
@@ -178,44 +269,54 @@ export default function AgendarPublicPage() {
         {step === 3 && (
           <div className="rounded-3xl border border-rose-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
             <button onClick={() => setStep(2)} className="text-xs font-bold text-rose-600 hover:underline">
-              &larr; Voltar
+              &larr; Voltar para Escolha de Horário
             </button>
             <h2 className="font-serif text-lg font-bold text-slate-900 dark:text-white text-center">
               Passo 3 de 3: Seus Dados de Contato
             </h2>
 
+            {bookingError && (
+              <div className="rounded-2xl bg-rose-100 p-3 text-xs font-bold text-rose-800 flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <span>{bookingError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleBooking} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold">Seu Nome Completo *</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300">Seu Nome Completo *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Maria Fernanda Rossi..."
-                  className="mt-1 w-full rounded-2xl border p-3 font-medium outline-none dark:bg-slate-800"
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-bold">Seu WhatsApp *</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300">Seu WhatsApp *</label>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(11) 99999-8888"
-                  className="mt-1 w-full rounded-2xl border p-3 font-medium outline-none dark:bg-slate-800"
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 />
               </div>
 
-              <div className="rounded-2xl bg-rose-50 p-4 font-semibold text-rose-900 dark:bg-slate-800 dark:text-rose-200">
-                Resumo: {selectedService?.name} dia {selectedDate} às {selectedTime} com {selectedProf?.name}. Total: R$ {(selectedService?.promoPrice || selectedService?.price)?.toFixed(2)}
+              <div className="rounded-2xl bg-rose-50 p-4 font-semibold text-rose-900 dark:bg-slate-800 dark:text-rose-200 space-y-1">
+                <div>💅 <strong>Serviço:</strong> {selectedService?.name} ({selectedService?.durationMinutes} min)</div>
+                <div>📅 <strong>Data:</strong> {selectedDate.split("-").reverse().join("/")} às <strong>{selectedTime}</strong></div>
+                <div>👩‍🎨 <strong>Profissional:</strong> {selectedProf?.name}</div>
+                <div className="pt-1 text-sm font-bold font-serif text-rose-600">Total: R$ {(selectedService?.promoPrice || selectedService?.price)?.toFixed(2)}</div>
               </div>
 
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg"
+                className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
               >
                 FINALIZAR AGENDAMENTO AGORA ✨
               </button>

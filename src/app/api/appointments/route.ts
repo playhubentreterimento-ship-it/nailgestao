@@ -105,6 +105,35 @@ export async function POST(req: Request) {
     const endMins = endMinutesTotal % 60;
     const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
 
+    // Helper para converter HH:mm em minutos desde meia-noite
+    const timeToMins = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    // Trava de Choque de Horários: Verificar agendamentos ativos que sobreponham o intervalo [startMinutes, endMinutesTotal)
+    const existingApps = await prisma.appointment.findMany({
+      where: {
+        salonId: "default-salon",
+        professionalId,
+        date,
+        status: { notIn: ["CANCELADO"] },
+      },
+    });
+
+    const hasConflict = existingApps.some((app) => {
+      const appStartMins = timeToMins(app.startTime);
+      const appEndMins = app.endTime ? timeToMins(app.endTime) : appStartMins + (app.totalDurationMinutes || 60);
+      return startMinutes < appEndMins && endMinutesTotal > appStartMins;
+    });
+
+    if (hasConflict) {
+      return NextResponse.json(
+        { error: "🛑 Este horário (ou parte dele durante a duração do serviço) já está reservado para esta profissional. Por favor, escolha outro horário livre." },
+        { status: 400 }
+      );
+    }
+
     // Criar agendamento no banco
     const appointment = await prisma.appointment.create({
       data: {
