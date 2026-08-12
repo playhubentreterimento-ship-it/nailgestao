@@ -194,36 +194,39 @@ export default function AgendaPage() {
   };
 
   const handleToggleLunchBlock = async () => {
-    const existingBlock = appointments.find(
-      (a) => a.status === "BLOQUEADO" && a.startTime === "11:00" && a.date === selectedDate
+    const unlockedEntry = appointments.find(
+      (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
     );
 
-    if (existingBlock) {
-      if (confirm(`Remover o bloqueio de almoço do dia ${selectedDate}? O horário (11:00 às 13:00) voltará a ficar totalmente livre!`)) {
-        await fetch(`/api/appointments?id=${existingBlock.id}`, { method: "DELETE" });
-        alert("✨ Bloqueio de almoço removido! Horários das 11h às 13h liberados.");
+    if (unlockedEntry) {
+      if (confirm(`Bloquear novamente o horário de almoço (11:00 às 13:00) no dia ${selectedDate}?`)) {
+        await fetch(`/api/appointments?id=${unlockedEntry.id}`, { method: "DELETE" });
+        alert("🍱 Horário de almoço (11h-13h) bloqueado com sucesso na agenda!");
         loadAgenda();
       }
     } else {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "BLOCK_LUNCH",
-          date: selectedDate,
-          professionalId: filterProf,
-          startTime: "11:00",
-          endTime: "13:00",
-          notes: "🍱 Pausa de Almoço",
-        }),
-      });
+      if (confirm(`Liberar manualmente o horário de almoço (11:00 às 13:00) para agendamentos no dia ${selectedDate}?`)) {
+        const res = await fetch("/api/appointments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: "system-lunch",
+            professionalId: filterProf !== "all" ? filterProf : (professionals[0]?.id || "prof-default"),
+            date: selectedDate,
+            startTime: "11:00",
+            endTime: "13:00",
+            status: "ALMOCO_LIBERADO",
+            notes: "LIBERADO_ALMOCO",
+            serviceIds: [],
+          }),
+        });
 
-      if (res.ok) {
-        alert("✨ Horário de Almoço (11h às 13h) bloqueado com sucesso na agenda!");
-        loadAgenda();
-      } else {
-        const err = await res.json();
-        alert("Erro ao bloquear horário: " + (err.error || "Erro no servidor"));
+        if (res.ok) {
+          alert("🔓 Horário de Almoço (11h às 13h) LIBERADO com sucesso para o dia " + selectedDate + "!");
+          loadAgenda();
+        } else {
+          alert("Erro ao liberar horário de almoço.");
+        }
       }
     }
   };
@@ -338,20 +341,20 @@ export default function AgendaPage() {
 
           {/* Botão de Bloqueio/Liberação de Almoço */}
           {(() => {
-            const isLunchBlocked = appointments.some(
-              (a) => a.status === "BLOQUEADO" && a.startTime === "11:00" && a.date === selectedDate
+            const isLunchUnlocked = appointments.some(
+              (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
             );
             return (
               <button
                 onClick={handleToggleLunchBlock}
                 className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
-                  isLunchBlocked
-                    ? "bg-slate-800 text-amber-300 border border-amber-400 hover:bg-slate-700"
-                    : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-200"
+                  isLunchUnlocked
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+                    : "bg-slate-800 text-amber-300 border border-amber-400 hover:bg-slate-700"
                 }`}
-                title="Bloquear ou Liberar o horário de almoço (11:00 às 13:00) nesta data"
+                title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
               >
-                <span>{isLunchBlocked ? "🔓 Liberar Almoço (11h-13h)" : "🍱 Bloquear Almoço (11h-13h)"}</span>
+                <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
               </button>
             );
           })()}

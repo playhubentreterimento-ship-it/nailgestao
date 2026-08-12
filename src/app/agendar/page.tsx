@@ -38,10 +38,30 @@ export default function AgendarPublicPage() {
       .catch(() => setExistingAppointments([]));
   }, [selectedDate, selectedProf]);
 
+  const getBrowserTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getBrowserCurrentMins = () => {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  };
+
   // Converter horário "HH:mm" para minutos desde 00:00
   const timeToMins = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
+  };
+
+  // Verificar se o almoço foi liberado manualmente pelo admin nesta data
+  const isLunchUnlockedOnDate = () => {
+    return existingAppointments.some(
+      (app) => app.notes?.includes("LIBERADO_ALMOCO") || app.status === "ALMOCO_LIBERADO"
+    );
   };
 
   // Verificar se o slot (e sua duração) está 100% livre sem sobreposição
@@ -51,15 +71,31 @@ export default function AgendarPublicPage() {
     const slotStart = timeToMins(slot);
     const slotEnd = slotStart + duration;
 
-    // Verificar choque com agendamentos ativos da profissional
+    // 1. Horários passados para o dia de hoje no fuso local
+    const todayStr = getBrowserTodayString();
+    if (selectedDate === todayStr) {
+      const currentMins = getBrowserCurrentMins();
+      if (slotStart <= currentMins) return false;
+    }
+
+    // 2. Horário de Almoço (11:00 = 660 mins, 13:00 = 780 mins)
+    // Bloqueado por padrão em TODOS OS DIAS, exceto se houver liberação manual do salão
+    const isLunchUnlocked = isLunchUnlockedOnDate();
+    if (!isLunchUnlocked) {
+      if (slotStart < 780 && slotEnd > 660) {
+        return false;
+      }
+    }
+
+    // 3. Verificar choque com agendamentos ativos da profissional
     const hasConflict = existingAppointments.some((app) => {
       if (app.status === "CANCELADO") return false;
-      if (app.professionalId !== selectedProf.id) return false;
+      if (app.notes?.includes("LIBERADO_ALMOCO") || app.status === "ALMOCO_LIBERADO") return false;
+      if (app.professionalId !== selectedProf.id && app.professionalId !== "ALL") return false;
 
       const appStart = timeToMins(app.startTime);
       const appEnd = app.endTime ? timeToMins(app.endTime) : appStart + (app.totalDurationMinutes || 60);
 
-      // Duas faixas de tempo [slotStart, slotEnd) e [appStart, appEnd) colidem se:
       return slotStart < appEnd && slotEnd > appStart;
     });
 
@@ -115,7 +151,7 @@ export default function AgendarPublicPage() {
   };
 
   const timeSlots = [
-    "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+    "08:00", "08:30", "09:00", "09:30",
     "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
     "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
     "18:00", "18:30", "19:00"
@@ -224,32 +260,55 @@ export default function AgendarPublicPage() {
                 <span className="text-[10px] font-bold text-slate-400">🟢 Livre | 🔴 Ocupado</span>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1">
-                {timeSlots.map((slot) => {
-                  const available = isSlotAvailable(slot);
-                  const isSelected = selectedTime === slot;
+              {(() => {
+                const todayStr = getBrowserTodayString();
+                const isToday = selectedDate === todayStr;
+                const currentMins = getBrowserCurrentMins();
 
+                const visibleSlots = timeSlots.filter((slot) => {
+                  if (!isToday) return true;
+                  return timeToMins(slot) > currentMins;
+                });
+
+                if (visibleSlots.length === 0) {
                   return (
-                    <button
-                      key={slot}
-                      disabled={!available}
-                      onClick={() => setSelectedTime(slot)}
-                      className={`rounded-xl border p-2.5 text-xs font-bold transition flex flex-col items-center justify-center ${
-                        !available
-                          ? "border-slate-200 bg-slate-100 text-slate-400 line-through cursor-not-allowed opacity-60"
-                          : isSelected
-                          ? "border-amber-500 bg-amber-500 text-white shadow-md"
-                          : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-300"
-                      }`}
-                    >
-                      <span>{slot}</span>
-                      <span className="text-[9px] font-normal">
-                        {available ? "🟢 Livre" : "🔴 Ocupado"}
-                      </span>
-                    </button>
+                    <div className="rounded-2xl bg-amber-50 p-4 text-center text-xs font-bold text-amber-900 border border-amber-200">
+                      ⏰ Os horários de atendimento para hoje ({selectedDate.split("-").reverse().join("/")}) já encerraram. Por favor, selecione uma nova data a partir de amanhã no calendário acima!
+                    </div>
                   );
-                })}
-              </div>
+                }
+
+                return (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1">
+                    {visibleSlots.map((slot) => {
+                      const available = isSlotAvailable(slot);
+                      const isSelected = selectedTime === slot;
+                      const slotStart = timeToMins(slot);
+                      const isLunchSlot = slotStart >= 660 && slotStart < 780 && !isLunchUnlockedOnDate();
+
+                      return (
+                        <button
+                          key={slot}
+                          disabled={!available}
+                          onClick={() => setSelectedTime(slot)}
+                          className={`rounded-xl border p-2.5 text-xs font-bold transition flex flex-col items-center justify-center ${
+                            !available
+                              ? "border-slate-200 bg-slate-100 text-slate-400 line-through cursor-not-allowed opacity-60"
+                              : isSelected
+                              ? "border-amber-500 bg-amber-500 text-white shadow-md"
+                              : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-300"
+                          }`}
+                        >
+                          <span>{slot}</span>
+                          <span className="text-[9px] font-normal">
+                            {isLunchSlot ? "🍱 Almoço" : available ? "🟢 Livre" : "🔴 Ocupado"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
             <button
