@@ -52,6 +52,35 @@ export default function FinanceiroPage() {
     loadFinance();
   };
 
+  const handleResetFinancials = async () => {
+    if (
+      confirm(
+        "⚠️ Tem certeza que deseja ZERAR todas as métricas financeiras, despesas e extratos?\n\nEsta ação limpará todo o histórico de teste para que os seus números fiquem 100% zerados!"
+      )
+    ) {
+      const res = await fetch("/api/finance?action=reset_all", { method: "DELETE" });
+      if (res.ok) {
+        alert("✨ Métricas e histórico financeiro zerados com sucesso!");
+        loadFinance();
+      } else {
+        const err = await res.json();
+        alert("Erro ao zerar dados: " + err.error);
+      }
+    }
+  };
+
+  const handleDeleteExpense = async (id: string, name: string) => {
+    if (confirm(`Tem certeza que deseja excluir a despesa "${name}"?`)) {
+      const res = await fetch(`/api/finance?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadFinance();
+      } else {
+        const err = await res.json();
+        alert("Erro ao excluir despesa: " + err.error);
+      }
+    }
+  };
+
   const { summary, expenses, commissionsByProfessional } = data || {};
 
   return (
@@ -66,13 +95,23 @@ export default function FinanceiroPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowExpenseModal(true)}
-          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-200 hover:opacity-95 dark:shadow-none"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Cadastrar Nova Despesa</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleResetFinancials}
+            className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-white/90 px-3.5 py-2.5 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-50 dark:border-slate-800 dark:bg-slate-900 dark:text-rose-400"
+            title="Zerar todas as despesas e métricas de teste"
+          >
+            <span>🗑️ Zerar Dados / Métricas</span>
+          </button>
+
+          <button
+            onClick={() => setShowExpenseModal(true)}
+            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-200 hover:opacity-95 dark:shadow-none"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Cadastrar Nova Despesa</span>
+          </button>
+        </div>
       </div>
 
       {/* DRE GERENCIAL (RESUMO) */}
@@ -175,14 +214,23 @@ export default function FinanceiroPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {exp.status === "PENDENTE" && (
+                    <div className="flex items-center justify-end space-x-2">
+                      {exp.status === "PENDENTE" && (
+                        <button
+                          onClick={() => handlePayExpense(exp.id)}
+                          className="rounded-lg bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-700"
+                        >
+                          Dar Baixa (Pagar)
+                        </button>
+                      )}
                       <button
-                        onClick={() => handlePayExpense(exp.id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white shadow-sm hover:bg-emerald-700"
+                        onClick={() => handleDeleteExpense(exp.id, exp.name)}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+                        title="Excluir despesa"
                       >
-                        Dar Baixa (Pagar)
+                        🗑️ Excluir
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -53,17 +53,41 @@ export async function GET() {
 
     return NextResponse.json({
       summary: {
-        inflow: totalInflow || 14750.0,
-        cardFees: totalCardFees || 285.5,
-        expenses: totalExpenses || 4830.0,
-        commissions: totalCommissions || 3640.0,
-        profit: netProfit || 5994.5,
+        inflow: totalInflow,
+        cardFees: totalCardFees,
+        expenses: totalExpenses,
+        commissions: totalCommissions,
+        profit: netProfit,
       },
       expenses,
       commissions,
       commissionsByProfessional: commissionsByProf,
       transactions,
     });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const action = searchParams.get("action");
+
+    if (action === "reset_all") {
+      await prisma.expense.deleteMany({ where: { salonId: "default-salon" } });
+      await prisma.commission.deleteMany({ where: { salonId: "default-salon" } });
+      await prisma.cashTransaction.deleteMany({ where: { salonId: "default-salon" } });
+      return NextResponse.json({ success: true, message: "Todas as despesas e métricas financeiras foram zeradas com sucesso!" });
+    }
+
+    if (id) {
+      await prisma.expense.delete({ where: { id } });
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "ID ou ação é obrigatório." }, { status: 400 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

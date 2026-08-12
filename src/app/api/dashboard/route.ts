@@ -89,14 +89,14 @@ export async function GET() {
         appointments: todayAppointments,
       },
       month: {
-        totalRevenue: monthRevenue || 14750.0,
-        estimatedProfit: (monthRevenue || 14750.0) * 0.58, // ~58% margem de lucro
-        totalAttendances: totalAttendances || 84,
-        averageTicket: averageTicket || 175.6,
-        newClients: newClients || 14,
-        recurringClients: recurringClients || 62,
-        cancellationCount: cancellationCount || 3,
-        noShowCount: noShowCount || 1,
+        totalRevenue: monthRevenue,
+        estimatedProfit: monthRevenue * 0.58, // ~58% margem de lucro
+        totalAttendances: totalAttendances,
+        averageTicket: averageTicket,
+        newClients: newClients,
+        recurringClients: recurringClients,
+        cancellationCount: cancellationCount,
+        noShowCount: noShowCount,
       },
       charts: {
         paymentMethods: paymentMethodsData,
