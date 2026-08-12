@@ -34,6 +34,11 @@ export default function LoginPage() {
     }
   };
 
+  const handleQuickLogin = (userEmail: string, userPass: string) => {
+    setEmail(userEmail);
+    setPassword(userPass);
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 p-4">
       <div className="w-full max-w-md rounded-3xl border border-rose-500/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
@@ -43,6 +48,15 @@ export default function LoginPage() {
           </div>
           <h1 className="mt-3 font-serif text-2xl font-bold text-white">NAILGESTÃO Pro</h1>
           <p className="text-xs text-rose-300">Sistema Profissional de Gestão & Agendamentos</p>
+        </div>
+
+        {/* Card Informativo com Credenciais Master */}
+        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-rose-500/10 p-3 text-center">
+          <p className="text-[11px] font-bold text-amber-300">👑 Credenciais de Acesso Master Administradora:</p>
+          <div className="mt-1 text-xs font-mono font-semibold text-white space-y-0.5">
+            <p>E-mail: <span className="text-amber-200">juliana@studioluxe.com.br</span></p>
+            <p>Senha: <span className="text-amber-200">123456</span></p>
+          </div>
         </div>
 
         {error && (
@@ -60,7 +74,8 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 py-3 text-white outline-none focus:ring-2 focus:ring-rose-400"
+                placeholder="seu.email@salão.com"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 py-3 text-white outline-none focus:ring-2 focus:ring-rose-400 placeholder:text-slate-500"
                 required
               />
             </div>
@@ -74,7 +89,8 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 py-3 text-white outline-none focus:ring-2 focus:ring-rose-400"
+                placeholder="••••••••"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 py-3 text-white outline-none focus:ring-2 focus:ring-rose-400 placeholder:text-slate-500"
                 required
               />
             </div>
@@ -88,6 +104,27 @@ export default function LoginPage() {
             <ArrowRight className="h-4 w-4" />
           </button>
         </form>
+
+        {/* Atalhos Rápidos */}
+        <div className="mt-6 border-t border-white/10 pt-4 text-center">
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Entrar rapidamente como:</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("juliana@studioluxe.com.br", "123456")}
+              className="rounded-xl border border-amber-400/40 bg-amber-500/10 py-2 font-bold text-amber-300 hover:bg-amber-500/20 transition"
+            >
+              👑 Administradora
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("selma@studioluxe.com.br", "123456")}
+              className="rounded-xl border border-rose-400/40 bg-rose-500/10 py-2 font-bold text-rose-300 hover:bg-rose-500/20 transition"
+            >
+              💅 Colaboradora
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
