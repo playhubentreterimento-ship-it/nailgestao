@@ -317,7 +317,7 @@ export default function AgendaPage() {
     AGENDADO: "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950 dark:text-blue-200",
     CONFIRMADO: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200",
     AGUARDANDO_CONFIRMACAO: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200",
-    EM_ATENDIMENTO: "bg-rose-100 text-rose-900 border-rose-400 animate-pulse dark:bg-rose-950 dark:text-rose-200",
+    EM_ATENDIMENTO: "bg-purple-600 text-white font-extrabold border-2 border-purple-800 shadow-md animate-pulse dark:bg-purple-900 dark:text-purple-100 dark:border-purple-400",
     CONCLUIDO: "bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950 dark:text-teal-200",
     BLOQUEADO: "bg-[#1E293B] text-amber-300 border-2 border-amber-400/90 font-bold shadow-md dark:bg-[#151F2D] dark:text-amber-200",
     CANCELADO: "bg-slate-200 text-slate-600 line-through dark:bg-slate-800 dark:text-slate-400",
@@ -568,22 +568,27 @@ export default function AgendaPage() {
                         {ongoingApps.map((app) => (
                           <div
                             key={"ongoing-" + app.id}
-                            className="flex items-center justify-between rounded-xl border border-amber-300/80 bg-amber-50/80 p-3 shadow-sm dark:border-amber-900/60 dark:bg-slate-800/80"
+                            className="flex items-center justify-between rounded-2xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-3 shadow-md dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90"
                           >
                             <div className="flex items-center space-x-2.5">
-                              <span className="text-sm">⏳</span>
+                              <span className="text-base">⏳</span>
                               <div>
-                                <p className="text-xs font-extrabold text-[#6B1615] dark:text-amber-200">
-                                  Atendimento em Andamento &mdash; Ocupado até {app.endTime}
-                                </p>
-                                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                <div className="flex items-center space-x-2">
+                                  <span className="bg-purple-700 text-white px-2 py-0.5 rounded-md font-extrabold text-[9px] uppercase tracking-wider">
+                                    ATENDIMENTO EM ANDAMENTO
+                                  </span>
+                                  <span className="text-xs font-extrabold text-purple-950 dark:text-purple-200">
+                                    Ocupado até {app.endTime}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs font-bold text-purple-950 dark:text-slate-100">
                                   {app.clientName} ({app.services?.map((s: any) => s.serviceName).join(", ")}) &bull; 👩 {app.professionalName}
                                 </p>
                               </div>
                             </div>
                             <button
                               onClick={() => handleOpenEditModal(app)}
-                              className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300 underline shrink-0"
+                              className="rounded-lg bg-purple-200 px-3 py-1.5 text-[11px] font-extrabold text-purple-900 hover:bg-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800 shrink-0 shadow-sm"
                             >
                               ✏️ Editar
                             </button>
@@ -722,15 +727,23 @@ export default function AgendaPage() {
                             ) : hasOngoing ? (
                               <div
                                 onClick={() => handleOpenEditModal(profOngoingApp)}
-                                className="rounded-xl border border-amber-300/80 bg-amber-50/80 p-2 text-xs shadow-sm cursor-pointer hover:bg-amber-100/80 transition dark:border-amber-900/60 dark:bg-slate-800/80"
-                                title="Clique para editar este atendimento"
+                                className="rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-2.5 text-xs shadow-md cursor-pointer hover:border-purple-600 transition dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90"
+                                title="Clique para editar este atendimento em andamento"
                               >
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[9px] font-extrabold uppercase text-amber-800 dark:text-amber-300">⏳ EM ANDAMENTO</span>
-                                  <span className="text-[9px] font-extrabold text-slate-600 dark:text-slate-300">até {profOngoingApp.endTime}</span>
+                                  <span className="bg-purple-700 text-white px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider">
+                                    ⏳ EM ANDAMENTO
+                                  </span>
+                                  <span className="text-[9px] font-extrabold text-purple-950 dark:text-purple-200">
+                                    até {profOngoingApp.endTime}
+                                  </span>
                                 </div>
-                                <p className="font-serif text-xs font-extrabold mt-0.5 text-slate-900 dark:text-white truncate">{profOngoingApp.clientName}</p>
-                                <p className="text-[9px] font-bold text-slate-600 dark:text-slate-300 truncate">💅 {profOngoingApp.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                                <p className="font-serif text-xs font-extrabold mt-1 text-slate-900 dark:text-white truncate">
+                                  {profOngoingApp.clientName}
+                                </p>
+                                <p className="text-[9px] font-bold text-purple-900 dark:text-slate-300 truncate">
+                                  💅 {profOngoingApp.services?.map((s: any) => s.serviceName).join(", ")}
+                                </p>
                               </div>
                             ) : (
                             <button
