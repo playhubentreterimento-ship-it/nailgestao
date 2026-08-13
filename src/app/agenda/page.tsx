@@ -83,7 +83,7 @@ export default function AgendaPage() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Form de Agendamento
+  // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
   const [formProf, setFormProf] = useState("");
   const [formDate, setFormDate] = useState(getTodayString());
@@ -92,6 +92,66 @@ export default function AgendaPage() {
   const [formDiscount, setFormDiscount] = useState<number>(0);
   const [formDeposit, setFormDeposit] = useState<number>(50);
   const [formNotes, setFormNotes] = useState("");
+
+  // Form de Edição de Agendamento
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editingApp, setEditingApp] = useState<any>(null);
+  const [editProf, setEditProf] = useState("");
+  const [editDate, setEditDate] = useState(getTodayString());
+  const [editTime, setEditTime] = useState("10:00");
+  const [editSelectedServices, setEditSelectedServices] = useState<string[]>([]);
+  const [editDiscount, setEditDiscount] = useState<number>(0);
+  const [editDeposit, setEditDeposit] = useState<number>(0);
+  const [editNotes, setEditNotes] = useState("");
+
+  const handleOpenEditModal = (app: any) => {
+    setEditingApp(app);
+    setEditProf(app.professionalId);
+    setEditDate(app.date);
+    setEditTime(app.startTime);
+    setEditSelectedServices(app.services ? app.services.map((s: any) => s.serviceId) : []);
+    setEditDiscount(app.discount || 0);
+    setEditDeposit(app.depositPaid || 0);
+    setEditNotes(app.notes || "");
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingApp || editSelectedServices.length === 0) {
+      alert("Por favor, selecione ao menos 1 serviço.");
+      return;
+    }
+
+    const res = await fetch("/api/appointments", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingApp.id,
+        professionalId: editProf,
+        date: editDate,
+        startTime: editTime,
+        serviceIds: editSelectedServices,
+        discount: Number(editDiscount),
+        depositPaid: Number(editDeposit),
+        notes: editNotes,
+      }),
+    });
+
+    if (res.ok) {
+      sendLocalPushNotification(
+        "✏️ Agendamento Alterado!",
+        `Serviços/valores de ${editingApp.clientName} foram atualizados com sucesso.`,
+        "/agenda"
+      );
+      setShowEditModal(false);
+      setEditingApp(null);
+      refreshAllData();
+    } else {
+      const err = await res.json();
+      alert("Erro ao editar agendamento: " + err.error);
+    }
+  };
 
   const loadAgenda = () => {
     setLoading(true);
@@ -459,6 +519,13 @@ export default function AgendaPage() {
                               </span>
                               <div className="flex items-center space-x-2">
                                 <button
+                                  onClick={() => handleOpenEditModal(app)}
+                                  className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-amber-300 hover:text-amber-200' : 'text-amber-700 hover:text-amber-900 dark:text-amber-300'}`}
+                                  title="Editar serviços, preços ou profissional"
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
                                   onClick={() => handleCancelAppointment(app)}
                                   className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
                                   title="Cancelar e liberar este horário"
@@ -566,12 +633,21 @@ export default function AgendaPage() {
                                   <p className="font-serif text-xs font-extrabold mt-1 text-slate-900 dark:text-white">{app.clientName}</p>
                                   <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">💅 {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
                                   <div className="mt-2 flex items-center justify-between border-t border-black/10 dark:border-white/10 pt-1.5 text-[10px] font-extrabold">
-                                    <button
-                                      onClick={() => handleCancelAppointment(app)}
-                                      className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
-                                    >
-                                      🗑️ Excluir
-                                    </button>
+                                    <div className="flex items-center space-x-1.5">
+                                      <button
+                                        onClick={() => handleOpenEditModal(app)}
+                                        className="text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
+                                        title="Editar serviços ou valores"
+                                      >
+                                        ✏️ Editar
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelAppointment(app)}
+                                        className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
+                                      >
+                                        🗑️ Excluir
+                                      </button>
+                                    </div>
                                     {app.status !== "CONCLUIDO" && (
                                       <button
                                         onClick={() => handleFinishAppointment(app.id)}
@@ -1149,6 +1225,196 @@ export default function AgendaPage() {
                   className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2.5 font-bold text-white shadow-md shadow-rose-200 hover:opacity-95"
                 >
                   Confirmar Agendamento &rarr;
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL DE EDIÇÃO DE AGENDAMENTO ==================== */}
+      {showEditModal && editingApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-amber-300 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div>
+                <h3 className="font-serif text-lg font-extrabold text-[#6B1615] dark:text-amber-200">
+                  ✏️ Editar Agendamento &mdash; {editingApp.clientName}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                  Altere os serviços, profissional, desconto ou horário se a cliente mudou de ideia.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAppointment} className="mt-4 space-y-4 text-xs font-semibold">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {/* Profissional */}
+                <div>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Profissional *</label>
+                  <select
+                    value={editProf}
+                    onChange={(e) => setEditProf(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    {professionals.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Data */}
+                <div>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Data *</label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+
+                {/* Horário */}
+                <div>
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Horário de Início *</label>
+                  <select
+                    value={editTime}
+                    onChange={(e) => setEditTime(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    {timeSlots.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Multi-Serviços */}
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                  Serviços Selecionados (Marque ou desmarque conforme escolha da cliente) *
+                </label>
+                <div className="max-h-44 space-y-2 overflow-y-auto rounded-2xl border border-slate-300 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/80">
+                  {services.map((s) => {
+                    const isChecked = editSelectedServices.includes(s.id);
+                    return (
+                      <label
+                        key={s.id}
+                        className={`flex items-center justify-between rounded-xl p-2.5 transition border ${
+                          isChecked
+                            ? "bg-rose-100 text-rose-900 border-rose-300 font-extrabold dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800"
+                            : "bg-white text-slate-900 font-bold border-slate-200 hover:bg-rose-50 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditSelectedServices([...editSelectedServices, s.id]);
+                              } else {
+                                setEditSelectedServices(editSelectedServices.filter((id) => id !== s.id));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-400"
+                          />
+                          <span className="text-xs">{s.name} ({s.durationMinutes} min)</span>
+                        </div>
+                        <span className="text-xs font-serif font-extrabold text-rose-600 dark:text-rose-400">
+                          R$ {(s.promoPrice || s.price).toFixed(2)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Resumo Financeiro Recalculado */}
+              {(() => {
+                const selObjs = services.filter((s) => editSelectedServices.includes(s.id));
+                const dur = selObjs.reduce((acc, s) => acc + s.durationMinutes, 0);
+                const sub = selObjs.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+                const tot = Math.max(0, sub - editDiscount);
+                const rem = Math.max(0, tot - editDeposit);
+
+                return (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
+                    <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <div>Nova Duração: <span className="font-extrabold text-rose-600 dark:text-rose-400">{dur} min</span></div>
+                      <div>Novo Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {sub.toFixed(2)}</span></div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
+                        <input
+                          type="number"
+                          value={editDiscount}
+                          onChange={(e) => setEditDiscount(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
+                        <input
+                          type="number"
+                          value={editDeposit}
+                          onChange={(e) => setEditDeposit(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
+                        <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                          R$ {rem.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 border-t border-amber-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
+                      Novo Valor Total: R$ {tot.toFixed(2)}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Observações */}
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Observações / Motivo da Alteração</label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Ex: Cliente alterou para Manicure + Esmaltação na hora do atendimento..."
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  rows={2}
+                />
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
+                >
+                  💾 Salvar Alterações &rarr;
                 </button>
               </div>
             </form>

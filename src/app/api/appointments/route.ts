@@ -276,18 +276,88 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, status, notes, date, startTime } = body;
+    const {
+      id,
+      status,
+      notes,
+      date,
+      startTime,
+      professionalId,
+      serviceIds,
+      discount,
+      depositPaid,
+    } = body;
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
+    const existingApp = await prisma.appointment.findUnique({
+      where: { id },
+      include: { services: true },
+    });
+
+    if (!existingApp) {
+      return NextResponse.json({ error: "Agendamento não encontrado." }, { status: 404 });
+    }
+
+    const updateData: any = {};
+
+    if (status) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (date) updateData.date = date;
+    if (startTime) updateData.startTime = startTime;
+    if (professionalId) updateData.professionalId = professionalId;
+
+    if (serviceIds && Array.isArray(serviceIds) && serviceIds.length > 0) {
+      const services = await prisma.service.findMany({
+        where: { id: { in: serviceIds } },
+      });
+
+      if (services.length > 0) {
+        const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
+        const subtotal = services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+        const disc = discount !== undefined ? Number(discount) : existingApp.discount || 0;
+        const dep = depositPaid !== undefined ? Number(depositPaid) : existingApp.depositPaid || 0;
+        const total = Math.max(0, subtotal - disc);
+        const remainingAmount = Math.max(0, total - dep);
+
+        const currentStart = startTime || existingApp.startTime;
+        const [hours, minutes] = currentStart.split(":").map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutesTotal = startMinutes + totalDuration;
+        const endHours = Math.floor(endMinutesTotal / 60);
+        const endMins = endMinutesTotal % 60;
+        const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+        updateData.totalDurationMinutes = totalDuration;
+        updateData.subtotal = subtotal;
+        updateData.discount = disc;
+        updateData.depositPaid = dep;
+        updateData.total = total;
+        updateData.remainingAmount = remainingAmount;
+        updateData.endTime = endTime;
+
+        await prisma.appointmentService.deleteMany({
+          where: { appointmentId: id },
+        });
+
+        updateData.services = {
+          create: services.map((s) => ({
+            serviceId: s.id,
+            serviceName: s.name,
+            price: s.promoPrice || s.price,
+            durationMinutes: s.durationMinutes,
+          })),
+        };
+      }
+    } else {
+      if (discount !== undefined) updateData.discount = Number(discount);
+      if (depositPaid !== undefined) updateData.depositPaid = Number(depositPaid);
+    }
+
     const updated = await prisma.appointment.update({
       where: { id },
-      data: {
-        ...(status ? { status } : {}),
-        ...(notes ? { notes } : {}),
-        ...(date ? { date } : {}),
-        ...(startTime ? { startTime } : {}),
-      },
+      data: updateData,
+      include: { services: true },
     });
 
     return NextResponse.json(updated);
