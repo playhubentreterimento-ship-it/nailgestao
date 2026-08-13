@@ -75,6 +75,15 @@ export async function GET() {
 
     const insights = await generateSalonInsights();
 
+    const clients = await prisma.client.findMany({ where: { salonId: salon.id } });
+    const professionals = await prisma.professional.findMany({ where: { salonId: salon.id } });
+
+    const populatedTodayAppointments = todayAppointments.map((app) => ({
+      ...app,
+      clientName: clients.find((c) => c.id === app.clientId)?.name || "Cliente",
+      professionalName: professionals.find((p) => p.id === app.professionalId)?.name || "Profissional",
+    }));
+
     return NextResponse.json({
       salon,
       today: {
@@ -86,7 +95,7 @@ export async function GET() {
         freeSlots: Math.max(0, 16 - occupiedSlotsToday), // 16 horários totais por dia
         canceledCount: canceledToday,
         unconfirmedCount: unconfirmedToday,
-        appointments: todayAppointments,
+        appointments: populatedTodayAppointments,
       },
       month: {
         totalRevenue: monthRevenue,

@@ -384,14 +384,14 @@ export default function DashboardPage() {
                   <tr key={app.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                     <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-white">{app.startTime} - {app.endTime}</td>
                     <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
-                      Maria Fernanda Rossi
+                      {app.clientName || "Cliente"}
                     </td>
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
-                      {app.services?.map((s: any) => s.serviceName).join(", ") || "Alongamento Fibra"}
+                      {app.services?.map((s: any) => s.serviceName).join(", ") || "Procedimento"}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                        Juliana Silva
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                        {app.professionalName || "Profissional"}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
