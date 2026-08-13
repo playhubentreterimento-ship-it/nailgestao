@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
+import { registerServiceWorker, requestNotificationPermission, sendLocalPushNotification } from "@/lib/notifications";
 
 interface HeaderProps {
   userRole?: string | null;
@@ -27,8 +28,15 @@ export function Header({ userRole }: HeaderProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
+  const [pushStatus, setPushStatus] = useState<string>("default");
 
   useEffect(() => {
+    registerServiceWorker();
+
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushStatus(Notification.permission);
+    }
+
     fetch("/api/settings")
       .then((res) => res.json())
       .then((data) => setSalon(data))
@@ -49,6 +57,11 @@ export function Header({ userRole }: HeaderProps) {
       { id: "3", title: "🎂 Aniversariante Hoje", message: "Fernanda Lima completa ano hoje!", type: "INFO", time: "Hoje" },
     ]);
   }, []);
+
+  const handleEnablePush = async () => {
+    const perm = await requestNotificationPermission();
+    setPushStatus(perm);
+  };
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -158,13 +171,32 @@ export function Header({ userRole }: HeaderProps) {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-rose-100 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <div className="mb-3 flex items-center justify-between border-b pb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+            <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-rose-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="mb-3 flex items-center justify-between border-b border-rose-100 pb-2 dark:border-slate-800">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
                   Notificações do Salão
                 </h3>
-                <span className="text-[10px] text-rose-600 font-semibold">{notifications.length} novas</span>
+                <span className="text-[10px] text-rose-600 font-extrabold">{notifications.length} novas</span>
               </div>
+
+              {/* Banner Ativação de Pop-up Push no Celular */}
+              <div className="mb-3 rounded-xl bg-gradient-to-br from-rose-50 to-amber-50 p-2.5 border border-rose-200/80 dark:from-slate-800 dark:to-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-extrabold text-[#6B1615] dark:text-amber-200">📲 Pop-ups no Celular</p>
+                    <p className="text-[9px] font-semibold text-slate-600 dark:text-rose-100">
+                      {pushStatus === "granted" ? "🟢 Ativadas para este celular" : "Ative para receber avisos instantâneos"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleEnablePush}
+                    className="rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-sm hover:opacity-95"
+                  >
+                    {pushStatus === "granted" ? "Testar 🔔" : "Ativar Pop-up 🔔"}
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 {notifications.map((n) => (
                   <div

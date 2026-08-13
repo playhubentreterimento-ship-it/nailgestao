@@ -20,6 +20,7 @@ import {
   Phone,
   Check,
 } from "lucide-react";
+import { sendLocalPushNotification } from "@/lib/notifications";
 
 const getTodayString = () => {
   const now = new Date();
@@ -158,10 +159,18 @@ export default function AgendaPage() {
     });
 
     if (res.ok) {
-      alert("✨ Agendamento criado com sucesso! Lembrete enviado via WhatsApp.");
+      const clientObj = clients.find((c) => c.id === formClient);
+      sendLocalPushNotification(
+        "💅 Novo Agendamento!",
+        `Cliente: ${clientObj?.name || "Cliente"} | Horário: ${formTime} | Data: ${formDate}`,
+        "/agenda"
+      );
       setShowModal(false);
-      setSelectedDate(formDate);
-      loadAgenda();
+      setFormSelectedServices([]);
+      setFormNotes("");
+      setFormDiscount(0);
+      setFormDeposit(0);
+      refreshAllData();
     } else {
       const err = await res.json();
       alert("Erro ao agendar: " + err.error);
