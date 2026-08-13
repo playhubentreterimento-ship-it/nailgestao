@@ -10,10 +10,10 @@ export default function GiftCardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+        <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
           🎁 Vales-Presente (Gift Cards)
         </h2>
-        <p className="text-xs text-rose-100/90 font-medium">
+        <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
           Emissão e resgate de cartões de presente com código único e acompanhamento de saldo.
         </p>
       </div>

@@ -103,10 +103,10 @@ export default function ServicosPage() {
       {/* Header da Página */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+          <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
             Serviços & Tabela de Preços
           </h2>
-          <p className="text-xs text-rose-100/90 font-medium">
+          <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
             Cadastro de procedimentos de Nail Designer, categorias, duração e comissões.
           </p>
         </div>

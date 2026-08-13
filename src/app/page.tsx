@@ -116,10 +116,10 @@ export default function DashboardPage() {
       {/* 1. RESUMO DO DIA */}
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#6B1615] dark:text-amber-200">
             ☀️ Resumo de Hoje ({new Date().toLocaleDateString("pt-BR")})
           </h3>
-          <Link href="/agenda" className="text-xs font-semibold text-slate-500 hover:text-rose-600 dark:text-slate-400">
+          <Link href="/agenda" className="text-xs font-bold text-slate-700 hover:text-[#6B1615] dark:text-slate-300">
             Ver Agenda Completa &rarr;
           </Link>
         </div>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
 
       {/* 2. RESUMO DO MÊS */}
       <div>
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <h3 className="mb-3 text-xs font-extrabold uppercase tracking-wider text-[#6B1615] dark:text-amber-200">
           📊 Desempenho Consolidado do Mês
         </h3>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

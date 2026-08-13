@@ -63,10 +63,10 @@ export default function WhatsAppHubPage() {
       {/* Header */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+          <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
             WhatsApp Automation Hub
           </h2>
-          <p className="text-xs text-rose-100/90 font-medium">
+          <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
             Conexão com WhatsApp API, disparo com DDI 55 automático e confirmações de presença.
           </p>
         </div>

@@ -15,10 +15,10 @@ export default function InsightsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+        <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
           💡 Central de IA & Insights de Negócios
         </h2>
-        <p className="text-xs text-rose-100/90 font-medium">
+        <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
           Análise inteligente contínua dos dados do seu salão com sugestões de crescimento.
         </p>
       </div>

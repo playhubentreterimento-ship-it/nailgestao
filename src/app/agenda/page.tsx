@@ -244,7 +244,7 @@ export default function AgendaPage() {
     AGUARDANDO_CONFIRMACAO: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200",
     EM_ATENDIMENTO: "bg-rose-100 text-rose-900 border-rose-400 animate-pulse dark:bg-rose-950 dark:text-rose-200",
     CONCLUIDO: "bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950 dark:text-teal-200",
-    BLOQUEADO: "bg-slate-800 text-amber-300 border-amber-400 font-bold dark:bg-slate-900 dark:text-amber-200",
+    BLOQUEADO: "bg-[#1E293B] text-amber-300 border-2 border-amber-400/90 font-bold shadow-md dark:bg-[#151F2D] dark:text-amber-200",
     CANCELADO: "bg-slate-200 text-slate-600 line-through dark:bg-slate-800 dark:text-slate-400",
     NAO_COMPARECEU: "bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950 dark:text-orange-200",
   };
@@ -280,13 +280,42 @@ export default function AgendaPage() {
       {/* Header & Controles da Agenda */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+          <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
             Agenda Interativa
           </h2>
-          <p className="text-xs text-rose-100/90 font-medium">
+          <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
             Gerenciamento visual de atendimentos, confirmações e resumos por período.
           </p>
         </div>
+
+        {/* Botão de Bloqueio/Liberação de Almoço */}
+        {(() => {
+          const isLunchUnlocked = appointments.some(
+            (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
+          );
+          return (
+            <button
+              onClick={handleToggleLunchBlock}
+              className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+                isLunchUnlocked
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+                  : "bg-slate-900 text-amber-300 border-2 border-amber-400 hover:bg-slate-800"
+              }`}
+              title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
+            >
+              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
+            </button>
+          );
+        })()}
+
+        <button
+          onClick={() => handleOpenModal()}
+          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Novo Agendamento</span>
+        </button>
+      </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Seletor de data */}
@@ -367,7 +396,6 @@ export default function AgendaPage() {
             <span>Novo Agendamento</span>
           </button>
         </div>
-      </div>
 
       {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
       {viewMode === "day" && (
@@ -406,28 +434,32 @@ export default function AgendaPage() {
                         {slotApps.map((app) => (
                           <div
                             key={app.id}
-                            className={`flex flex-col justify-between rounded-xl border p-3 shadow-sm ${statusColors[app.status] || "bg-white"}`}
+                            className={`flex flex-col justify-between rounded-xl border p-3 shadow-sm ${statusColors[app.status] || "bg-white text-slate-900"}`}
                           >
                             <div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold uppercase tracking-wider">{app.status}</span>
-                                <span className="text-xs font-bold">R$ {app.total?.toFixed(2)}</span>
+                              <div className="flex items-center justify-between border-b pb-1.5 mb-1.5 border-black/10 dark:border-white/10">
+                                <span className={`text-[10px] font-extrabold uppercase tracking-wider ${app.status === 'BLOQUEADO' ? 'text-amber-300' : ''}`}>{app.status}</span>
+                                <span className={`text-xs font-extrabold ${app.status === 'BLOQUEADO' ? 'text-amber-300' : ''}`}>R$ {app.total?.toFixed(2)}</span>
                               </div>
-                              <h4 className="mt-1 font-serif text-sm font-bold text-slate-900 dark:text-white">{app.clientName}</h4>
-                              <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                              <h4 className={`mt-1 font-serif text-sm font-extrabold ${app.status === 'BLOQUEADO' ? 'text-amber-200' : 'text-slate-900 dark:text-white'}`}>
+                                {app.clientName}
+                              </h4>
+                              <p className={`text-xs font-bold ${app.status === 'BLOQUEADO' ? 'text-rose-200' : 'text-slate-800 dark:text-slate-200'}`}>
                                 💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                               </p>
-                              <p className="mt-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                              <p className={`mt-1 text-[11px] font-semibold ${app.status === 'BLOQUEADO' ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'}`}>
                                 👩 {app.professionalName} ({app.totalDurationMinutes} min)
                               </p>
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-2 text-[11px] font-bold text-slate-800">
-                              <span>Sinal: R$ {app.depositPaid?.toFixed(2)}</span>
+                            <div className="mt-3 flex items-center justify-between border-t border-black/10 dark:border-white/10 pt-2 text-[11px] font-extrabold">
+                              <span className={app.status === 'BLOQUEADO' ? 'text-slate-200' : 'text-slate-800 dark:text-slate-200'}>
+                                Sinal: R$ {app.depositPaid?.toFixed(2)}
+                              </span>
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={() => handleCancelAppointment(app)}
-                                  className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline font-bold"
+                                  className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
                                   title="Cancelar e liberar este horário"
                                 >
                                   🗑️ Excluir
@@ -435,7 +467,7 @@ export default function AgendaPage() {
                                 {app.status !== "CONCLUIDO" && (
                                   <button
                                     onClick={() => handleFinishAppointment(app.id)}
-                                    className="underline hover:opacity-80 text-emerald-800 dark:text-emerald-300 font-bold"
+                                    className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-800 dark:text-emerald-300'}`}
                                   >
                                     Finalizar &rarr;
                                   </button>

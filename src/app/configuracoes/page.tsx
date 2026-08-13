@@ -182,10 +182,10 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+        <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
           ⚙️ Configurações, Equipe & Logins
         </h2>
-        <p className="text-xs text-rose-100/90 font-medium">
+        <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
           Altere dados do salão, cadastre atendentes, defina emails/senhas e altere comissões.
         </p>
       </div>
