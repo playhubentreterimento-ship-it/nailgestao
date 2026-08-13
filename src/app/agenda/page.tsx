@@ -30,6 +30,12 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const timeToMins = (t: string) => {
+  if (!t || !t.includes(":")) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
 // Auxiliar para obter o intervalo da semana (Segunda a Domingo)
 function getWeekDays(dateStr: string) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -473,8 +479,20 @@ export default function AgendaPage() {
           {/* Linha do Tempo Visual */}
           <div className="space-y-3">
             {timeSlots.map((slot) => {
-              const slotApps = appointments.filter((a) => a.startTime === slot);
-              const isBusy = slotApps.length > 0;
+              const slotMins = timeToMins(slot);
+
+              const startingApps = appointments.filter(
+                (a) => a.startTime === slot && a.status !== "CANCELADO"
+              );
+
+              const ongoingApps = appointments.filter((a) => {
+                if (a.status === "CANCELADO" || a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO") return false;
+                const startMins = timeToMins(a.startTime);
+                const endMins = a.endTime ? timeToMins(a.endTime) : startMins + (a.totalDurationMinutes || 60);
+                return slotMins > startMins && slotMins < endMins;
+              });
+
+              const isBusy = startingApps.length > 0 || ongoingApps.length > 0;
 
               return (
                 <div
@@ -492,7 +510,8 @@ export default function AgendaPage() {
                   <div className="flex-1">
                     {isBusy ? (
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {slotApps.map((app) => (
+                        {/* Agendamentos que Iniciam neste Horário */}
+                        {startingApps.map((app) => (
                           <div
                             key={app.id}
                             className={`flex flex-col justify-between rounded-xl border p-3 shadow-sm ${statusColors[app.status] || "bg-white text-slate-900"}`}
@@ -509,7 +528,7 @@ export default function AgendaPage() {
                                 💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                               </p>
                               <p className={`mt-1 text-[11px] font-semibold ${app.status === 'BLOQUEADO' ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'}`}>
-                                👩 {app.professionalName} ({app.totalDurationMinutes} min)
+                                👩 {app.professionalName} ({app.startTime} até {app.endTime})
                               </p>
                             </div>
 
@@ -542,6 +561,32 @@ export default function AgendaPage() {
                                 )}
                               </div>
                             </div>
+                          </div>
+                        ))}
+
+                        {/* Agendamentos em Andamento (Período Ocupado pela Duração do Serviço) */}
+                        {ongoingApps.map((app) => (
+                          <div
+                            key={"ongoing-" + app.id}
+                            className="flex items-center justify-between rounded-xl border border-amber-300/80 bg-amber-50/80 p-3 shadow-sm dark:border-amber-900/60 dark:bg-slate-800/80"
+                          >
+                            <div className="flex items-center space-x-2.5">
+                              <span className="text-sm">⏳</span>
+                              <div>
+                                <p className="text-xs font-extrabold text-[#6B1615] dark:text-amber-200">
+                                  Atendimento em Andamento &mdash; Ocupado até {app.endTime}
+                                </p>
+                                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                  {app.clientName} ({app.services?.map((s: any) => s.serviceName).join(", ")}) &bull; 👩 {app.professionalName}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleOpenEditModal(app)}
+                              className="text-[11px] font-extrabold text-amber-800 dark:text-amber-300 underline shrink-0"
+                            >
+                              ✏️ Editar
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -605,62 +650,89 @@ export default function AgendaPage() {
 
               {/* Linhas de Horários em Colunas */}
               <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {timeSlots.map((slot) => (
-                  <div key={slot} className="grid grid-cols-[90px_repeat(auto-fit,minmax(210px,1fr))] gap-3 py-2.5 items-start">
-                    <div className="font-serif text-xs font-extrabold text-slate-800 dark:text-slate-200 pt-2">
-                      ⏰ {slot}
-                    </div>
+                {timeSlots.map((slot) => {
+                  const slotMins = timeToMins(slot);
 
-                    {professionals.map((prof) => {
-                      const profSlotApps = appointments.filter(
-                        (a) => a.professionalId === prof.id && a.startTime === slot
-                      );
-                      const hasApp = profSlotApps.length > 0;
+                  return (
+                    <div key={slot} className="grid grid-cols-[90px_repeat(auto-fit,minmax(210px,1fr))] gap-3 py-2.5 items-start">
+                      <div className="font-serif text-xs font-extrabold text-slate-800 dark:text-slate-200 pt-2">
+                        ⏰ {slot}
+                      </div>
 
-                      return (
-                        <div key={prof.id} className="min-h-[48px]">
-                          {hasApp ? (
-                            <div className="space-y-2">
-                              {profSlotApps.map((app) => (
-                                <div
-                                  key={app.id}
-                                  className={`rounded-xl border p-2.5 shadow-sm text-xs ${statusColors[app.status] || "bg-white text-slate-900"}`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[9px] font-extrabold uppercase tracking-wider">{app.status}</span>
-                                    <span className="text-[10px] font-extrabold">R$ {app.total?.toFixed(2)}</span>
-                                  </div>
-                                  <p className="font-serif text-xs font-extrabold mt-1 text-slate-900 dark:text-white">{app.clientName}</p>
-                                  <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">💅 {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
-                                  <div className="mt-2 flex items-center justify-between border-t border-black/10 dark:border-white/10 pt-1.5 text-[10px] font-extrabold">
-                                    <div className="flex items-center space-x-1.5">
-                                      <button
-                                        onClick={() => handleOpenEditModal(app)}
-                                        className="text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
-                                        title="Editar serviços ou valores"
-                                      >
-                                        ✏️ Editar
-                                      </button>
-                                      <button
-                                        onClick={() => handleCancelAppointment(app)}
-                                        className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
-                                      >
-                                        🗑️ Excluir
-                                      </button>
+                      {professionals.map((prof) => {
+                        const profStartingApps = appointments.filter(
+                          (a) => a.professionalId === prof.id && a.startTime === slot && a.status !== "CANCELADO"
+                        );
+
+                        const profOngoingApp = appointments.find((a) => {
+                          if (a.professionalId !== prof.id) return false;
+                          if (a.status === "CANCELADO" || a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO") return false;
+                          const startMins = timeToMins(a.startTime);
+                          const endMins = a.endTime ? timeToMins(a.endTime) : startMins + (a.totalDurationMinutes || 60);
+                          return slotMins > startMins && slotMins < endMins;
+                        });
+
+                        const hasStarting = profStartingApps.length > 0;
+                        const hasOngoing = Boolean(profOngoingApp);
+
+                        return (
+                          <div key={prof.id} className="min-h-[48px]">
+                            {hasStarting ? (
+                              <div className="space-y-2">
+                                {profStartingApps.map((app) => (
+                                  <div
+                                    key={app.id}
+                                    className={`rounded-xl border p-2.5 shadow-sm text-xs ${statusColors[app.status] || "bg-white text-slate-900"}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-extrabold uppercase tracking-wider">{app.status}</span>
+                                      <span className="text-[10px] font-extrabold">R$ {app.total?.toFixed(2)}</span>
                                     </div>
-                                    {app.status !== "CONCLUIDO" && (
-                                      <button
-                                        onClick={() => handleFinishAppointment(app.id)}
-                                        className="text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 underline"
-                                      >
-                                        Finalizar &rarr;
-                                      </button>
-                                    )}
+                                    <p className="font-serif text-xs font-extrabold mt-1 text-slate-900 dark:text-white">{app.clientName}</p>
+                                    <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">💅 {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                                    <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">⏱️ {app.startTime} até {app.endTime}</p>
+                                    <div className="mt-2 flex items-center justify-between border-t border-black/10 dark:border-white/10 pt-1.5 text-[10px] font-extrabold">
+                                      <div className="flex items-center space-x-1.5">
+                                        <button
+                                          onClick={() => handleOpenEditModal(app)}
+                                          className="text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
+                                          title="Editar serviços ou valores"
+                                        >
+                                          ✏️ Editar
+                                        </button>
+                                        <button
+                                          onClick={() => handleCancelAppointment(app)}
+                                          className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
+                                        >
+                                          🗑️ Excluir
+                                        </button>
+                                      </div>
+                                      {app.status !== "CONCLUIDO" && (
+                                        <button
+                                          onClick={() => handleFinishAppointment(app.id)}
+                                          className="text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 underline"
+                                        >
+                                          Finalizar &rarr;
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
+                                ))}
+                              </div>
+                            ) : hasOngoing ? (
+                              <div
+                                onClick={() => handleOpenEditModal(profOngoingApp)}
+                                className="rounded-xl border border-amber-300/80 bg-amber-50/80 p-2 text-xs shadow-sm cursor-pointer hover:bg-amber-100/80 transition dark:border-amber-900/60 dark:bg-slate-800/80"
+                                title="Clique para editar este atendimento"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] font-extrabold uppercase text-amber-800 dark:text-amber-300">⏳ EM ANDAMENTO</span>
+                                  <span className="text-[9px] font-extrabold text-slate-600 dark:text-slate-300">até {profOngoingApp.endTime}</span>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
+                                <p className="font-serif text-xs font-extrabold mt-0.5 text-slate-900 dark:text-white truncate">{profOngoingApp.clientName}</p>
+                                <p className="text-[9px] font-bold text-slate-600 dark:text-slate-300 truncate">💅 {profOngoingApp.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                              </div>
+                            ) : (
                             <button
                               onClick={() => {
                                 setFormProf(prof.id);
@@ -676,9 +748,10 @@ export default function AgendaPage() {
                       );
                     })}
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
+          </div>
           </div>
         </div>
       )}
