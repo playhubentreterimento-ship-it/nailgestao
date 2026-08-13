@@ -29,6 +29,26 @@ export function Header({ userRole }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [pushStatus, setPushStatus] = useState<string>("default");
+  const [knownAppIds, setKnownAppIds] = useState<Set<string>>(new Set());
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Som agradável de alerta quando um agendamento novo chega no salão
+  const playNotificationSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Re
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // La
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+  };
 
   useEffect(() => {
     registerServiceWorker();
@@ -57,6 +77,64 @@ export function Header({ userRole }: HeaderProps) {
       { id: "3", title: "🎂 Aniversariante Hoje", message: "Fernanda Lima completa ano hoje!", type: "INFO", time: "Hoje" },
     ]);
   }, []);
+
+  // Monitoramento em Tempo Real a cada 8s para Pop-up no Celular
+  useEffect(() => {
+    const checkNewAppointments = async () => {
+      try {
+        const res = await fetch("/api/appointments");
+        if (!res.ok) return;
+        const apps = await res.json();
+        if (!Array.isArray(apps)) return;
+
+        const currentIds = new Set<string>(apps.map((a: any) => a.id));
+
+        if (!isInitialLoad) {
+          const newApps = apps.filter(
+            (a: any) => !knownAppIds.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO"
+          );
+
+          if (newApps.length > 0) {
+            playNotificationSound();
+
+            newApps.forEach((newApp: any) => {
+              const serviceName = newApp.services?.[0]?.serviceName || "Procedimento";
+              const clientName = newApp.clientName || "Cliente";
+              const profName = newApp.professionalName || "";
+              const dateStr = newApp.date ? newApp.date.split("-").reverse().join("/") : "";
+              const title = "💅 NOVO AGENDAMENTO NO SALÃO!";
+              const message = `${clientName} agendou ${serviceName} com ${profName} dia ${dateStr} às ${newApp.startTime}h`;
+
+              // Disparar o Pop-up Nativo no Celular (Android / iOS)
+              sendLocalPushNotification(title, message, "/agenda");
+
+              setNotifications((prev) => [
+                {
+                  id: "app-" + newApp.id,
+                  title: "🔔 Novo Agendamento",
+                  message: `${clientName} agendou ${serviceName} (${newApp.startTime}h)`,
+                  type: "SUCCESS",
+                  time: "Agora",
+                },
+                ...prev,
+              ]);
+            });
+          }
+        } else {
+          setIsInitialLoad(false);
+        }
+
+        setKnownAppIds(currentIds);
+      } catch (err) {
+        console.error("Erro ao verificar novos agendamentos:", err);
+      }
+    };
+
+    checkNewAppointments();
+    const interval = setInterval(checkNewAppointments, 8000);
+
+    return () => clearInterval(interval);
+  }, [isInitialLoad, knownAppIds]);
 
   const handleEnablePush = async () => {
     const perm = await requestNotificationPermission();
