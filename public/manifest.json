@@ -1,15 +1,28 @@
 {
-  "name": "NAILGESTÃO - Gestão para Salão de Nail Designer",
-  "short_name": "NailGestão",
-  "description": "Sistema de Gestão Completo, Agendamento & Financeiro para Studio de Unhas",
+  "name": "NailGestão - Studio Selma Gloor",
+  "short_name": "Selma Gloor",
+  "description": "Sistema de Gestão Completo, Agendamento Online & Financeiro para Studio de Unhas Selma Gloor",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#2B1B2F",
-  "theme_color": "#E0A96D",
+  "orientation": "portrait",
+  "background_color": "#FAF3F0",
+  "theme_color": "#6B1615",
   "icons": [
     {
       "src": "/icon.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ]

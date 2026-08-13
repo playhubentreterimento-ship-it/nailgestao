@@ -3,9 +3,18 @@ import "./globals.css";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 export const metadata: Metadata = {
-  title: "NAILGESTÃO - Sistema Profissional de Gestão para Salão de Nail Designer",
+  title: "NailGestão - Studio Selma Gloor",
   description: "Plataforma completa de agendamento, clientes, financeiro, caixa e automação WhatsApp para estúdios de manicures e junto de unhas.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Selma Gloor",
+  },
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
