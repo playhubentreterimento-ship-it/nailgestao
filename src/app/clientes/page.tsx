@@ -226,10 +226,10 @@ export default function ClientesPage() {
       {/* Header & Controles */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
         <div>
-          <h2 className="font-serif text-2xl font-bold text-amber-200 sm:text-3xl">
+          <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
             Gestão de Clientes & CRM
           </h2>
-          <p className="text-xs text-rose-100/90 font-medium">
+          <p className="text-xs text-slate-700 dark:text-rose-100 font-semibold">
             Ficha técnica de unhas, histórico de atendimentos, galeria de fotos e métricas por cliente.
           </p>
         </div>
@@ -543,134 +543,136 @@ export default function ClientesPage() {
 
       {/* MODAL EDIÇÃO DE DADOS & ANOTAÇÕES DA CLIENTE */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
-              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border-2 border-rose-200/80 dark:bg-[#2D1B24] dark:border-rose-900">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 border-rose-100 dark:border-rose-900/60">
+              <h3 className="font-serif text-lg font-extrabold text-[#6B1615] dark:text-white flex items-center space-x-2">
                 <Edit className="h-5 w-5 text-amber-500" />
                 <span>✏️ Editar Cliente & Anotações</span>
               </h3>
-              <button onClick={() => setShowEditModal(false)} className="rounded-full p-2 text-slate-400">
+              <button onClick={() => setShowEditModal(false)} className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleUpdateClient} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome Completo *</label>
+                <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Nome Completo *</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">WhatsApp / Telefone *</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">WhatsApp / Telefone *</label>
                   <input
                     type="text"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Perfil / Tag</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Perfil / Tag</label>
                   <select
                     value={editTag}
                     onChange={(e) => setEditTag(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                   >
-                    <option value="NOVO">NOVO</option>
-                    <option value="VIP">VIP</option>
-                    <option value="FREQUENTE">FREQUENTE</option>
-                    <option value="INATIVO">INATIVO</option>
+                    <option value="NOVO" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">NOVO</option>
+                    <option value="VIP" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">VIP</option>
+                    <option value="FREQUENTE" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">FREQUENTE</option>
+                    <option value="INATIVO" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">INATIVO</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">E-mail</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">E-mail</label>
                   <input
                     type="email"
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data de Nascimento</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Data de Nascimento</label>
                   <input
                     type="date"
                     value={editBirthDate}
                     onChange={(e) => setEditBirthDate(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                   />
                 </div>
               </div>
 
               {/* Ficha Técnica de Unhas */}
-              <div className="rounded-2xl bg-rose-50/60 p-3.5 border border-rose-100 space-y-3 dark:bg-slate-800 dark:border-slate-700">
-                <h4 className="font-serif font-bold text-rose-800 dark:text-rose-300 text-xs">💅 Ficha Técnica de Unhas</h4>
+              <div className="rounded-2xl bg-[#FAF0EC] p-4 border border-rose-200/80 space-y-3 dark:bg-[#1E121A] dark:border-rose-900/60 shadow-inner">
+                <h4 className="font-serif font-extrabold text-[#6B1615] dark:text-amber-300 text-xs flex items-center space-x-1.5">
+                  <span>💅 Ficha Técnica de Unhas</span>
+                </h4>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-800 dark:text-slate-200">Formato da Unha</label>
+                    <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Formato da Unha</label>
                     <select
                       value={editNailForm}
                       onChange={(e) => setEditNailForm(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#2B1B24] dark:text-white"
                     >
-                      <option value="Amendoado">Amendoado</option>
-                      <option value="Stiletto">Stiletto</option>
-                      <option value="Quadrado">Quadrado</option>
-                      <option value="Bailarina">Bailarina</option>
-                      <option value="Coffin">Coffin</option>
-                      <option value="Oval">Oval</option>
+                      <option value="Amendoado" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Amendoado</option>
+                      <option value="Stiletto" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Stiletto</option>
+                      <option value="Quadrado" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Quadrado</option>
+                      <option value="Bailarina" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Bailarina</option>
+                      <option value="Coffin" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Coffin</option>
+                      <option value="Oval" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Oval</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-800 dark:text-slate-200">Material Utilizado</label>
+                    <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Material Utilizado</label>
                     <select
                       value={editNailMaterial}
                       onChange={(e) => setEditNailMaterial(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#2B1B24] dark:text-white"
                     >
-                      <option value="Gel Moldado">Gel Moldado</option>
-                      <option value="Fibra de Vidro">Fibra de Vidro</option>
-                      <option value="Banho de Gel">Banho de Gel</option>
-                      <option value="Acrigel">Acrigel</option>
-                      <option value="Esmaltação em Gel">Esmaltação em Gel</option>
+                      <option value="Gel Moldado" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Gel Moldado</option>
+                      <option value="Fibra de Vidro" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Fibra de Vidro</option>
+                      <option value="Banho de Gel" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Banho de Gel</option>
+                      <option value="Acrigel" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Acrigel</option>
+                      <option value="Esmaltação em Gel" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Esmaltação em Gel</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-800 dark:text-slate-200">Cor Preferida</label>
+                    <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Cor Preferida</label>
                     <input
                       type="text"
                       value={editNailColor}
                       onChange={(e) => setEditNailColor(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#2B1B24] dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-800 dark:text-slate-200">Tamanho Habitual</label>
+                    <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Tamanho Habitual</label>
                     <input
                       type="text"
                       value={editNailSize}
                       onChange={(e) => setEditNailSize(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#2B1B24] dark:text-white"
                     />
                   </div>
                 </div>
@@ -678,27 +680,27 @@ export default function ClientesPage() {
 
               {/* Anotações e Observações Técnicas */}
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">📝 Anotações & Observações da Cliente</label>
+                <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">📝 Anotações & Observações da Cliente</label>
                 <textarea
                   rows={3}
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Ex: Cliente prefere cuticulagem funda; alérgica a esmalte tradicional; gosta de nail art delicada..."
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-medium text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white placeholder:text-slate-400"
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200"
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2 font-bold text-white shadow-md hover:opacity-95"
+                  className="rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-6 py-2.5 font-bold text-white shadow-md hover:opacity-95"
                 >
                   Salvar Alterações &rarr;
                 </button>
@@ -710,87 +712,87 @@ export default function ClientesPage() {
 
       {/* MODAL NOVO CADASTRO */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
-              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border-2 border-rose-200/80 dark:bg-[#2D1B24] dark:border-rose-900">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 border-rose-100 dark:border-rose-900/60">
+              <h3 className="font-serif text-lg font-extrabold text-[#6B1615] dark:text-white">
                 ✨ Cadastrar Cliente & Ficha de Unhas
               </h3>
-              <button onClick={() => setShowNewModal(false)} className="rounded-full p-2 text-slate-400">
+              <button onClick={() => setShowNewModal(false)} className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateClient} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome Completo *</label>
+                <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Nome Completo *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Maria Eduarda Silva..."
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white placeholder:text-slate-400"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">WhatsApp / Telefone *</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">WhatsApp / Telefone *</label>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(67) 99999-8888"
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white placeholder:text-slate-400"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data Nasc.</label>
+                  <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">Data Nasc.</label>
                   <input
                     type="date"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">E-mail</label>
+                <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">E-mail</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Ex: cliente@email.com"
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white placeholder:text-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">📝 Anotações & Observações</label>
+                <label className="block font-extrabold text-slate-900 dark:text-rose-100 mb-1">📝 Anotações & Observações</label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ex: Prefere esmaltação em gel nude, cutículas sensíveis..."
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 p-2.5 font-medium text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-[#1E121A] dark:text-white placeholder:text-slate-400"
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowNewModal(false)}
-                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200"
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-6 py-2 font-bold text-white shadow-md hover:opacity-95"
+                  className="rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-6 py-2.5 font-bold text-white shadow-md hover:opacity-95"
                 >
                   Salvar Cliente &rarr;
                 </button>

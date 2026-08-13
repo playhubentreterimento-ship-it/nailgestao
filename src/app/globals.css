@@ -5,37 +5,47 @@
     --primary: #831D1C;
     --primary-hover: #6B1615;
     --secondary: #2B1B2F;
-    --accent: #FAF0EE;
+    --accent: #FAF3F0;
     --burgundy: #831D1C;
   }
 }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #831D1C;
-  color: #F8FAFC;
+  background-color: #FAF3F0;
+  color: #1E1B18;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Regra Global: Forçar texto escuro visível em todos os rótulos (labels), inputs, selects e textareas */
-label {
-  color: #0F172A !important;
-  font-weight: 700 !important;
+.dark body {
+  background-color: #2D1B24;
+  color: #FAF3F0;
 }
 
+/* Regra Global: Garantir visibilidade e legibilidade total em inputs e selects em mobile/desktop */
 input, select, textarea {
-  color: #0F172A !important;
-  background-color: #FFFFFF !important;
-  font-weight: 600 !important;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  font-weight: 600;
+}
+
+option {
+  color: #0F172A;
+  background-color: #FFFFFF;
+}
+
+.dark input, .dark select, .dark textarea {
+  color: #FFFFFF;
+  background-color: #1E293B;
+}
+
+.dark option {
+  color: #FFFFFF;
+  background-color: #1E293B;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #94A3B8 !important;
-}
-
-.dark body {
-  background-color: #5C1312;
-  color: #F8FAFC;
+  color: #94A3B8;
 }
 
 /* Scrollbar estilizada */
@@ -56,12 +66,12 @@ input::placeholder, textarea::placeholder {
 
 /* Glassmorphism utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(244, 219, 216, 0.5);
+  border: 1px solid rgba(244, 219, 216, 0.6);
 }
 .dark .glass-panel {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(45, 27, 36, 0.9);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(80, 45, 60, 0.6);
 }

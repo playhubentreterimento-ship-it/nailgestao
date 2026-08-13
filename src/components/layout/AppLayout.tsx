@@ -48,7 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isPublicPage) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-amber-50/50 font-sans text-slate-800 antialiased dark:from-slate-950 dark:to-slate-900 dark:text-slate-100">
+      <div className="min-h-screen bg-gradient-to-b from-[#FAF3F0] via-[#F6EBE5] to-[#EFE0D5] font-sans text-slate-800 antialiased dark:from-[#2D1B24] dark:to-[#1F1219] dark:text-slate-100">
         {children}
       </div>
     );
@@ -56,19 +56,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-rose-50 to-amber-50 dark:from-slate-950 dark:to-slate-900">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#FAF3F0] via-[#F6EBE5] to-[#EFE0D5] dark:from-[#2D1B24] dark:to-[#1F1219]">
         <div className="text-center space-y-3">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-white text-2xl font-bold animate-pulse">
             💅
           </div>
-          <p className="text-xs font-bold text-rose-800 dark:text-rose-300">Autenticando acesso do salão...</p>
+          <p className="text-xs font-bold text-rose-900 dark:text-rose-200">Autenticando acesso do salão...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#FAF3F0] via-[#F6EBE5] to-[#EFE0D5] dark:from-[#2D1B24] dark:to-[#1F1219] text-slate-900 dark:text-slate-100">
       <Header userRole={userRole} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar userRole={userRole} />
@@ -77,6 +77,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <MobileNav userRole={userRole} />
-    </>
+    </div>
   );
 }

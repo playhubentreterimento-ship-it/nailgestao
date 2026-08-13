@@ -91,11 +91,11 @@ export function Sidebar({ userRole }: SidebarProps) {
   const menuGroups = isCollaborator ? collaboratorMenuGroups : adminMenuGroups;
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-rose-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-rose-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-md dark:border-rose-900/50 dark:bg-[#20121C] md:flex">
       <div className="flex flex-1 flex-col space-y-6 overflow-y-auto pr-1">
         {menuGroups.map((group, idx) => (
           <div key={idx} className="space-y-1">
-            <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <h4 className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#6B1615] dark:text-amber-200">
               {group.title}
             </h4>
             {group.items.map((item) => {
@@ -105,13 +105,13 @@ export function Sidebar({ userRole }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group flex items-center space-x-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+                  className={`group flex items-center space-x-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all ${
                     isActive
-                      ? "bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-md shadow-rose-200 dark:shadow-none"
-                      : "text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                      ? "bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-md shadow-rose-200/60 dark:shadow-none"
+                      : "text-slate-700 hover:bg-rose-100/70 hover:text-rose-800 dark:text-slate-200 dark:hover:bg-slate-800/80 dark:hover:text-white"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${isActive ? "text-white" : "text-slate-400 group-hover:text-rose-500"}`} />
+                  <Icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${isActive ? "text-white" : "text-rose-700/70 group-hover:text-rose-800 dark:text-rose-300"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -121,9 +121,9 @@ export function Sidebar({ userRole }: SidebarProps) {
       </div>
 
       {/* Card Suporte / PWA */}
-      <div className="mt-4 rounded-2xl bg-gradient-to-br from-rose-50 to-amber-50 p-3 text-center dark:from-slate-800 dark:to-slate-800/80">
-        <p className="text-xs font-bold text-slate-800 dark:text-white">NAILGESTÃO Pro 💅</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+      <div className="mt-4 rounded-2xl bg-gradient-to-br from-[#FFF5F2] to-[#F5E6E0] p-3 text-center border border-rose-200/80 dark:from-[#2B1B24] dark:to-[#24151E] dark:border-rose-900">
+        <p className="text-xs font-extrabold text-[#6B1615] dark:text-amber-200">NAILGESTÃO Pro 💅</p>
+        <p className="text-[10px] font-semibold text-slate-600 dark:text-rose-100">
           {isCollaborator ? "Acesso Restrito Colaboradora" : "Painel Master Salão"}
         </p>
       </div>
