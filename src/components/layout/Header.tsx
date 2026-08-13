@@ -171,7 +171,7 @@ export function Header({ userRole }: HeaderProps) {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-rose-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="fixed inset-x-3 top-16 z-50 mt-2 max-h-[85vh] overflow-y-auto rounded-3xl border-2 border-rose-200/90 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between border-b border-rose-100 pb-2 dark:border-slate-800">
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
                   Notificações do Salão
@@ -180,19 +180,19 @@ export function Header({ userRole }: HeaderProps) {
               </div>
 
               {/* Banner Ativação de Pop-up Push no Celular */}
-              <div className="mb-3 rounded-xl bg-gradient-to-br from-rose-50 to-amber-50 p-2.5 border border-rose-200/80 dark:from-slate-800 dark:to-slate-800/80">
-                <div className="flex items-center justify-between">
+              <div className="mb-3 rounded-xl bg-gradient-to-br from-rose-50 to-amber-50 p-3 border border-rose-200/80 dark:from-slate-800 dark:to-slate-800/80">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-[11px] font-extrabold text-[#6B1615] dark:text-amber-200">📲 Pop-ups no Celular</p>
                     <p className="text-[9px] font-semibold text-slate-600 dark:text-rose-100">
-                      {pushStatus === "granted" ? "🟢 Ativadas para este celular" : "Ative para receber avisos instantâneos"}
+                      {pushStatus === "granted" ? "🟢 Ativadas para Agendamentos, Estoque e Aniversários" : "Ative para receber alertas de agendamentos, estoque e aniversariantes"}
                     </p>
                   </div>
                   <button
                     onClick={handleEnablePush}
-                    className="rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-sm hover:opacity-95"
+                    className="shrink-0 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 px-3 py-1.5 text-[10px] font-extrabold text-white shadow-sm hover:opacity-95"
                   >
-                    {pushStatus === "granted" ? "Testar 🔔" : "Ativar Pop-up 🔔"}
+                    {pushStatus === "granted" ? "Testar Pop-up 🔔" : "Ativar Pop-up 🔔"}
                   </button>
                 </div>
               </div>
@@ -201,7 +201,11 @@ export function Header({ userRole }: HeaderProps) {
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className="flex items-start space-x-2.5 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60"
+                    onClick={() => {
+                      sendLocalPushNotification(n.title, n.message, "/agenda");
+                    }}
+                    className="flex items-start space-x-2.5 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 cursor-pointer hover:bg-rose-50 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para disparar pop-up de teste no celular"
                   >
                     {n.type === "WARNING" ? (
                       <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
@@ -209,9 +213,9 @@ export function Header({ userRole }: HeaderProps) {
                       <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
                     )}
                     <div>
-                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{n.title}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">{n.message}</p>
-                      <span className="text-[9px] text-slate-400">{n.time}</span>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{n.title}</p>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300">{n.message}</p>
+                      <span className="text-[9px] font-semibold text-slate-400">{n.time} &bull; Toque para ver no celular 📲</span>
                     </div>
                   </div>
                 ))}
