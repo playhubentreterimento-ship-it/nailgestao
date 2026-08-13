@@ -147,13 +147,19 @@ export default function CaixaPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4 text-xs">
-            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800">
-              <span className="text-[10px] text-slate-400">VALOR INICIAL</span>
-              <p className="font-serif font-bold text-slate-900 dark:text-white">R$ {activeRegister.initialAmount?.toFixed(2)}</p>
+            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800 border border-emerald-100 dark:border-slate-700">
+              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">VALOR INICIAL</span>
+              <p className="font-serif font-extrabold text-slate-900 dark:text-white">R$ {activeRegister.initialAmount?.toFixed(2)}</p>
             </div>
-            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800">
-              <span className="text-[10px] text-slate-400">TOTAL DE TRANSAÇÕES</span>
-              <p className="font-serif font-bold text-slate-900 dark:text-white">{activeRegister.transactions?.length || 0} lançamentos</p>
+            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800 border border-emerald-100 dark:border-slate-700">
+              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">TOTAL DE TRANSAÇÕES</span>
+              <p className="font-serif font-extrabold text-slate-900 dark:text-white">{activeRegister.transactions?.length || 0} lançamentos</p>
+            </div>
+            <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 col-span-2">
+              <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300">📊 CAIXA UNIFICADO DO SALÃO</span>
+              <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 mt-0.5">
+                Entradas de todas as profissionais consolidadas no caixa central!
+              </p>
             </div>
           </div>
         </div>

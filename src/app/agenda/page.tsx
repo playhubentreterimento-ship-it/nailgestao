@@ -73,7 +73,7 @@ function getMonthCalendar(dateStr: string) {
 }
 
 export default function AgendaPage() {
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  const [viewMode, setViewMode] = useState<"day" | "columns" | "week" | "month">("day");
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
   const [appointments, setAppointments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
@@ -97,7 +97,7 @@ export default function AgendaPage() {
     setLoading(true);
     let url = `/api/appointments?professionalId=${filterProf}`;
     
-    if (viewMode === "day") {
+    if (viewMode === "day" || viewMode === "columns") {
       url += `&date=${selectedDate}`;
     } else if (viewMode === "week") {
       const weekDays = getWeekDays(selectedDate);
@@ -396,14 +396,6 @@ export default function AgendaPage() {
               </button>
             );
           })()}
-
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Novo Agendamento</span>
-          </button>
         </div>
 
       {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
@@ -501,6 +493,116 @@ export default function AgendaPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== VISUALIZAÇÃO COLUNAS POR PROFISSIONAL ==================== */}
+      {viewMode === "columns" && (
+        <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 dark:border-slate-800 gap-2">
+            <div>
+              <h3 className="font-serif text-lg font-extrabold text-[#6B1615] dark:text-amber-200">
+                👩‍🎨 Grade por Profissional &mdash; {new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+              </h3>
+              <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
+                Cada profissional possui sua própria agenda. Atendimentos simultâneos no mesmo horário são permitidos!
+              </p>
+            </div>
+            <span className="text-xs font-extrabold text-rose-700 dark:text-rose-300 bg-rose-50 px-3 py-1 rounded-xl border border-rose-200 dark:bg-slate-800 dark:border-slate-700">
+              {professionals.length} Cadeiras / Profissionais
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="min-w-[750px]">
+              {/* Cabeçalho das Colunas */}
+              <div className="grid grid-cols-[90px_repeat(auto-fit,minmax(210px,1fr))] gap-3 border-b pb-3 dark:border-slate-800">
+                <div className="font-serif text-xs font-extrabold text-slate-800 dark:text-slate-200 self-center">
+                  Horário
+                </div>
+                {professionals.map((prof) => {
+                  const profAppsToday = appointments.filter((a) => a.professionalId === prof.id);
+                  return (
+                    <div key={prof.id} className="rounded-2xl bg-[#FAF0EC] p-3 border border-rose-200/80 dark:bg-slate-800 dark:border-slate-700 text-center shadow-sm">
+                      <p className="font-serif text-xs font-extrabold text-[#6B1615] dark:text-amber-200">
+                        👩‍🎨 {prof.name}
+                      </p>
+                      <p className="text-[10px] font-extrabold text-slate-600 dark:text-rose-100 mt-0.5">
+                        {profAppsToday.length} agendamentos hoje
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Linhas de Horários em Colunas */}
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {timeSlots.map((slot) => (
+                  <div key={slot} className="grid grid-cols-[90px_repeat(auto-fit,minmax(210px,1fr))] gap-3 py-2.5 items-start">
+                    <div className="font-serif text-xs font-extrabold text-slate-800 dark:text-slate-200 pt-2">
+                      ⏰ {slot}
+                    </div>
+
+                    {professionals.map((prof) => {
+                      const profSlotApps = appointments.filter(
+                        (a) => a.professionalId === prof.id && a.startTime === slot
+                      );
+                      const hasApp = profSlotApps.length > 0;
+
+                      return (
+                        <div key={prof.id} className="min-h-[48px]">
+                          {hasApp ? (
+                            <div className="space-y-2">
+                              {profSlotApps.map((app) => (
+                                <div
+                                  key={app.id}
+                                  className={`rounded-xl border p-2.5 shadow-sm text-xs ${statusColors[app.status] || "bg-white text-slate-900"}`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-extrabold uppercase tracking-wider">{app.status}</span>
+                                    <span className="text-[10px] font-extrabold">R$ {app.total?.toFixed(2)}</span>
+                                  </div>
+                                  <p className="font-serif text-xs font-extrabold mt-1 text-slate-900 dark:text-white">{app.clientName}</p>
+                                  <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">💅 {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                                  <div className="mt-2 flex items-center justify-between border-t border-black/10 dark:border-white/10 pt-1.5 text-[10px] font-extrabold">
+                                    <button
+                                      onClick={() => handleCancelAppointment(app)}
+                                      className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
+                                    >
+                                      🗑️ Excluir
+                                    </button>
+                                    {app.status !== "CONCLUIDO" && (
+                                      <button
+                                        onClick={() => handleFinishAppointment(app.id)}
+                                        className="text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 underline"
+                                      >
+                                        Finalizar &rarr;
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setFormProf(prof.id);
+                                handleOpenModal(selectedDate, slot);
+                              }}
+                              className="w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-2 text-center text-[11px] font-bold text-slate-600 hover:border-rose-400 hover:bg-rose-50/60 hover:text-rose-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800 transition flex items-center justify-center space-x-1"
+                            >
+                              <Plus className="h-3.5 w-3.5 text-rose-500" />
+                              <span>+ Agendar</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
