@@ -1,5 +1,16 @@
 "use client";
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export async function registerServiceWorker() {
   if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     try {
@@ -21,6 +32,42 @@ export function isIOS(): boolean {
 export function isPWA(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+}
+
+export async function subscribeUserToPush() {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    return null;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const res = await fetch("/api/push-subscribe");
+    const { publicKey } = await res.json();
+
+    if (!publicKey) return null;
+
+    const convertedKey = urlBase64ToUint8Array(publicKey);
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey,
+      });
+    }
+
+    await fetch("/api/push-subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: sub }),
+    });
+
+    console.log("Push Subscription VAPID registrada com sucesso!");
+    return sub;
+  } catch (e) {
+    console.error("Erro ao registrar Push Subscription VAPID:", e);
+    return null;
+  }
 }
 
 export async function requestNotificationPermission(): Promise<"granted" | "denied" | "default" | "unsupported"> {
@@ -55,9 +102,10 @@ export async function requestNotificationPermission(): Promise<"granted" | "deni
   }
 
   if (permission === "granted") {
+    await subscribeUserToPush();
     await sendLocalPushNotification(
-      "🔔 Pop-ups Ativados!",
-      "Você receberá alertas instantâneos de novos agendamentos neste celular.",
+      "🔔 Pop-ups VAPID 24h Ativados!",
+      "Seu celular agora receberá alertas instantâneos de novos agendamentos a qualquer momento.",
       "/agenda"
     );
   }
@@ -79,7 +127,6 @@ export async function sendLocalPushNotification(title: string, body: string, url
         }
       }
 
-      // Método 1: Chamada direta via Service Worker Registration (compatível com Android e iOS PWA)
       if (reg && reg.showNotification) {
         await reg.showNotification(title, {
           body,
@@ -91,26 +138,6 @@ export async function sendLocalPushNotification(title: string, body: string, url
           data: { url },
         } as any);
         return;
-      }
-
-      // Método 2: Envio de mensagem para o controller do Service Worker
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: "SHOW_NOTIFICATION",
-          title,
-          body,
-          url,
-        });
-        return;
-      }
-
-      // Método 3: Fallback para Desktop (não usado em mobile pois new Notification lança erro no Android/iOS)
-      if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        new Notification(title, {
-          body,
-          icon: "/icon.png",
-          data: { url },
-        });
       }
     } catch (e) {
       console.error("Erro ao disparar notificação local:", e);

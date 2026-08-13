@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { whatsAppService } from "@/lib/whatsapp/provider";
+import { sendWebPushToAll } from "@/app/api/push-subscribe/route";
 
 export async function GET(req: Request) {
   try {
@@ -255,6 +256,21 @@ export async function POST(req: Request) {
 
     // Disparar lembrete/confirmação automática via WhatsApp
     await whatsAppService.sendConfirmationRequest(appointment.id);
+
+    // Disparar notificação OS Web Push VAPID para os celulares cadastrados (Funciona 24h mesmo com celular bloqueado)
+    try {
+      const clientObj = await prisma.client.findUnique({ where: { id: clientId } });
+      const profObj = await prisma.professional.findUnique({ where: { id: professionalId } });
+      const dateFormatted = date ? date.split("-").reverse().join("/") : date;
+      const srvName = services[0]?.name || "Procedimento";
+
+      const pushTitle = "💅 NOVO AGENDAMENTO NO SALÃO!";
+      const pushMessage = `${clientObj?.name || 'Cliente'} agendou ${srvName} com ${profObj?.name || 'Profissional'} para ${dateFormatted} às ${startTime}h`;
+
+      await sendWebPushToAll(pushTitle, pushMessage, "/agenda");
+    } catch (pushErr) {
+      console.warn("Aviso ao disparar Web Push no servidor:", pushErr);
+    }
 
     // Auditoria
     await prisma.auditLog.create({
