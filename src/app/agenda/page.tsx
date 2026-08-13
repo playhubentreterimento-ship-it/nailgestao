@@ -507,7 +507,7 @@ export default function AgendaPage() {
                     <span className="font-serif text-sm font-bold text-slate-800 dark:text-slate-200">{slot}</span>
                   </div>
 
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     {isBusy ? (
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {/* Agendamentos que Iniciam neste Horário */}
@@ -568,27 +568,27 @@ export default function AgendaPage() {
                         {ongoingApps.map((app) => (
                           <div
                             key={"ongoing-" + app.id}
-                            className="flex items-center justify-between rounded-2xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-3 shadow-md dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90"
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-2xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-3 shadow-md dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90 min-w-0 w-full gap-2"
                           >
-                            <div className="flex items-center space-x-2.5">
-                              <span className="text-base">⏳</span>
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="bg-purple-700 text-white px-2 py-0.5 rounded-md font-extrabold text-[9px] uppercase tracking-wider">
+                            <div className="flex items-start space-x-2 min-w-0 flex-1">
+                              <span className="text-base shrink-0">⏳</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="bg-purple-700 text-white px-1.5 py-0.5 rounded-md font-extrabold text-[9px] uppercase tracking-wider shrink-0">
                                     ATENDIMENTO EM ANDAMENTO
                                   </span>
                                   <span className="text-xs font-extrabold text-purple-950 dark:text-purple-200">
                                     Ocupado até {app.endTime}
                                   </span>
                                 </div>
-                                <p className="mt-1 text-xs font-bold text-purple-950 dark:text-slate-100">
+                                <p className="mt-1 text-xs font-bold text-purple-950 dark:text-slate-100 truncate">
                                   {app.clientName} ({app.services?.map((s: any) => s.serviceName).join(", ")}) &bull; 👩 {app.professionalName}
                                 </p>
                               </div>
                             </div>
                             <button
                               onClick={() => handleOpenEditModal(app)}
-                              className="rounded-lg bg-purple-200 px-3 py-1.5 text-[11px] font-extrabold text-purple-900 hover:bg-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800 shrink-0 shadow-sm"
+                              className="self-end sm:self-center rounded-lg bg-purple-200 px-3 py-1 text-[11px] font-extrabold text-purple-900 hover:bg-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800 shrink-0 shadow-sm"
                             >
                               ✏️ Editar
                             </button>
