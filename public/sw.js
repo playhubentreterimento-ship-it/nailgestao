@@ -6,6 +6,53 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Monitoramento em segundo plano no Service Worker (Roda continuamente mesmo com app minimizado no celular)
+let swKnownIds = new Set();
+let swInitial = true;
+
+async function checkBackgroundAppointments() {
+  try {
+    const res = await fetch('/api/appointments');
+    if (!res.ok) return;
+    const apps = await res.json();
+    if (!Array.isArray(apps)) return;
+
+    const currentIds = new Set(apps.map((a) => a.id));
+
+    if (!swInitial) {
+      const newApps = apps.filter(
+        (a) => !swKnownIds.has(a.id) && a.status !== 'CANCELADO' && a.status !== 'BLOQUEADO'
+      );
+
+      for (const app of newApps) {
+        const title = '💅 NOVO AGENDAMENTO NO SALÃO!';
+        const clientName = app.clientName || 'Cliente';
+        const serviceName = app.services?.[0]?.serviceName || 'Procedimento';
+        const body = `${clientName} agendou ${serviceName} para ${app.date ? app.date.split('-').reverse().join('/') : ''} às ${app.startTime}h`;
+
+        self.registration.showNotification(title, {
+          body,
+          icon: '/icon.png',
+          badge: '/icon.png',
+          vibrate: [200, 100, 200],
+          tag: 'nail-app-' + app.id,
+          renotify: true,
+          data: { url: '/agenda' },
+        });
+      }
+    } else {
+      swInitial = false;
+    }
+
+    swKnownIds = currentIds;
+  } catch (e) {
+    // Ignorar falhas temporarias de rede
+  }
+}
+
+// Executar checagem contínua a cada 6 segundos no Service Worker
+setInterval(checkBackgroundAppointments, 6000);
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {
@@ -20,7 +67,7 @@ self.addEventListener('push', (event) => {
     icon: '/icon.png',
     badge: '/icon.png',
     vibrate: [200, 100, 200],
-    tag: 'nailgestao-push',
+    tag: 'nailgestao-push-' + Date.now(),
     renotify: true,
     data: { url: data.url || '/agenda' },
   };

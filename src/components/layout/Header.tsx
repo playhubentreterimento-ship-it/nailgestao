@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -29,8 +29,9 @@ export function Header({ userRole }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [pushStatus, setPushStatus] = useState<string>("default");
-  const [knownAppIds, setKnownAppIds] = useState<Set<string>>(new Set());
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const knownAppIdsRef = useRef<Set<string>>(new Set());
+  const isInitialLoadRef = useRef<boolean>(true);
 
   // Som agradável de alerta quando um agendamento novo chega no salão
   const playNotificationSound = () => {
@@ -78,7 +79,7 @@ export function Header({ userRole }: HeaderProps) {
     ]);
   }, []);
 
-  // Monitoramento em Tempo Real a cada 8s para Pop-up no Celular
+  // Monitoramento em Tempo Real a cada 6s para Pop-up no Celular
   useEffect(() => {
     const checkNewAppointments = async () => {
       try {
@@ -89,9 +90,9 @@ export function Header({ userRole }: HeaderProps) {
 
         const currentIds = new Set<string>(apps.map((a: any) => a.id));
 
-        if (!isInitialLoad) {
+        if (!isInitialLoadRef.current) {
           const newApps = apps.filter(
-            (a: any) => !knownAppIds.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO"
+            (a: any) => !knownAppIdsRef.current.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO"
           );
 
           if (newApps.length > 0) {
@@ -121,20 +122,20 @@ export function Header({ userRole }: HeaderProps) {
             });
           }
         } else {
-          setIsInitialLoad(false);
+          isInitialLoadRef.current = false;
         }
 
-        setKnownAppIds(currentIds);
+        knownAppIdsRef.current = currentIds;
       } catch (err) {
         console.error("Erro ao verificar novos agendamentos:", err);
       }
     };
 
     checkNewAppointments();
-    const interval = setInterval(checkNewAppointments, 8000);
+    const interval = setInterval(checkNewAppointments, 6000);
 
     return () => clearInterval(interval);
-  }, [isInitialLoad, knownAppIds]);
+  }, []);
 
   const handleEnablePush = async () => {
     const perm = await requestNotificationPermission();
