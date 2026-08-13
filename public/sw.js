@@ -20,10 +20,28 @@ self.addEventListener('push', (event) => {
     icon: '/icon.png',
     badge: '/icon.png',
     vibrate: [200, 100, 200],
+    tag: 'nailgestao-push',
+    renotify: true,
     data: { url: data.url || '/agenda' },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const title = event.data.title || '💅 NAILGESTÃO - Alerta';
+    const options = {
+      body: event.data.body || '',
+      icon: '/icon.png',
+      badge: '/icon.png',
+      vibrate: [200, 100, 200],
+      tag: 'nailgestao-msg-' + Date.now(),
+      renotify: true,
+      data: { url: event.data.url || '/agenda' },
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
