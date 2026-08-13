@@ -568,30 +568,37 @@ export default function AgendaPage() {
                         {ongoingApps.map((app) => (
                           <div
                             key={"ongoing-" + app.id}
-                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-2xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-3 shadow-md dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90 min-w-0 w-full gap-2"
+                            className="flex flex-col justify-between rounded-xl border-2 border-purple-400/90 bg-gradient-to-r from-purple-100 via-violet-50 to-purple-100 p-3 shadow-md dark:border-purple-500 dark:from-purple-950/90 dark:via-slate-900 dark:to-purple-950/90 w-full"
                           >
-                            <div className="flex items-start space-x-2 min-w-0 flex-1">
-                              <span className="text-base shrink-0">⏳</span>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <span className="bg-purple-700 text-white px-1.5 py-0.5 rounded-md font-extrabold text-[9px] uppercase tracking-wider shrink-0">
-                                    ATENDIMENTO EM ANDAMENTO
-                                  </span>
-                                  <span className="text-xs font-extrabold text-purple-950 dark:text-purple-200">
-                                    Ocupado até {app.endTime}
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-xs font-bold text-purple-950 dark:text-slate-100 truncate">
-                                  {app.clientName} ({app.services?.map((s: any) => s.serviceName).join(", ")}) &bull; 👩 {app.professionalName}
-                                </p>
+                            <div>
+                              <div className="flex flex-wrap items-center justify-between border-b pb-1.5 mb-1.5 border-purple-300/60 dark:border-purple-800 gap-1">
+                                <span className="bg-purple-700 text-white px-2 py-0.5 rounded-md font-extrabold text-[9px] uppercase tracking-wider shrink-0">
+                                  ATENDIMENTO EM ANDAMENTO
+                                </span>
+                                <span className="text-xs font-extrabold text-purple-950 dark:text-purple-200 shrink-0">
+                                  Ocupado até {app.endTime}
+                                </span>
                               </div>
+                              <h4 className="mt-1 font-serif text-sm font-extrabold text-slate-900 dark:text-white break-words">
+                                {app.clientName}
+                              </h4>
+                              <p className="text-xs font-bold text-purple-950 dark:text-rose-200 break-words">
+                                💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
+                              </p>
+                              <p className="mt-1 text-[11px] font-semibold text-purple-900 dark:text-slate-300 break-words">
+                                👩 {app.professionalName} ({app.startTime} até {app.endTime})
+                              </p>
                             </div>
-                            <button
-                              onClick={() => handleOpenEditModal(app)}
-                              className="self-end sm:self-center rounded-lg bg-purple-200 px-3 py-1 text-[11px] font-extrabold text-purple-900 hover:bg-purple-300 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800 shrink-0 shadow-sm"
-                            >
-                              ✏️ Editar
-                            </button>
+
+                            <div className="mt-3 flex items-center justify-between border-t border-purple-300/60 pt-2 dark:border-purple-800 text-[11px] font-extrabold">
+                              <span className="text-purple-900 dark:text-purple-200">⏳ Ocupado até {app.endTime}</span>
+                              <button
+                                onClick={() => handleOpenEditModal(app)}
+                                className="font-extrabold underline text-purple-900 hover:text-purple-950 dark:text-purple-300"
+                              >
+                                ✏️ Editar
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
