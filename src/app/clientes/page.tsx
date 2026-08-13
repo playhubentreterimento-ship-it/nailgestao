@@ -413,6 +413,46 @@ export default function ClientesPage() {
 
             {/* Detalhes da Cliente */}
             <div className="space-y-6 text-xs">
+              {/* Pacotes & Planos de Sessões Ativos */}
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif text-sm font-extrabold text-amber-900 dark:text-amber-300">
+                    📦 Pacotes & Planos de Sessões Ativos
+                  </h4>
+                  <a
+                    href="/pacotes"
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-800 underline dark:text-rose-400"
+                  >
+                    + Gerenciar / Adicionar Pacote &rarr;
+                  </a>
+                </div>
+
+                {selectedClient.packages && selectedClient.packages.length > 0 ? (
+                  <div className="mt-2.5 space-y-2">
+                    {selectedClient.packages.map((cp: any) => {
+                      const remaining = cp.totalSessions - cp.sessionsUsed;
+                      return (
+                        <div key={cp.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900 border border-amber-100 gap-2">
+                          <div>
+                            <p className="font-extrabold text-slate-900 dark:text-white text-xs">{cp.packageName || "Pacote de Sessões"}</p>
+                            <p className="text-[10px] text-slate-500">Validade: {new Date(cp.expiryDate).toLocaleDateString("pt-BR")}</p>
+                          </div>
+                          <div className="flex items-center space-x-2 shrink-0">
+                            <span className="rounded-md bg-amber-100 px-2.5 py-1 text-[11px] font-extrabold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                              {cp.sessionsUsed} / {cp.totalSessions} sessões usadas ({remaining > 0 ? `${remaining} restantes` : "Concluído"})
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[11px] text-slate-500 italic">
+                    Esta cliente não possui nenhum pacote ativo no momento. Acesse a área de Pacotes para vincular.
+                  </p>
+                )}
+              </div>
+
               {/* Ficha Técnica de Unhas Expandida */}
               <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80">
                 <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300">

@@ -19,6 +19,11 @@ import {
   FileText,
   Lightbulb,
   Settings,
+  Package,
+  Heart,
+  Gift,
+  Megaphone,
+  Cake,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -44,11 +49,16 @@ export function MobileNav({ userRole }: MobileNavProps) {
       ];
 
   const extraItems = [
+    { href: "/servicos", label: "Serviços & Tabela", icon: Sparkles },
+    { href: "/pacotes", label: "Pacotes", icon: Package },
     { href: "/atendimento", label: "Atendimento", icon: PlayCircle },
     { href: "/financeiro", label: "Financeiro & DRE", icon: DollarSign },
-    { href: "/servicos", label: "Serviços", icon: Sparkles },
     { href: "/whatsapp", label: "WhatsApp", icon: MessageSquare },
     { href: "/estoque", label: "Estoque", icon: Boxes },
+    { href: "/fidelidade", label: "Fidelidade", icon: Heart },
+    { href: "/gift-cards", label: "Gift Cards", icon: Gift },
+    { href: "/campanhas", label: "Campanhas", icon: Megaphone },
+    { href: "/aniversariantes", label: "Aniversários", icon: Cake },
     { href: "/relatorios", label: "Relatórios", icon: FileText },
     { href: "/insights", label: "Insights IA", icon: Lightbulb },
     { href: "/configuracoes", label: "Configurações", icon: Settings },

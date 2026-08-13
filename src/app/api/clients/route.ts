@@ -15,12 +15,32 @@ export async function GET() {
       orderBy: { date: "desc" },
     });
 
-    // Enriquecer clientes com o histórico completo de agendamentos
+    const clientPackages = await prisma.clientPackage.findMany({
+      where: { active: true },
+    });
+
+    const packages = await prisma.package.findMany({
+      where: { salonId: "default-salon" },
+    });
+
+    // Enriquecer clientes com o histórico completo de agendamentos e pacotes ativos
     const enriched = clients.map((cli) => {
       const cliApps = appointments.filter((a) => a.clientId === cli.id);
+      const cliPkgs = clientPackages
+        .filter((cp) => cp.clientId === cli.id)
+        .map((cp) => {
+          const pkgObj = packages.find((p) => p.id === cp.packageId);
+          return {
+            ...cp,
+            packageName: pkgObj?.name || "Pacote de Sessões",
+            price: pkgObj?.price || 0,
+          };
+        });
+
       return {
         ...cli,
         appointments: cliApps,
+        packages: cliPkgs,
         lastAppointment: cliApps[0] || null,
         nextAppointment: cliApps.find((a) => new Date(a.date) >= new Date()) || null,
       };
@@ -145,7 +165,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, appointments, photos, lastAppointment, nextAppointment, ...data } = body;
+    const { id, appointments, packages, photos, lastAppointment, nextAppointment, ...data } = body;
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
