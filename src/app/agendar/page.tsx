@@ -123,6 +123,51 @@ export default function AgendarPublicPage() {
     return !hasConflict;
   };
 
+  const getWhatsAppUrl = () => {
+    const isDummy = (p?: string) => {
+      if (!p) return true;
+      const d = p.replace(/\D/g, "");
+      return !d || d.length < 10 || d.includes("999998888") || d.includes("987654321") || d.includes("0000000000");
+    };
+
+    const candidates = [
+      salon?.activeWhatsApp,
+      salon?.whatsapp,
+      salon?.phone,
+      selectedProf?.phone,
+      professionals.find((p: any) => !isDummy(p.phone))?.phone,
+    ];
+
+    const validPhone = candidates.find((p) => !isDummy(p)) || "67999635783";
+    const digits = validPhone.replace(/\D/g, "");
+    const targetPhone = digits.length >= 10 && !digits.startsWith("55") ? `55${digits}` : digits;
+
+    let formattedDateStr = selectedDate;
+    if (selectedDate && selectedDate.includes("-")) {
+      const parts = selectedDate.split("-");
+      if (parts.length === 3) formattedDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    const messageText = [
+      `Olá, equipe do ${salon?.name || "Studio Selma Gloor"}! ✨💖`,
+      ``,
+      `Acabei de realizar meu agendamento online pelo site! 💅`,
+      ``,
+      `📌 *DETALHES DO AGENDAMENTO:*`,
+      `💅 *Serviço:* ${selectedService?.name || "Procedimento"}`,
+      `📅 *Data:* ${formattedDateStr}`,
+      `⏰ *Horário:* ${selectedTime}h`,
+      `👩‍🎨 *Profissional:* ${selectedProf?.name || "Nail Designer"}`,
+      `👤 *Cliente:* ${name}`,
+      `📱 *Meu WhatsApp:* ${phone}`,
+      ``,
+      `Por favor, confirmem o meu agendamento! Muito obrigada! 🥰✨`
+    ].join("\n");
+
+    const waText = encodeURIComponent(messageText);
+    return `https://wa.me/${targetPhone}?text=${waText}`;
+  };
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingError("");
@@ -165,6 +210,12 @@ export default function AgendarPublicPage() {
       try {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       } catch (err) {}
+
+      // Redirecionamento automático e obrigatório para o WhatsApp do Salão
+      const waUrl = getWhatsAppUrl();
+      setTimeout(() => {
+        window.location.href = waUrl;
+      }, 500);
     } else {
       const err = await appRes.json();
       setBookingError(err.error || "Erro ao realizar agendamento.");
@@ -427,82 +478,50 @@ export default function AgendarPublicPage() {
           </div>
         )}
 
-        {/* Passo 4: Confirmação Concluída */}
+        {/* Passo 4: Confirmação Concluída e Redirecionamento Obrigatório */}
         {step === 4 && (
-          <div className="rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl font-bold">
+          <div className="rounded-3xl border-2 border-emerald-300 bg-white p-6 sm:p-8 text-center shadow-2xl dark:border-emerald-700 dark:bg-slate-900 space-y-5">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl font-bold animate-bounce">
               ✓
             </div>
-            <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
-              Agendamento Solicitado com Sucesso! 💖
-            </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Enviamos os detalhes do seu agendamento para seu WhatsApp ({phone}).
-            </p>
 
-            <div className="pt-4 flex justify-center">
-              {(() => {
-                const isDummy = (p?: string) => {
-                  if (!p) return true;
-                  const d = p.replace(/\D/g, "");
-                  return !d || d.length < 10 || d.includes("999998888") || d.includes("987654321") || d.includes("0000000000");
-                };
+            <div>
+              <h2 className="font-serif text-2xl font-extrabold text-slate-900 dark:text-white">
+                Agendamento Pré-Reservado! 💖
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Seu horário foi reservado no sistema do salão.
+              </p>
+            </div>
 
-                const candidates = [
-                  salon?.activeWhatsApp,
-                  salon?.whatsapp,
-                  salon?.phone,
-                  selectedProf?.phone,
-                  professionals.find((p: any) => !isDummy(p.phone))?.phone,
-                ];
+            {/* Alerta de Obrigatoriedade de Envio no WhatsApp */}
+            <div className="rounded-2xl border-2 border-rose-300 bg-gradient-to-br from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/90 text-left space-y-2 shadow-sm">
+              <div className="flex items-center space-x-2 text-rose-800 dark:text-amber-200">
+                <AlertCircle className="h-5 w-5 shrink-0 animate-pulse text-rose-600" />
+                <h4 className="font-serif text-xs font-extrabold uppercase tracking-wide">
+                  ⚠️ ETAPA OBRIGATÓRIA PARA CONFIRMAÇÃO:
+                </h4>
+              </div>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Para validar seu agendamento e garantir a sua vaga na agenda, você precisa <strong>enviar a mensagem de confirmação para o WhatsApp do Salão</strong>.
+              </p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                O site está redirecionando você para o WhatsApp... Se a mensagem não abrir automaticamente no seu celular, clique no botão verde abaixo:
+              </p>
+            </div>
 
-                const validPhone = candidates.find((p) => !isDummy(p)) || "";
-                const digits = validPhone.replace(/\D/g, "");
-                const targetPhone = digits.length >= 10 && !digits.startsWith("55") ? `55${digits}` : digits;
+            <div className="pt-2 flex flex-col items-center space-y-3">
+              <a
+                href={getWhatsAppUrl()}
+                className="w-full flex items-center justify-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 px-6 py-4 text-xs sm:text-sm font-extrabold text-white shadow-xl hover:scale-105 active:scale-95 transition transform animate-pulse"
+              >
+                <MessageSquare className="h-5 w-5" />
+                <span>📲 ENVIAR CONFIRMAÇÃO NO WHATSAPP (OBRIGATÓRIO)</span>
+              </a>
 
-                if (!targetPhone) {
-                  return (
-                    <div className="rounded-2xl bg-amber-100 p-3 text-center text-xs font-bold text-amber-900 border border-amber-300">
-                      📱 Agendamento gravado com sucesso! Cadastre seu número de WhatsApp em Configurações para habilitar o botão direto de conversa.
-                    </div>
-                  );
-                }
-
-                let formattedDateStr = selectedDate;
-                if (selectedDate && selectedDate.includes("-")) {
-                  const parts = selectedDate.split("-");
-                  if (parts.length === 3) formattedDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-
-                const messageText = [
-                  `Olá, equipe do ${salon?.name || "Salão"}! \u2728\u{1F496}`,
-                  ``,
-                  `Acabei de realizar meu agendamento online pelo site! \u{1F485}`,
-                  ``,
-                  `\u{1F4CC} *DETALHES DO AGENDAMENTO:*`,
-                  `\u{1F485} *Serviço:* ${selectedService?.name || "Procedimento"}`,
-                  `\u{1F4C5} *Data:* ${formattedDateStr}`,
-                  `\u23F0 *Horário:* ${selectedTime}h`,
-                  `\u{1F469} *Profissional:* ${selectedProf?.name || "Nail Designer"}`,
-                  `\u{1F464} *Cliente:* ${name}`,
-                  ``,
-                  `Aguardando a confirmação! Muito obrigada! \u{1F970}\u2728`
-                ].join("\n");
-
-                const waText = encodeURIComponent(messageText);
-
-                return (
-                  <a
-                    href={`https://wa.me/${targetPhone}?text=${waText}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 transition"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>📱 Falar no WhatsApp do Salão</span>
-                  </a>
-                );
-              })()}
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                Studio Selma Gloor &bull; Agendamento Garantido via WhatsApp
+              </p>
             </div>
           </div>
         )}
