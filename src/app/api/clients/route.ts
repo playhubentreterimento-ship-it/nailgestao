@@ -78,6 +78,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nome e Telefone/WhatsApp são obrigatórios." }, { status: 400 });
     }
 
+    const inputPhone = (phone || whatsapp || "").replace(/\D/g, "");
+
+    // Busca Inteligente por WhatsApp/Telefone (Reaproveitamento de Cliente Fixo)
+    if (inputPhone.length >= 8) {
+      const existingClients = await prisma.client.findMany({
+        where: { salonId: "default-salon" },
+      });
+
+      const lastDigitsTarget = inputPhone.slice(-8);
+
+      const matchedClient = existingClients.find((c) => {
+        const cPhone = (c.phone || "").replace(/\D/g, "");
+        const cWa = (c.whatsapp || "").replace(/\D/g, "");
+        return (
+          (cPhone.length >= 8 && cPhone.slice(-8) === lastDigitsTarget) ||
+          (cWa.length >= 8 && cWa.slice(-8) === lastDigitsTarget)
+        );
+      });
+
+      if (matchedClient) {
+        // Atualizar nome ou contatos mantendo o mesmo perfil e histórico da cliente
+        const updatedClient = await prisma.client.update({
+          where: { id: matchedClient.id },
+          data: {
+            ...(name ? { name } : {}),
+            phone: phone || matchedClient.phone,
+            whatsapp: whatsapp || matchedClient.whatsapp,
+            ...(email ? { email } : {}),
+          },
+        });
+
+        return NextResponse.json(updatedClient);
+      }
+    }
+
+    // Se for cliente nova, criar registro único
     const client = await prisma.client.create({
       data: {
         salonId: "default-salon",
