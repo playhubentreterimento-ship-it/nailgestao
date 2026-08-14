@@ -173,17 +173,11 @@ export function Header({ userRole }: HeaderProps) {
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-rose-200/40 bg-[#6b1615]/95 px-4 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 shadow-md">
       {/* Branding / Salão */}
       <div className="flex items-center space-x-3">
-        {salon?.logoUrl ? (
-          <img
-            src={salon.logoUrl}
-            alt={salon.name || "Logo do Salão"}
-            className="h-10 w-10 rounded-xl object-cover border-2 border-amber-300/80 shadow-md"
-          />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-rose-500 to-amber-600 font-bold text-white shadow-md">
-            💅
-          </div>
-        )}
+        <img
+          src={salon?.logoUrl && salon.logoUrl !== "/logo.png" ? salon.logoUrl : "/salon-logo-official.png"}
+          alt={salon?.name || "Selma Gloor Nails Studio"}
+          className="h-10 w-10 rounded-xl object-contain bg-white p-0.5 border-2 border-amber-300/80 shadow-md"
+        />
         <div>
           <h1 className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">
             {salon?.name || "Selma Gloor Nails Studio"}

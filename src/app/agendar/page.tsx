@@ -234,8 +234,8 @@ export default function AgendarPublicPage() {
       <div className="mx-auto max-w-xl">
         {/* Header do Salão */}
         <div className="text-center mb-6">
-          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-white p-2 shadow-xl shadow-rose-200/60 border-2 border-rose-200/80 dark:bg-slate-900 dark:border-slate-800">
-            <img src="/logo.png" alt="Selma Gloor Nails Studio" className="h-full w-full object-contain" />
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-white p-2 shadow-xl shadow-rose-200/60 border-2 border-rose-200/80 dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+            <img src="/salon-logo-official.png" alt="Selma Gloor Nails Studio" className="h-full w-full object-contain" />
           </div>
           <h1 className="mt-3 font-serif text-2xl font-bold text-slate-900 dark:text-white">
             {salon?.name || "Selma Gloor Nails Studio"}
