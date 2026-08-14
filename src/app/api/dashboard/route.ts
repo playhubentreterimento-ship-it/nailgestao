@@ -28,16 +28,15 @@ export async function GET() {
     const canceledToday = todayAppointments.filter((a) => a.status === "CANCELADO").length;
     const unconfirmedToday = todayAppointments.filter((a) => a.status === "AGUARDANDO_CONFIRMACAO" || a.status === "AGENDADO").length;
 
-    // 2. Resumo do Mês
+    // 2. Resumo do Mês Real do Banco de Dados
     const allAppointments = await prisma.appointment.findMany({
       where: { salonId: salon.id },
       include: { services: true },
     });
 
-    const monthRevenue = allAppointments
-      .filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO")
-      .reduce((acc, curr) => acc + curr.total, 0);
-    const totalAttendances = allAppointments.filter((a) => a.status === "CONCLUIDO").length || allAppointments.length;
+    const completedApps = allAppointments.filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO");
+    const monthRevenue = completedApps.reduce((acc, curr) => acc + curr.total, 0);
+    const totalAttendances = completedApps.length;
     const averageTicket = totalAttendances > 0 ? monthRevenue / totalAttendances : 0;
 
     const allClients = await prisma.client.findMany({ where: { salonId: salon.id } });
@@ -46,32 +45,72 @@ export async function GET() {
     const noShowCount = allAppointments.filter((a) => a.status === "NAO_COMPARECEU").length;
     const cancellationCount = allAppointments.filter((a) => a.status === "CANCELADO").length;
 
-    // 3. Gráficos de Faturamento e Formas de Pagamento
+    // 3. Gráficos de Formas de Pagamento Reais
     const cashTransactions = await prisma.cashTransaction.findMany({ where: { salonId: salon.id } });
 
+    const pixVal = cashTransactions.filter((t) => t.paymentMethod === "PIX").reduce((acc, t) => acc + t.amount, 0);
+    const credVal = cashTransactions.filter((t) => t.paymentMethod === "CREDITO").reduce((acc, t) => acc + t.amount, 0);
+    const debVal = cashTransactions.filter((t) => t.paymentMethod === "DEBITO").reduce((acc, t) => acc + t.amount, 0);
+    const dinVal = cashTransactions.filter((t) => t.paymentMethod === "DINHEIRO").reduce((acc, t) => acc + t.amount, 0);
+
     const paymentMethodsData = [
-      { name: "Pix", value: cashTransactions.filter((t) => t.paymentMethod === "PIX").reduce((acc, t) => acc + t.amount, 0) || 450.0 },
-      { name: "Cartão Crédito", value: cashTransactions.filter((t) => t.paymentMethod === "CREDITO").reduce((acc, t) => acc + t.amount, 0) || 890.0 },
-      { name: "Cartão Débito", value: cashTransactions.filter((t) => t.paymentMethod === "DEBITO").reduce((acc, t) => acc + t.amount, 0) || 280.0 },
-      { name: "Dinheiro", value: cashTransactions.filter((t) => t.paymentMethod === "DINHEIRO").reduce((acc, t) => acc + t.amount, 0) || 150.0 },
+      { name: "Pix", value: pixVal },
+      { name: "Cartão Crédito", value: credVal },
+      { name: "Cartão Débito", value: debVal },
+      { name: "Dinheiro", value: dinVal },
     ];
 
-    const revenueByDayData = [
-      { day: "Segunda", faturamento: 850.0, atendimentos: 5 },
-      { day: "Terça", faturamento: 1100.0, atendimentos: 7 },
-      { day: "Quarta", faturamento: 1450.0, atendimentos: 9 },
-      { day: "Quinta", faturamento: 1950.0, atendimentos: 12 },
-      { day: "Sexta", faturamento: 2800.0, atendimentos: 16 },
-      { day: "Sábado", faturamento: 3400.0, atendimentos: 19 },
-    ];
+    // 4. Faturamento por Dia Real da Semana
+    const daysMap: Record<string, { faturamento: number; atendimentos: number }> = {
+      "Segunda": { faturamento: 0, atendimentos: 0 },
+      "Terça": { faturamento: 0, atendimentos: 0 },
+      "Quarta": { faturamento: 0, atendimentos: 0 },
+      "Quinta": { faturamento: 0, atendimentos: 0 },
+      "Sexta": { faturamento: 0, atendimentos: 0 },
+      "Sábado": { faturamento: 0, atendimentos: 0 },
+      "Domingo": { faturamento: 0, atendimentos: 0 },
+    };
 
-    const topServicesData = [
-      { service: "Fibra de Vidro Premium", vendas: 42, receita: 9240.0 },
-      { service: "Manutenção de Fibra", vendas: 38, receita: 4940.0 },
-      { service: "Gel Moldado", vendas: 25, receita: 4750.0 },
-      { service: "Nail Art Encapsulada", vendas: 30, receita: 1800.0 },
-      { service: "SPA dos Pés", vendas: 18, receita: 2520.0 },
-    ];
+    const daysNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+    completedApps.forEach((app) => {
+      if (!app.date) return;
+      const appDate = new Date(app.date + "T12:00:00");
+      const dayName = daysNames[appDate.getDay()];
+      if (daysMap[dayName]) {
+        daysMap[dayName].faturamento += app.total || 0;
+        daysMap[dayName].atendimentos += 1;
+      }
+    });
+
+    const revenueByDayData = Object.entries(daysMap).map(([day, val]) => ({
+      day,
+      faturamento: val.faturamento,
+      atendimentos: val.atendimentos,
+    }));
+
+    // 5. Serviços Mais Lucrativos Reais do Banco de Dados
+    const appointmentServices = await prisma.appointmentService.findMany({
+      where: {
+        appointment: {
+          salonId: salon.id,
+          status: { in: ["CONCLUIDO", "CONFIRMADO", "EM_ATENDIMENTO"] },
+        },
+      },
+    });
+
+    const serviceMap = new Map<string, { service: string; vendas: number; receita: number }>();
+
+    appointmentServices.forEach((as) => {
+      const name = as.serviceName || "Serviço";
+      const existing = serviceMap.get(name) || { service: name, vendas: 0, receita: 0 };
+      existing.vendas += 1;
+      existing.receita += as.price || 0;
+      serviceMap.set(name, existing);
+    });
+
+    const topServicesData = Array.from(serviceMap.values())
+      .sort((a, b) => b.receita - a.receita);
 
     const insights = await generateSalonInsights();
 
@@ -92,14 +131,14 @@ export async function GET() {
         revenueExpected: revenueExpectedToday,
         revenueRealized: revenueRealizedToday,
         occupiedSlots: occupiedSlotsToday,
-        freeSlots: Math.max(0, 16 - occupiedSlotsToday), // 16 horários totais por dia
+        freeSlots: Math.max(0, 16 - occupiedSlotsToday),
         canceledCount: canceledToday,
         unconfirmedCount: unconfirmedToday,
         appointments: populatedTodayAppointments,
       },
       month: {
         totalRevenue: monthRevenue,
-        estimatedProfit: monthRevenue * 0.58, // ~58% margem de lucro
+        estimatedProfit: monthRevenue * 0.58,
         totalAttendances: totalAttendances,
         averageTicket: averageTicket,
         newClients: newClients,
