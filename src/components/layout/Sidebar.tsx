@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -22,6 +23,7 @@ import {
   ShieldCheck,
   Settings,
 } from "lucide-react";
+import { applyPrimaryColor } from "@/lib/theme";
 
 interface SidebarProps {
   userRole?: string | null;
@@ -29,6 +31,26 @@ interface SidebarProps {
 
 export function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname();
+  const [salon, setSalon] = useState<any>(null);
+
+  const fetchSettings = () => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setSalon(data);
+        if (data?.primaryColor) {
+          applyPrimaryColor(data.primaryColor);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    const handleSettingsUpdate = () => fetchSettings();
+    window.addEventListener("salon-settings-updated", handleSettingsUpdate);
+    return () => window.removeEventListener("salon-settings-updated", handleSettingsUpdate);
+  }, []);
 
   const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
 
@@ -95,7 +117,10 @@ export function Sidebar({ userRole }: SidebarProps) {
       <div className="flex flex-1 flex-col space-y-6 overflow-y-auto pr-1">
         {menuGroups.map((group, idx) => (
           <div key={idx} className="space-y-1">
-            <h4 className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#6B1615] dark:text-amber-200">
+            <h4
+              style={{ color: salon?.primaryColor || 'var(--primary-color, #6B1615)' }}
+              className="px-3 text-[10px] font-extrabold uppercase tracking-wider dark:text-amber-200"
+            >
               {group.title}
             </h4>
             {group.items.map((item) => {
@@ -105,9 +130,10 @@ export function Sidebar({ userRole }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  style={isActive ? { backgroundColor: salon?.primaryColor || 'var(--primary-color, #6B1615)' } : undefined}
                   className={`group flex items-center space-x-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all ${
                     isActive
-                      ? "bg-gradient-to-r from-rose-600 to-amber-600 text-white shadow-md shadow-rose-200/60 dark:shadow-none"
+                      ? "text-white shadow-md shadow-rose-200/60 dark:shadow-none"
                       : "text-slate-700 hover:bg-rose-100/70 hover:text-rose-800 dark:text-slate-200 dark:hover:bg-slate-800/80 dark:hover:text-white"
                   }`}
                 >

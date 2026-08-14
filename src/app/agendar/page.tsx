@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Sparkles, Calendar, Clock, User, CheckCircle, MessageSquare, QrCode, AlertCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 
+import { applyPrimaryColor } from "@/lib/theme";
+
 export default function AgendarPublicPage() {
   const [salon, setSalon] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
@@ -20,7 +22,10 @@ export default function AgendarPublicPage() {
   const [bookingError, setBookingError] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then(setSalon);
+    fetch("/api/settings").then((r) => r.json()).then((res) => {
+      setSalon(res);
+      if (res?.primaryColor) applyPrimaryColor(res.primaryColor);
+    });
     fetch("/api/services").then((r) => r.json()).then((res) => setServices(res.services || []));
     fetch("/api/professionals").then((r) => r.json()).then((res) => {
       setProfessionals(res || []);

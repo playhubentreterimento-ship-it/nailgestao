@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Settings, Save, Trash2, RefreshCw, Palette, Store, CreditCard, ShieldAlert, Users, Plus, Key, Edit, Check } from "lucide-react";
+import { applyPrimaryColor } from "@/lib/theme";
 
 export default function ConfiguracoesPage() {
   const [salon, setSalon] = useState<any>(null);
@@ -40,7 +41,9 @@ export default function ConfiguracoesPage() {
         setLogoUrl(data.logoUrl || "");
         setPhone(data.phone || "");
         setAddress(data.address || "");
-        setPrimaryColor(data.primaryColor || "#E0A96D");
+        const loadedColor = data.primaryColor || "#6B1615";
+        setPrimaryColor(loadedColor);
+        applyPrimaryColor(loadedColor);
         setCreditFee(data.creditFeePercent || 2.99);
         setDebitFee(data.debitFeePercent || 1.49);
         if (data.adminEmail) {
@@ -56,6 +59,11 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleColorChange = (newColor: string) => {
+    setPrimaryColor(newColor);
+    applyPrimaryColor(newColor);
+  };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +88,8 @@ export default function ConfiguracoesPage() {
     if (res.ok) {
       setSaved(true);
       setAdminPassword("");
+      applyPrimaryColor(primaryColor);
+      window.dispatchEvent(new Event("salon-settings-updated"));
       loadData();
       setTimeout(() => setSaved(false), 4000);
     } else {
@@ -384,8 +394,8 @@ export default function ConfiguracoesPage() {
             <div>
               <label className="block font-bold">Cor Primária de Destaque</label>
               <div className="flex items-center space-x-2 mt-1">
-                <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border p-1" />
-                <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-full rounded-xl border p-2.5 font-mono dark:bg-slate-800" />
+                <input type="color" value={primaryColor} onChange={(e) => handleColorChange(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border p-1" />
+                <input type="text" value={primaryColor} onChange={(e) => handleColorChange(e.target.value)} className="w-full rounded-xl border p-2.5 font-mono dark:bg-slate-800" />
               </div>
             </div>
           </div>

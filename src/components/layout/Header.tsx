@@ -17,6 +17,7 @@ import {
 
 import { LogOut } from "lucide-react";
 import { registerServiceWorker, requestNotificationPermission, sendLocalPushNotification } from "@/lib/notifications";
+import { applyPrimaryColor } from "@/lib/theme";
 
 interface HeaderProps {
   userRole?: string | null;
@@ -51,6 +52,18 @@ export function Header({ userRole }: HeaderProps) {
     } catch (e) {}
   };
 
+  const fetchSettings = () => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        setSalon(data);
+        if (data?.primaryColor) {
+          applyPrimaryColor(data.primaryColor);
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     registerServiceWorker();
 
@@ -58,10 +71,10 @@ export function Header({ userRole }: HeaderProps) {
       setPushStatus(Notification.permission);
     }
 
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then((data) => setSalon(data))
-      .catch(() => {});
+    fetchSettings();
+
+    const handleSettingsUpdate = () => fetchSettings();
+    window.addEventListener("salon-settings-updated", handleSettingsUpdate);
 
     fetch("/api/auth/session")
       .then((res) => res.json())
@@ -170,7 +183,10 @@ export function Header({ userRole }: HeaderProps) {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-rose-200/40 bg-[#6b1615]/95 px-4 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 shadow-md">
+    <header
+      style={{ backgroundColor: salon?.primaryColor || 'var(--primary-color, #6b1615)' }}
+      className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-white/20 px-4 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 shadow-md transition-colors duration-300"
+    >
       {/* Branding / Salão */}
       <div className="flex items-center space-x-3">
         <img
