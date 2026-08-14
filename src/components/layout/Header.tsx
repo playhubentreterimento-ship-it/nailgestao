@@ -186,10 +186,10 @@ export function Header({ userRole }: HeaderProps) {
         )}
         <div>
           <h1 className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">
-            {salon?.name || "Studio Luxe Nail Designer"}
+            {salon?.name || "Selma Gloor Nails Studio"}
           </h1>
           <p className="hidden text-xs text-amber-200/90 sm:block font-medium">
-            {salon?.slogan || "Especialistas em Alongamentos & Estética"}
+            {salon?.slogan || "Especialista em Unhas & Nails Art"}
           </p>
         </div>
       </div>
