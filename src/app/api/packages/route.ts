@@ -56,7 +56,13 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json({ packages, clientPackages, clients });
+    const services = await prisma.service.findMany({
+      where: { salonId: "default-salon", active: true },
+      select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
+      orderBy: { name: "asc" },
+    });
+
+    return NextResponse.json({ packages, clientPackages, clients, services });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -120,7 +126,17 @@ export async function POST(req: Request) {
     }
 
     // Criar Novo Pacote
-    const { name, price, totalSessions, validityDays, description } = body;
+    const {
+      name,
+      price,
+      totalSessions,
+      validityDays,
+      description,
+      weeklyServices,
+      discountType,
+      discountValue,
+      originalPrice,
+    } = body;
 
     if (!name || !price || !totalSessions) {
       return NextResponse.json({ error: "Nome, preço e total de sessões são obrigatórios." }, { status: 400 });
@@ -131,9 +147,13 @@ export async function POST(req: Request) {
         salonId: "default-salon",
         name,
         price: Number(price),
-        totalSessions: Number(totalSessions),
+        totalSessions: Math.min(5, Math.max(1, Number(totalSessions))),
         validityDays: Number(validityDays || 90),
         description: description || null,
+        weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
+        discountType: discountType || "FIXED",
+        discountValue: Number(discountValue || 0),
+        originalPrice: Number(originalPrice || price),
         active: true,
       },
     });
@@ -147,7 +167,18 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, name, price, totalSessions, validityDays, description } = body;
+    const {
+      id,
+      name,
+      price,
+      totalSessions,
+      validityDays,
+      description,
+      weeklyServices,
+      discountType,
+      discountValue,
+      originalPrice,
+    } = body;
 
     if (!id || !name) {
       return NextResponse.json({ error: "ID e nome do pacote são obrigatórios." }, { status: 400 });
@@ -158,11 +189,17 @@ export async function PUT(req: Request) {
       data: {
         name,
         price: Number(price),
-        totalSessions: Number(totalSessions),
+        totalSessions: Math.min(5, Math.max(1, Number(totalSessions))),
         validityDays: Number(validityDays || 90),
         description: description || null,
+        weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
+        discountType: discountType || "FIXED",
+        discountValue: Number(discountValue || 0),
+        originalPrice: Number(originalPrice || price),
       },
     });
+
+    return NextResponse.json(updated);
 
     return NextResponse.json(updated);
   } catch (error: any) {

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar, X } from "lucide-react";
+import { Package as PackageIcon, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar, X, Sparkles, Percent, DollarSign } from "lucide-react";
 
 export default function PacotesPage() {
   const [data, setData] = useState<any>(null);
-  
+
   // Modais
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -13,18 +13,33 @@ export default function PacotesPage() {
 
   // Form Novo Pacote
   const [name, setName] = useState("");
-  const [price, setPrice] = useState(250);
-  const [totalSessions, setTotalSessions] = useState(3);
-  const [validityDays, setValidityDays] = useState(90);
   const [description, setDescription] = useState("");
+  const [totalSessions, setTotalSessions] = useState(4); // 1 a 5 semanas
+  const [validityDays, setValidityDays] = useState(90);
+  const [weeklyServices, setWeeklyServices] = useState<
+    { week: number; serviceId: string; serviceName: string; price: number }[]
+  >([
+    { week: 1, serviceId: "", serviceName: "Aplicação / Manutenção em Fibra", price: 120 },
+    { week: 2, serviceId: "", serviceName: "Esmaltação em Gel", price: 80 },
+    { week: 3, serviceId: "", serviceName: "Manutenção & Cutilagem", price: 100 },
+    { week: 4, serviceId: "", serviceName: "Spa das Mãos & Nivelamento", price: 80 },
+  ]);
+  const [discountType, setDiscountType] = useState<"FIXED" | "PERCENT">("FIXED");
+  const [discountValue, setDiscountValue] = useState<number>(40);
+  const [manualPrice, setManualPrice] = useState<number | null>(null);
 
   // Form Editar Pacote
   const [editId, setEditId] = useState("");
   const [editName, setEditName] = useState("");
-  const [editPrice, setEditPrice] = useState(250);
-  const [editTotalSessions, setEditTotalSessions] = useState(3);
-  const [editValidityDays, setEditValidityDays] = useState(90);
   const [editDescription, setEditDescription] = useState("");
+  const [editTotalSessions, setEditTotalSessions] = useState(4);
+  const [editValidityDays, setEditValidityDays] = useState(90);
+  const [editWeeklyServices, setEditWeeklyServices] = useState<
+    { week: number; serviceId: string; serviceName: string; price: number }[]
+  >([]);
+  const [editDiscountType, setEditDiscountType] = useState<"FIXED" | "PERCENT">("FIXED");
+  const [editDiscountValue, setEditDiscountValue] = useState<number>(0);
+  const [editManualPrice, setEditManualPrice] = useState<number | null>(null);
 
   // Form Vincular a Cliente
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
@@ -47,27 +62,147 @@ export default function PacotesPage() {
     return () => window.removeEventListener("focus", loadData);
   }, []);
 
+  const { packages = [], clientPackages = [], clients = [], services = [] } = data || {};
+
+  // Ajustar número de semanas (1 a 5) no formulário de criação
+  const handleSessionsCountChange = (count: number) => {
+    const num = Math.min(5, Math.max(1, count));
+    setTotalSessions(num);
+    const updated = [];
+    for (let i = 1; i <= num; i++) {
+      if (weeklyServices[i - 1]) {
+        updated.push({ ...weeklyServices[i - 1], week: i });
+      } else {
+        const defaultSrv = services[0] || { id: "", name: `Procedimento Semana ${i}`, price: 100 };
+        updated.push({
+          week: i,
+          serviceId: defaultSrv.id,
+          serviceName: defaultSrv.name,
+          price: defaultSrv.promoPrice || defaultSrv.price || 100,
+        });
+      }
+    }
+    setWeeklyServices(updated);
+  };
+
+  // Atualizar procedimento da semana no form Criar
+  const handleWeeklyServiceChange = (weekNum: number, serviceId: string, customName?: string) => {
+    const srv = services.find((s: any) => s.id === serviceId);
+    setWeeklyServices((prev) =>
+      prev.map((item) => {
+        if (item.week !== weekNum) return item;
+        if (srv) {
+          return {
+            ...item,
+            serviceId: srv.id,
+            serviceName: srv.name,
+            price: srv.promoPrice || srv.price,
+          };
+        }
+        return {
+          ...item,
+          serviceId,
+          serviceName: customName || item.serviceName,
+        };
+      })
+    );
+  };
+
+  // Ajustar número de semanas no formulário de edição
+  const handleEditSessionsCountChange = (count: number) => {
+    const num = Math.min(5, Math.max(1, count));
+    setEditTotalSessions(num);
+    const updated = [];
+    for (let i = 1; i <= num; i++) {
+      if (editWeeklyServices[i - 1]) {
+        updated.push({ ...editWeeklyServices[i - 1], week: i });
+      } else {
+        const defaultSrv = services[0] || { id: "", name: `Procedimento Semana ${i}`, price: 100 };
+        updated.push({
+          week: i,
+          serviceId: defaultSrv.id,
+          serviceName: defaultSrv.name,
+          price: defaultSrv.promoPrice || defaultSrv.price || 100,
+        });
+      }
+    }
+    setEditWeeklyServices(updated);
+  };
+
+  // Atualizar procedimento da semana no form Editar
+  const handleEditWeeklyServiceChange = (weekNum: number, serviceId: string, customName?: string) => {
+    const srv = services.find((s: any) => s.id === serviceId);
+    setEditWeeklyServices((prev) =>
+      prev.map((item) => {
+        if (item.week !== weekNum) return item;
+        if (srv) {
+          return {
+            ...item,
+            serviceId: srv.id,
+            serviceName: srv.name,
+            price: srv.promoPrice || srv.price,
+          };
+        }
+        return {
+          ...item,
+          serviceId,
+          serviceName: customName || item.serviceName,
+        };
+      })
+    );
+  };
+
+  // Helper de cálculo de valores
+  const calculateTotals = (
+    list: { week: number; serviceId: string; serviceName: string; price: number }[],
+    discType: "FIXED" | "PERCENT",
+    discVal: number,
+    customPrice: number | null
+  ) => {
+    const subtotal = list.reduce((acc, item) => acc + (item.price || 0), 0);
+    let discountAmount = 0;
+    if (discType === "PERCENT") {
+      discountAmount = (subtotal * Math.min(100, Math.max(0, discVal))) / 100;
+    } else {
+      discountAmount = Math.min(subtotal, Math.max(0, discVal));
+    }
+    const calculatedTotal = Math.max(0, subtotal - discountAmount);
+    const finalPrice = customPrice !== null && customPrice > 0 ? customPrice : calculatedTotal;
+    return { subtotal, discountAmount, finalPrice };
+  };
+
+  // Valores calculados do Form Criar
+  const createTotals = calculateTotals(weeklyServices, discountType, discountValue, manualPrice);
+
+  // Valores calculados do Form Editar
+  const editTotals = calculateTotals(editWeeklyServices, editDiscountType, editDiscountValue, editManualPrice);
+
   const handleCreatePackage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !price || !totalSessions) return;
+    if (!name || totalSessions <= 0) return;
 
     const res = await fetch("/api/packages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        price: Number(price),
-        totalSessions: Number(totalSessions),
-        validityDays: Number(validityDays),
+        price: createTotals.finalPrice,
+        originalPrice: createTotals.subtotal,
+        totalSessions,
+        validityDays,
         description,
+        weeklyServices: JSON.stringify(weeklyServices),
+        discountType,
+        discountValue,
       }),
     });
 
     if (res.ok) {
-      alert("✨ Novo pacote cadastrado com sucesso!");
+      alert("✨ Novo pacote de sessões criado com sucesso!");
       setShowCreateModal(false);
       setName("");
       setDescription("");
+      setManualPrice(null);
       loadData();
     } else {
       alert("Erro ao cadastrar pacote.");
@@ -77,10 +212,35 @@ export default function PacotesPage() {
   const handleOpenEdit = (pkg: any) => {
     setEditId(pkg.id);
     setEditName(pkg.name);
-    setEditPrice(pkg.price);
-    setEditTotalSessions(pkg.totalSessions);
-    setEditValidityDays(pkg.validityDays);
     setEditDescription(pkg.description || "");
+    setEditTotalSessions(pkg.totalSessions || 4);
+    setEditValidityDays(pkg.validityDays || 90);
+    setEditDiscountType((pkg.discountType as "FIXED" | "PERCENT") || "FIXED");
+    setEditDiscountValue(pkg.discountValue || 0);
+    setEditManualPrice(pkg.price);
+
+    try {
+      if (pkg.weeklyServices) {
+        const parsed = typeof pkg.weeklyServices === "string" ? JSON.parse(pkg.weeklyServices) : pkg.weeklyServices;
+        setEditWeeklyServices(parsed);
+      } else {
+        // Fallback default 4 semanas
+        const perSessionPrice = (pkg.price || 200) / (pkg.totalSessions || 4);
+        const fallbackList = [];
+        for (let i = 1; i <= (pkg.totalSessions || 4); i++) {
+          fallbackList.push({
+            week: i,
+            serviceId: "",
+            serviceName: `Procedimento Semana ${i}`,
+            price: perSessionPrice,
+          });
+        }
+        setEditWeeklyServices(fallbackList);
+      }
+    } catch (e) {
+      setEditWeeklyServices([]);
+    }
+
     setShowEditModal(true);
   };
 
@@ -94,10 +254,14 @@ export default function PacotesPage() {
       body: JSON.stringify({
         id: editId,
         name: editName,
-        price: Number(editPrice),
-        totalSessions: Number(editTotalSessions),
-        validityDays: Number(editValidityDays),
+        price: editTotals.finalPrice,
+        originalPrice: editTotals.subtotal,
+        totalSessions: editTotalSessions,
+        validityDays: editValidityDays,
         description: editDescription,
+        weeklyServices: JSON.stringify(editWeeklyServices),
+        discountType: editDiscountType,
+        discountValue: editDiscountValue,
       }),
     });
 
@@ -168,8 +332,6 @@ export default function PacotesPage() {
     }
   };
 
-  const { packages = [], clientPackages = [], clients = [] } = data || {};
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -179,7 +341,7 @@ export default function PacotesPage() {
             📦 Pacotes & Planos de Sessões
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Venda pacotes recorrentes de manutenções, edite valores e acompanhe o uso de sessões das clientes.
+            Defina o cronograma semanal de procedimentos (até 5 semanas), aplique descontos especiais do pacote e gerencie clientes.
           </p>
         </div>
 
@@ -188,7 +350,7 @@ export default function PacotesPage() {
           className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:opacity-95 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>Novo Pacote</span>
+          <span>+ Criar Novo Pacote</span>
         </button>
       </div>
 
@@ -199,53 +361,95 @@ export default function PacotesPage() {
         </h3>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {packages.map((pkg: any) => (
-            <div
-              key={pkg.id}
-              className="flex flex-col justify-between rounded-3xl border border-rose-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-              <div>
-                <div className="flex items-start justify-between border-b pb-3 border-rose-100 dark:border-slate-800">
-                  <h4 className="font-serif text-base font-extrabold text-slate-900 dark:text-white">{pkg.name}</h4>
-                  <span className="font-serif text-lg font-extrabold text-rose-600 dark:text-rose-400">
-                    R$ {pkg.price?.toFixed(2)}
-                  </span>
+          {packages.map((pkg: any) => {
+            const hasDiscount = pkg.originalPrice && pkg.originalPrice > pkg.price;
+            const discountDiff = hasDiscount ? pkg.originalPrice - pkg.price : 0;
+
+            return (
+              <div
+                key={pkg.id}
+                className="flex flex-col justify-between rounded-3xl border border-rose-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div>
+                  <div className="flex items-start justify-between border-b pb-3 border-rose-100 dark:border-slate-800 gap-2">
+                    <div>
+                      <h4 className="font-serif text-base font-extrabold text-slate-900 dark:text-white">{pkg.name}</h4>
+                      {hasDiscount && (
+                        <span className="inline-block mt-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full dark:bg-emerald-950 dark:text-emerald-300">
+                          🎉 Economia de R$ {discountDiff.toFixed(2)} ({pkg.discountType === "PERCENT" ? `${pkg.discountValue}% OFF` : `R$ ${pkg.discountValue} OFF`})
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      {hasDiscount && (
+                        <span className="block text-xs font-semibold text-slate-400 line-through">
+                          R$ {pkg.originalPrice?.toFixed(2)}
+                        </span>
+                      )}
+                      <span className="font-serif text-lg font-extrabold text-rose-600 dark:text-rose-400">
+                        R$ {pkg.price?.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {pkg.description && <p className="mt-2 text-xs text-slate-600 dark:text-slate-300 italic">{pkg.description}</p>}
+
+                  {/* Cronograma Semanal de Procedimentos */}
+                  {pkg.weeklyServices && (
+                    <div className="mt-3.5 space-y-1.5 rounded-2xl bg-amber-50/60 p-3 text-xs dark:bg-slate-800/60 border border-amber-200/60">
+                      <p className="font-extrabold text-amber-900 dark:text-amber-300 text-[11px] mb-1">
+                        📅 Cronograma de Procedimentos (Até {pkg.totalSessions} Semanas):
+                      </p>
+                      {(() => {
+                        try {
+                          const parsed = typeof pkg.weeklyServices === "string" ? JSON.parse(pkg.weeklyServices) : pkg.weeklyServices;
+                          return parsed.map((item: any) => (
+                            <div key={item.week} className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300 border-b border-amber-200/40 pb-1 last:border-0 last:pb-0">
+                              <span>🗓️ <strong>Semana {item.week}:</strong> {item.serviceName}</span>
+                              <span className="text-slate-500 font-normal shrink-0">R$ {item.price?.toFixed(2)}</span>
+                            </div>
+                          ));
+                        } catch (e) {
+                          return null;
+                        }
+                      })()}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 bg-rose-50/50 p-2.5 rounded-xl dark:bg-slate-800/60">
+                    <span>✨ {pkg.totalSessions} Semanas / Sessões</span>
+                    <span>⏳ Validade: {pkg.validityDays} dias</span>
+                  </div>
                 </div>
-                {pkg.description && <p className="mt-2.5 text-xs text-slate-600 dark:text-slate-300">{pkg.description}</p>}
-                
-                <div className="mt-4 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 bg-rose-50/50 p-2.5 rounded-xl dark:bg-slate-800/60">
-                  <span>✨ {pkg.totalSessions} Sessões</span>
-                  <span>⏳ Validade: {pkg.validityDays} dias</span>
+
+                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-xs font-extrabold gap-1">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleOpenEdit(pkg)}
+                      className="flex items-center space-x-1 text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeletePackage(pkg.id, pkg.name)}
+                      className="flex items-center space-x-1 text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Excluir</span>
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenAssign(pkg)}
+                    className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 font-extrabold text-white shadow-sm hover:opacity-95 text-xs"
+                  >
+                    🤝 Vincular a Cliente
+                  </button>
                 </div>
               </div>
-
-              <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-xs font-extrabold">
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleOpenEdit(pkg)}
-                    className="flex items-center space-x-1 text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeletePackage(pkg.id, pkg.name)}
-                    className="flex items-center space-x-1 text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Excluir</span>
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => handleOpenAssign(pkg)}
-                  className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 font-extrabold text-white shadow-sm hover:opacity-95"
-                >
-                  🤝 Vincular a Cliente
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -284,6 +488,27 @@ export default function PacotesPage() {
                     <p className="mt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                       Validade até: {new Date(cp.expiryDate).toLocaleDateString("pt-BR")}
                     </p>
+
+                    {/* Exibir o próximo procedimento da semana a ser feito */}
+                    {pkgObj?.weeklyServices && (
+                      <div className="mt-2 bg-white/80 p-2 rounded-xl text-[11px] dark:bg-slate-800 border border-amber-100">
+                        {(() => {
+                          try {
+                            const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
+                            const nextWeek = cp.sessionsUsed + 1;
+                            const currentItem = parsed.find((item: any) => item.week === nextWeek);
+                            if (currentItem) {
+                              return (
+                                <p className="font-extrabold text-rose-700 dark:text-rose-300">
+                                  💅 Próxima Sessão (Semana {nextWeek}): {currentItem.serviceName}
+                                </p>
+                              );
+                            }
+                          } catch (e) {}
+                          return null;
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-4 flex items-center justify-between border-t border-amber-200/60 pt-2 dark:border-slate-800">
@@ -313,78 +538,193 @@ export default function PacotesPage() {
 
       {/* MODAL CRIAR PACOTE */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
-              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">✨ Criar Novo Pacote</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="my-8 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">✨ Criar Novo Pacote de Sessões</h3>
+                <p className="text-[11px] text-slate-500">Configure procedimentos para até 5 semanas e defina o desconto especial do combo.</p>
+              </div>
               <button onClick={() => setShowCreateModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePackage} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome do Pacote *</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Combo Club 3 Manutenções em Fibra..."
-                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                />
+            <form onSubmit={handleCreatePackage} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Nome do Pacote *</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Combo Club 4 Semanas de Manutenção"
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Quantidade de Semanas / Sessões (Até 5) *</label>
+                  <select
+                    value={totalSessions}
+                    onChange={(e) => handleSessionsCountChange(Number(e.target.value))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value={1}>1 Semana (1 Sessão)</option>
+                    <option value={2}>2 Semanas (2 Sessões)</option>
+                    <option value={3}>3 Semanas (3 Sessões)</option>
+                    <option value={4}>4 Semanas (4 Sessões)</option>
+                    <option value={5}>5 Semanas (5 Sessões)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Descrição</label>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Descrição / Observações</label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Ex: Inclui cutilagem e troca de decoração..."
+                  placeholder="Ex: Inclui cutilagem, troca de decoração e prioridade de horário..."
                   className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Preço (R$) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+              {/* SELEÇÃO DE PROCEDIMENTOS SEMANA A SEMANA */}
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif text-xs font-extrabold text-amber-900 dark:text-amber-300">
+                    💅 Procedimentos Selecionados para Cada Semana ({totalSessions} Semanas):
+                  </h4>
+                  <span className="text-[10px] text-amber-700 font-semibold">Altere os procedimentos abaixo</span>
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Total Sessões *</label>
-                  <input
-                    type="number"
-                    value={totalSessions}
-                    onChange={(e) => setTotalSessions(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+
+                <div className="space-y-2">
+                  {weeklyServices.map((ws) => (
+                    <div key={ws.week} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-2.5 rounded-xl border border-amber-100 dark:bg-slate-900 dark:border-slate-700 gap-2">
+                      <span className="font-extrabold text-slate-800 dark:text-slate-200 w-24 shrink-0">
+                        🗓️ Semana {ws.week}:
+                      </span>
+                      
+                      <select
+                        value={ws.serviceId}
+                        onChange={(e) => handleWeeklyServiceChange(ws.week, e.target.value)}
+                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      >
+                        <option value="">-- Selecione o Procedimento --</option>
+                        {services.map((srv: any) => (
+                          <option key={srv.id} value={srv.id}>
+                            {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="Nome do procedimento..."
+                        value={ws.serviceName}
+                        onChange={(e) => handleWeeklyServiceChange(ws.week, ws.serviceId, e.target.value)}
+                        className="w-full sm:w-44 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Validade (Dias)</label>
-                  <input
-                    type="number"
-                    value={validityDays}
-                    onChange={(e) => setValidityDays(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+              </div>
+
+              {/* SEÇÃO DE DESCONTO ESPECIAL DO PACOTE */}
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/60 space-y-3">
+                <h4 className="font-serif text-xs font-extrabold text-rose-900 dark:text-rose-300">
+                  🎁 Desconto Especial do Pacote Combo
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Tipo de Desconto</label>
+                    <div className="flex rounded-xl bg-white p-1 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setDiscountType("FIXED")}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                          discountType === "FIXED" ? "bg-rose-500 text-white shadow" : "text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        R$ Valor Fixo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDiscountType("PERCENT")}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                          discountType === "PERCENT" ? "bg-rose-500 text-white shadow" : "text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        % Porcentagem
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">
+                      {discountType === "FIXED" ? "Valor do Desconto (R$)" : "Porcentagem do Desconto (%)"}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={discountValue}
+                      onChange={(e) => {
+                        setDiscountValue(Number(e.target.value));
+                        setManualPrice(null);
+                      }}
+                      placeholder={discountType === "FIXED" ? "Ex: 50.00" : "Ex: 15"}
+                      className="mt-1 w-full rounded-2xl border border-slate-200 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    />
+                  </div>
                 </div>
+
+                {/* RESUMO DOS VALORES CALCULADOS */}
+                <div className="rounded-xl bg-white p-3 border border-rose-100 dark:bg-slate-900 dark:border-slate-800 space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>Soma dos Procedimentos ({totalSessions} semanas):</span>
+                    <span>R$ {createTotals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
+                    <span>Desconto Especial Aplicado:</span>
+                    <span>
+                      - R$ {createTotals.discountAmount.toFixed(2)} ({discountType === "PERCENT" ? `${discountValue}%` : `R$ ${discountValue}`})
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center font-serif text-sm font-extrabold text-rose-700 dark:text-rose-300 border-t pt-1.5 mt-1 border-slate-100 dark:border-slate-800">
+                    <span>VALOR FINAL DO PACOTE:</span>
+                    <div className="flex items-center space-x-1">
+                      <span>R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={createTotals.finalPrice}
+                        onChange={(e) => setManualPrice(Number(e.target.value))}
+                        className="w-24 rounded-lg border border-rose-300 p-1 text-right font-serif text-sm font-extrabold text-rose-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-rose-300"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Validade do Pacote (Dias)</label>
+                <input
+                  type="number"
+                  value={validityDays}
+                  onChange={(e) => setValidityDays(Number(e.target.value))}
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                />
               </div>
 
               <button
                 type="submit"
                 className="mt-4 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
               >
-                CRIAR PACOTE ✨
+                CRIAR PACOTE DE SESSÕES ✨
               </button>
             </form>
           </div>
@@ -393,25 +733,42 @@ export default function PacotesPage() {
 
       {/* MODAL EDITAR PACOTE */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="my-8 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">✏️ Editar Pacote</h3>
               <button onClick={() => setShowEditModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleUpdatePackage} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Nome do Pacote *</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                />
+            <form onSubmit={handleUpdatePackage} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Nome do Pacote *</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Semanas / Sessões (Até 5) *</label>
+                  <select
+                    value={editTotalSessions}
+                    onChange={(e) => handleEditSessionsCountChange(Number(e.target.value))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value={1}>1 Semana</option>
+                    <option value={2}>2 Semanas</option>
+                    <option value={3}>3 Semanas</option>
+                    <option value={4}>4 Semanas</option>
+                    <option value={5}>5 Semanas</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -424,38 +781,127 @@ export default function PacotesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Preço (R$) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+              {/* SELEÇÃO DE PROCEDIMENTOS SEMANA A SEMANA (EDITAR) */}
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/60 space-y-3">
+                <h4 className="font-serif text-xs font-extrabold text-amber-900 dark:text-amber-300">
+                  💅 Procedimentos para Cada Semana ({editTotalSessions} Semanas):
+                </h4>
+
+                <div className="space-y-2">
+                  {editWeeklyServices.map((ws) => (
+                    <div key={ws.week} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-2.5 rounded-xl border border-amber-100 dark:bg-slate-900 dark:border-slate-700 gap-2">
+                      <span className="font-extrabold text-slate-800 dark:text-slate-200 w-24 shrink-0">
+                        🗓️ Semana {ws.week}:
+                      </span>
+                      
+                      <select
+                        value={ws.serviceId}
+                        onChange={(e) => handleEditWeeklyServiceChange(ws.week, e.target.value)}
+                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      >
+                        <option value="">-- Selecione o Procedimento --</option>
+                        {services.map((srv: any) => (
+                          <option key={srv.id} value={srv.id}>
+                            {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="Nome do procedimento..."
+                        value={ws.serviceName}
+                        onChange={(e) => handleEditWeeklyServiceChange(ws.week, ws.serviceId, e.target.value)}
+                        className="w-full sm:w-44 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Total Sessões *</label>
-                  <input
-                    type="number"
-                    value={editTotalSessions}
-                    onChange={(e) => setEditTotalSessions(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+              </div>
+
+              {/* SEÇÃO DE DESCONTO ESPECIAL (EDITAR) */}
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/60 space-y-3">
+                <h4 className="font-serif text-xs font-extrabold text-rose-900 dark:text-rose-300">
+                  🎁 Desconto Especial do Pacote
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">Tipo de Desconto</label>
+                    <div className="flex rounded-xl bg-white p-1 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditDiscountType("FIXED")}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                          editDiscountType === "FIXED" ? "bg-rose-500 text-white shadow" : "text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        R$ Valor Fixo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditDiscountType("PERCENT")}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                          editDiscountType === "PERCENT" ? "bg-rose-500 text-white shadow" : "text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        % Porcentagem
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 dark:text-slate-200">
+                      {editDiscountType === "FIXED" ? "Valor do Desconto (R$)" : "Porcentagem do Desconto (%)"}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editDiscountValue}
+                      onChange={(e) => {
+                        setEditDiscountValue(Number(e.target.value));
+                        setEditManualPrice(null);
+                      }}
+                      className="mt-1 w-full rounded-2xl border border-slate-200 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Validade (Dias)</label>
-                  <input
-                    type="number"
-                    value={editValidityDays}
-                    onChange={(e) => setEditValidityDays(Number(e.target.value))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  />
+
+                {/* RESUMO DOS VALORES CALCULADOS */}
+                <div className="rounded-xl bg-white p-3 border border-rose-100 dark:bg-slate-900 dark:border-slate-800 space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>Soma dos Procedimentos:</span>
+                    <span>R$ {editTotals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400">
+                    <span>Desconto Aplicado:</span>
+                    <span>- R$ {editTotals.discountAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center font-serif text-sm font-extrabold text-rose-700 dark:text-rose-300 border-t pt-1.5 mt-1 border-slate-100 dark:border-slate-800">
+                    <span>VALOR FINAL DO PACOTE:</span>
+                    <div className="flex items-center space-x-1">
+                      <span>R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editTotals.finalPrice}
+                        onChange={(e) => setEditManualPrice(Number(e.target.value))}
+                        className="w-24 rounded-lg border border-rose-300 p-1 text-right font-serif text-sm font-extrabold text-rose-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-rose-300"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Validade (Dias)</label>
+                <input
+                  type="number"
+                  value={editValidityDays}
+                  onChange={(e) => setEditValidityDays(Number(e.target.value))}
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                />
               </div>
 
               <button
@@ -472,8 +918,8 @@ export default function PacotesPage() {
       {/* MODAL VINCULAR PACOTE A CLIENTE */}
       {showAssignModal && selectedPackage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
                 🤝 Vincular "{selectedPackage.name}"
               </h3>
@@ -499,10 +945,42 @@ export default function PacotesPage() {
                 </select>
               </div>
 
-              <div className="rounded-2xl bg-amber-50 p-3 text-amber-900 dark:bg-slate-800 dark:text-amber-300 font-semibold space-y-1">
-                <p>✨ Total de Sessões: <strong>{selectedPackage.totalSessions} sessões</strong></p>
-                <p>⏳ Validade: <strong>{selectedPackage.validityDays} dias</strong> a partir de hoje</p>
-                <p>💰 Valor Total: <strong>R$ {selectedPackage.price?.toFixed(2)}</strong></p>
+              {/* Detalhes do Cronograma Semanal */}
+              <div className="rounded-2xl bg-amber-50 p-4 text-amber-900 dark:bg-slate-800 dark:text-amber-300 font-semibold space-y-2 border border-amber-200/80">
+                <p className="font-serif font-extrabold text-sm text-amber-950 dark:text-amber-200">
+                  📦 Resumo do Combo Selecionado:
+                </p>
+
+                {selectedPackage.weeklyServices && (
+                  <div className="space-y-1 text-[11px] bg-white/70 p-2.5 rounded-xl dark:bg-slate-900 border border-amber-100">
+                    {(() => {
+                      try {
+                        const parsed = typeof selectedPackage.weeklyServices === "string" ? JSON.parse(selectedPackage.weeklyServices) : selectedPackage.weeklyServices;
+                        return parsed.map((item: any) => (
+                          <div key={item.week} className="flex justify-between">
+                            <span>🗓️ Semana {item.week}: {item.serviceName}</span>
+                            <span>R$ {item.price?.toFixed(2)}</span>
+                          </div>
+                        ));
+                      } catch (e) {
+                        return null;
+                      }
+                    })()}
+                  </div>
+                )}
+
+                <div className="flex justify-between text-xs pt-1 border-t border-amber-200/60">
+                  <span>✨ Total de Sessões:</span>
+                  <strong>{selectedPackage.totalSessions} Semanas / Sessões</strong>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>⏳ Validade:</span>
+                  <strong>{selectedPackage.validityDays} dias a partir de hoje</strong>
+                </div>
+                <div className="flex justify-between text-sm font-extrabold text-rose-700 dark:text-rose-300 pt-1 border-t border-amber-200">
+                  <span>💰 VALOR FINAL DO PACOTE:</span>
+                  <span>R$ {selectedPackage.price?.toFixed(2)}</span>
+                </div>
               </div>
 
               <button

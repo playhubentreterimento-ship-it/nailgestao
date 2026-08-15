@@ -129,14 +129,18 @@ model Service {
 }
 
 model Package {
-  id            String   @id @default(uuid())
-  salonId       String   @default("default-salon")
-  name          String
-  price         Float
-  totalSessions Int
-  validityDays  Int      @default(90)
-  description   String?
-  active        Boolean  @default(true)
+  id             String   @id @default(uuid())
+  salonId        String   @default("default-salon")
+  name           String
+  price          Float
+  totalSessions  Int
+  validityDays   Int      @default(90)
+  description    String?
+  weeklyServices String?
+  discountType   String?  @default("FIXED")
+  discountValue  Float?   @default(0.0)
+  originalPrice  Float?   @default(0.0)
+  active         Boolean  @default(true)
 }
 
 model ClientPackage {
