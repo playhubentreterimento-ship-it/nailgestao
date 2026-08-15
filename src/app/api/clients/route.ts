@@ -193,6 +193,11 @@ export async function DELETE(req: Request) {
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
+    // Apagar dependências para evitar violação de chave estrangeira
+    await prisma.clientPhoto.deleteMany({ where: { clientId: id } }).catch(() => {});
+    await prisma.clientPackage.deleteMany({ where: { clientId: id } }).catch(() => {});
+    await prisma.appointment.deleteMany({ where: { clientId: id } }).catch(() => {});
+
     await prisma.client.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error: any) {

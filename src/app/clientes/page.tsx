@@ -133,6 +133,31 @@ export default function ClientesPage() {
     setShowEditModal(true);
   };
 
+  const handleDeleteClient = async (client: any) => {
+    if (!client) return;
+    if (
+      confirm(
+        `⚠️ Tem certeza que deseja EXCLUIR permanentemente o cadastro da cliente "${client.name}"?\n\nEsta ação removerá a cliente, ficha técnica e todo o histórico do sistema.`
+      )
+    ) {
+      try {
+        const res = await fetch(`/api/clients?id=${client.id}`, { method: "DELETE" });
+        if (res.ok) {
+          if (selectedClient?.id === client.id) {
+            setSelectedClient(null);
+          }
+          alert(`🗑️ Cliente "${client.name}" excluída com sucesso.`);
+          loadClients();
+        } else {
+          const err = await res.json();
+          alert("Erro ao excluir cliente: " + (err.error || "Erro no servidor"));
+        }
+      } catch (e) {
+        alert("Erro ao excluir cliente.");
+      }
+    }
+  };
+
   const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await fetch("/api/clients", {
@@ -342,30 +367,40 @@ export default function ClientesPage() {
             </div>
 
             {/* Ações do Card */}
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 gap-1">
               <a
                 href={`https://wa.me/${(client.whatsapp || client.phone || "").replace(/\D/g, "")}`}
                 target="_blank"
-                className="flex items-center space-x-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
+                className="flex items-center space-x-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
               >
-                <MessageSquare className="h-4 w-4" />
+                <MessageSquare className="h-3.5 w-3.5" />
                 <span>WhatsApp</span>
               </a>
 
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center space-x-1">
                 <button
                   onClick={() => handleStartEdit(client)}
-                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  title="Editar dados da cliente"
                 >
                   <Edit className="h-3.5 w-3.5 text-amber-600" />
                   <span>Editar</span>
                 </button>
 
                 <button
-                  onClick={() => setSelectedClient(client)}
-                  className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                  onClick={() => handleDeleteClient(client)}
+                  className="flex items-center space-x-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+                  title="Excluir cadastro da cliente"
                 >
-                  Ver Ficha &rarr;
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Excluir</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedClient(client)}
+                  className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                >
+                  Ficha &rarr;
                 </button>
               </div>
             </div>
@@ -399,7 +434,16 @@ export default function ClientesPage() {
                   className="flex items-center space-x-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-600"
                 >
                   <Edit className="h-4 w-4" />
-                  <span>Editar Dados & Anotações</span>
+                  <span>Editar Dados</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteClient(selectedClient)}
+                  className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+                  title="Excluir cadastro da cliente"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Excluir</span>
                 </button>
 
                 <button
