@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package as PackageIcon, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar, X, Sparkles, Percent, DollarSign } from "lucide-react";
+import { Package as PackageIcon, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar as CalendarIcon, X, Sparkles, Percent, DollarSign } from "lucide-react";
+
+const getTodayString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function PacotesPage() {
   const [data, setData] = useState<any>(null);
@@ -10,6 +18,7 @@ export default function PacotesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Form Novo Pacote
   const [name, setName] = useState("");
@@ -45,6 +54,12 @@ export default function PacotesPage() {
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState("");
 
+  // Form Agendar Sessão na Agenda
+  const [selectedClientPackage, setSelectedClientPackage] = useState<any>(null);
+  const [scheduleDate, setScheduleDate] = useState<string>(getTodayString());
+  const [scheduleTime, setScheduleTime] = useState<string>("10:00");
+  const [scheduleProfId, setScheduleProfId] = useState<string>("");
+
   const loadData = () => {
     fetch("/api/packages", { cache: "no-store" })
       .then((r) => r.json())
@@ -61,6 +76,9 @@ export default function PacotesPage() {
         if (res.clients && res.clients.length > 0 && !selectedClientId) {
           setSelectedClientId(res.clients[0].id);
         }
+        if (res.professionals && res.professionals.length > 0 && !scheduleProfId) {
+          setScheduleProfId(res.professionals[0].id);
+        }
       });
   };
 
@@ -70,7 +88,7 @@ export default function PacotesPage() {
     return () => window.removeEventListener("focus", loadData);
   }, []);
 
-  const { packages = [], clientPackages = [], clients = [], services = [] } = data || {};
+  const { packages = [], clientPackages = [], clients = [], services = [], professionals = [] } = data || {};
 
   // Ajustar número de semanas (1 a 6) no formulário de criação
   const handleSessionsCountChange = (count: number) => {
@@ -345,6 +363,65 @@ export default function PacotesPage() {
     }
   };
 
+  const handleOpenScheduleModal = (cp: any) => {
+    setSelectedClientPackage(cp);
+    if (professionals && professionals.length > 0) {
+      setScheduleProfId(professionals[0].id);
+    }
+    setScheduleDate(getTodayString());
+    setScheduleTime("10:00");
+    setShowScheduleModal(true);
+  };
+
+  const handleSchedulePackageSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClientPackage) return;
+
+    const clientObj = clients.find((c: any) => c.id === selectedClientPackage.clientId);
+    const pkgObj = packages.find((p: any) => p.id === selectedClientPackage.packageId);
+
+    let procedureName = "Sessão de Pacote";
+    let targetServiceId = services[0]?.id || "srv-default";
+
+    if (pkgObj?.weeklyServices) {
+      try {
+        const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
+        const nextWeek = selectedClientPackage.sessionsUsed + 1;
+        const currentItem = parsed.find((item: any) => item.week === nextWeek);
+        if (currentItem) {
+          procedureName = currentItem.serviceName;
+          if (currentItem.serviceId) targetServiceId = currentItem.serviceId;
+        }
+      } catch (err) {}
+    }
+
+    const res = await fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientId: selectedClientPackage.clientId,
+        professionalId: scheduleProfId || (professionals[0]?.id),
+        date: scheduleDate,
+        startTime: scheduleTime,
+        serviceIds: [targetServiceId],
+        clientPackageId: selectedClientPackage.id,
+        notes: `📦 Sessão ${selectedClientPackage.sessionsUsed + 1}/${selectedClientPackage.totalSessions} do Pacote: ${procedureName}`,
+        depositPaid: 0,
+        discount: 0,
+        paymentStatus: "PACOTE",
+      }),
+    });
+
+    if (res.ok) {
+      alert(`✨ Agendamento de Pacote confirmado para a cliente ${clientObj?.name || "Cliente"} no dia ${scheduleDate} às ${scheduleTime}!`);
+      setShowScheduleModal(false);
+      loadData();
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      alert(`Erro ao agendar sessão do pacote: ${errJson.error || "Verifique o horário selecionado."}`);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -354,7 +431,7 @@ export default function PacotesPage() {
             📦 Pacotes & Planos de Sessões
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Defina o cronograma semanal de procedimentos (até 6 semanas), aplique descontos especiais do pacote e gerencie clientes.
+            Defina o cronograma semanal de procedimentos (até 6 semanas), aplique descontos especiais e agende clientes diretamente na Agenda.
           </p>
         </div>
 
@@ -524,18 +601,29 @@ export default function PacotesPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-amber-200/60 pt-2 dark:border-slate-800">
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      {remaining > 0 ? `Restam ${remaining} sessões` : "Pacote Concluído"}
+                  <div className="mt-4 flex items-center justify-between border-t border-amber-200/60 pt-2 dark:border-slate-800 gap-1">
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
+                      {remaining > 0 ? `Restam ${remaining}` : "Concluído"}
                     </span>
 
                     {remaining > 0 && (
-                      <button
-                        onClick={() => handleUseSession(cp.id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-extrabold text-white shadow-sm hover:bg-emerald-700"
-                      >
-                        ⚡ Abater 1 Sessão
-                      </button>
+                      <div className="flex items-center space-x-1.5">
+                        <button
+                          onClick={() => handleOpenScheduleModal(cp)}
+                          className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-sm hover:opacity-95 flex items-center space-x-1"
+                        >
+                          <CalendarIcon className="h-3.5 w-3.5" />
+                          <span>📅 Agendar na Agenda</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleUseSession(cp.id)}
+                          className="rounded-xl bg-emerald-600 px-2 py-1.5 text-[11px] font-extrabold text-white shadow-sm hover:bg-emerald-700"
+                          title="Abater 1 sessão manualmente sem agendar"
+                        >
+                          ⚡ Abater
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -548,6 +636,113 @@ export default function PacotesPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL AGENDAR SESSÃO NA AGENDA */}
+      {showScheduleModal && selectedClientPackage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+                  📅 Agendar Sessão do Pacote na Agenda
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Escolha o dia, horário e profissional para atender a cliente.
+                </p>
+              </div>
+              <button onClick={() => setShowScheduleModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSchedulePackageSession} className="space-y-4 text-xs">
+              {/* Informações da Cliente e do Pacote */}
+              <div className="rounded-2xl bg-amber-50 p-3.5 dark:bg-slate-800 border border-amber-200/80 space-y-1">
+                <p className="font-extrabold text-slate-900 dark:text-white">
+                  👤 Cliente: <span className="text-amber-900 dark:text-amber-200">{clients.find((c: any) => c.id === selectedClientPackage.clientId)?.name}</span>
+                </p>
+                <p className="font-semibold text-slate-700 dark:text-slate-300">
+                  📦 Pacote: {packages.find((p: any) => p.id === selectedClientPackage.packageId)?.name}
+                </p>
+                
+                {/* Exibir o serviço da sessão atual */}
+                {(() => {
+                  const pkgObj = packages.find((p: any) => p.id === selectedClientPackage.packageId);
+                  if (pkgObj?.weeklyServices) {
+                    try {
+                      const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
+                      const nextWeek = selectedClientPackage.sessionsUsed + 1;
+                      const currentItem = parsed.find((item: any) => item.week === nextWeek);
+                      if (currentItem) {
+                        return (
+                          <div className="mt-1 bg-white p-2 rounded-xl text-rose-700 font-extrabold dark:bg-slate-900 border border-amber-100">
+                            💅 Sessão {nextWeek} de {selectedClientPackage.totalSessions}: {currentItem.serviceName}
+                          </div>
+                        );
+                      }
+                    } catch (e) {}
+                  }
+                  return (
+                    <p className="font-bold text-rose-700">
+                      💅 Sessão {selectedClientPackage.sessionsUsed + 1} de {selectedClientPackage.totalSessions}
+                    </p>
+                  );
+                })()}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data do Atendimento *</label>
+                  <input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Horário *</label>
+                  <select
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"].map((t) => (
+                      <option key={t} value={t}>⏰ {t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Profissional Atendante *</label>
+                <select
+                  value={scheduleProfId}
+                  onChange={(e) => setScheduleProfId(e.target.value)}
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                >
+                  {professionals.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      💅 {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="mt-4 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95 flex items-center justify-center space-x-2"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span>CONFIRMAR E AGENDAR NA AGENDA 📅</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CRIAR PACOTE */}
       {showCreateModal && (

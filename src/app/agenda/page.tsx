@@ -85,6 +85,8 @@ export default function AgendaPage() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [clientPackages, setClientPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [filterProf, setFilterProf] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -98,6 +100,7 @@ export default function AgendaPage() {
   const [formDiscount, setFormDiscount] = useState<number>(0);
   const [formDeposit, setFormDeposit] = useState<number>(50);
   const [formNotes, setFormNotes] = useState("");
+  const [formClientPackageId, setFormClientPackageId] = useState<string>("");
 
   // Form de Edição de Agendamento
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -187,6 +190,10 @@ export default function AgendaPage() {
     fetch("/api/professionals", { cache: "no-store" }).then((r) => r.json()).then(setProfessionals).catch(() => {});
     fetch("/api/services", { cache: "no-store" }).then((r) => r.json()).then((res) => setServices(res.services || [])).catch(() => {});
     fetch("/api/clients", { cache: "no-store" }).then((r) => r.json()).then(setClients).catch(() => {});
+    fetch("/api/packages", { cache: "no-store" }).then((r) => r.json()).then((res) => {
+      setClientPackages(res.clientPackages || []);
+      setPackages(res.packages || []);
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -199,6 +206,7 @@ export default function AgendaPage() {
     refreshAllData();
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
+    setFormClientPackageId("");
     setShowModal(true);
   };
 
@@ -221,6 +229,7 @@ export default function AgendaPage() {
         discount: Number(formDiscount),
         depositPaid: Number(formDeposit),
         notes: formNotes,
+        clientPackageId: formClientPackageId || undefined,
       }),
     });
 
@@ -236,6 +245,7 @@ export default function AgendaPage() {
       setFormNotes("");
       setFormDiscount(0);
       setFormDeposit(0);
+      setFormClientPackageId("");
       refreshAllData();
     } else {
       const err = await res.json();
@@ -1197,6 +1207,46 @@ export default function AgendaPage() {
                     </option>
                   ))}
                 </select>
+
+                {/* Badge de Pacote Ativo da Cliente */}
+                {(() => {
+                  if (!formClient) return null;
+                  const activeCp = clientPackages.find((cp: any) => cp.clientId === formClient && cp.active);
+                  if (!activeCp) return null;
+                  const pkgObj = packages.find((p: any) => p.id === activeCp.packageId);
+                  const isSelected = formClientPackageId === activeCp.id;
+
+                  return (
+                    <div className={`mt-2.5 rounded-2xl border p-3.5 text-xs transition ${isSelected ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800' : 'bg-amber-50 border-amber-200 dark:bg-slate-800 dark:border-slate-700'}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <p className="font-extrabold text-amber-950 dark:text-amber-200 text-xs">
+                            🎁 Cliente possui Pacote Ativo: <strong>{pkgObj?.name || "Pacote de Sessões"}</strong>
+                          </p>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold mt-0.5">
+                            {activeCp.sessionsUsed}/{activeCp.totalSessions} sessões usadas ({activeCp.totalSessions - activeCp.sessionsUsed} restantes)
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormClientPackageId("");
+                            } else {
+                              setFormClientPackageId(activeCp.id);
+                              setFormDeposit(0);
+                              setFormDiscount(0);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow transition shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+                        >
+                          {isSelected ? '✓ Abater Sessão do Pacote' : '🎁 Usar Sessão do Pacote'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Profissional & Data & Horário */}

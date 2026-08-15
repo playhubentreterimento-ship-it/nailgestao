@@ -106,7 +106,13 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ packages, clientPackages, clients, services });
+    const professionals = await prisma.professional.findMany({
+      where: { salonId: "default-salon", active: true },
+      select: { id: true, name: true, color: true },
+      orderBy: { name: "asc" },
+    });
+
+    return NextResponse.json({ packages, clientPackages, clients, services, professionals });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

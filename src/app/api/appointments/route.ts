@@ -240,6 +240,25 @@ export async function POST(req: Request) {
       },
     });
 
+    // Se o agendamento for vinculado a um pacote da cliente, abater 1 sessão automaticamente
+    if (body.clientPackageId) {
+      try {
+        const clientPkg = await prisma.clientPackage.findUnique({ where: { id: body.clientPackageId } });
+        if (clientPkg && clientPkg.active) {
+          const nextUsed = clientPkg.sessionsUsed + 1;
+          await prisma.clientPackage.update({
+            where: { id: body.clientPackageId },
+            data: {
+              sessionsUsed: nextUsed,
+              active: nextUsed < clientPkg.totalSessions,
+            },
+          });
+        }
+      } catch (errPkg) {
+        console.error("Erro ao abater sessão do pacote no agendamento:", errPkg);
+      }
+    }
+
     // Se houve cobrança de sinal, lançar no caixa se houver um caixa aberto
     if (depositPaid > 0) {
       const openCash = await prisma.cashRegister.findFirst({
