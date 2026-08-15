@@ -481,6 +481,11 @@ export default function AgendaPage() {
             {timeSlots.map((slot) => {
               const slotMins = timeToMins(slot);
 
+              const isLunchUnlocked = appointments.some(
+                (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
+              );
+              const isLunchSlot = slotMins >= 690 && slotMins < 780 && !isLunchUnlocked;
+
               const startingApps = appointments.filter(
                 (a) => a.startTime === slot && a.status !== "CANCELADO"
               );
@@ -500,6 +505,8 @@ export default function AgendaPage() {
                   className={`flex items-start rounded-2xl border p-3 transition ${
                     isBusy
                       ? "border-rose-200 bg-rose-50/30 dark:border-slate-800 dark:bg-slate-800/40"
+                      : isLunchSlot
+                      ? "border-amber-300/80 bg-amber-50/30 dark:border-amber-900/60 dark:bg-amber-950/20"
                       : "border-slate-100 bg-slate-50/40 hover:bg-rose-50/40 dark:border-slate-800/60 dark:bg-slate-900/60"
                   }`}
                 >
@@ -601,6 +608,24 @@ export default function AgendaPage() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    ) : isLunchSlot ? (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs rounded-xl bg-amber-50/90 p-2.5 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/60 w-full gap-2 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-extrabold text-amber-900 dark:text-amber-300">
+                            🍱 Horário de Almoço (11:30 às 13:00)
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-200">
+                            Bloqueado na Agenda Online
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleOpenModal(selectedDate, slot)}
+                          className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-amber-700 shadow-sm transition"
+                          title="Permitir encaixe manual nesta vaga de almoço"
+                        >
+                          + Encaixar Manualmente
+                        </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
@@ -752,25 +777,35 @@ export default function AgendaPage() {
                                   💅 {profOngoingApp.services?.map((s: any) => s.serviceName).join(", ")}
                                 </p>
                               </div>
+                            ) : slotMins >= 690 && slotMins < 780 && !appointments.some((a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")) ? (
+                              <button
+                                onClick={() => {
+                                  setFormProf(prof.id);
+                                  handleOpenModal(selectedDate, slot);
+                                }}
+                                className="w-full min-h-[44px] rounded-xl border border-amber-300 bg-amber-50/90 p-2 text-center text-[11px] font-bold text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200 transition flex items-center justify-center space-x-1 shadow-sm"
+                                title="Horário de almoço (Bloqueado na Agenda Online) - Clique para encaixe manual"
+                              >
+                                <span>🍱 Almoço (Encaixe)</span>
+                              </button>
                             ) : (
-                            <button
-                              onClick={() => {
-                                setFormProf(prof.id);
-                                handleOpenModal(selectedDate, slot);
-                              }}
-                              className="w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-2 text-center text-[11px] font-bold text-slate-600 hover:border-rose-400 hover:bg-rose-50/60 hover:text-rose-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800 transition flex items-center justify-center space-x-1"
-                            >
-                              <Plus className="h-3.5 w-3.5 text-rose-500" />
-                              <span>+ Agendar</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+                              <button
+                                onClick={() => {
+                                  setFormProf(prof.id);
+                                  handleOpenModal(selectedDate, slot);
+                                }}
+                                className="w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-2 text-center text-[11px] font-bold text-slate-600 hover:border-rose-400 hover:bg-rose-50/60 hover:text-rose-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800 transition flex items-center justify-center space-x-1"
+                              >
+                                <span>+ Agendar</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
           </div>
           </div>
         </div>
