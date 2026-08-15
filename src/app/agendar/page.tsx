@@ -107,10 +107,16 @@ export default function AgendarPublicPage() {
     // 4. Horário de Almoço (11:30 = 690 mins, 13:00 = 780 mins)
     // Bloqueado por padrão na agenda virtual (11:30 às 13:00)
     const isLunchUnlocked = isLunchUnlockedOnDate();
+    const isStartingInLunch = slotStart >= 690 && slotStart < 780;
+
     if (!isLunchUnlocked) {
       if (slotStart < 780 && slotEnd > 690) {
         return false;
       }
+    } else if (isStartingInLunch) {
+      // Quando o almoço for liberado, PERMITIR QUALQUER PROCEDIMENTO (qualquer duração),
+      // ignorando estouro de horário com a tarde
+      return true;
     }
 
     // 5. Verificar choque com agendamentos ativos da profissional
