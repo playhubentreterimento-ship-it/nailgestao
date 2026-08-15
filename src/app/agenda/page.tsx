@@ -210,9 +210,65 @@ export default function AgendaPage() {
     setShowModal(true);
   };
 
+  const handleSelectClient = (clientId: string) => {
+    setFormClient(clientId);
+    if (!clientId) {
+      setFormClientPackageId("");
+      return;
+    }
+
+    const activeCp = clientPackages.find((cp: any) => cp.clientId === clientId && cp.active);
+    if (activeCp) {
+      setFormClientPackageId(activeCp.id);
+      setFormDeposit(0);
+      setFormDiscount(0);
+
+      // Auto-selecionar o procedimento cadastrado para a semana do pacote
+      const pkgObj = packages.find((p: any) => p.id === activeCp.packageId);
+      if (pkgObj?.weeklyServices) {
+        try {
+          const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
+          const nextWeek = activeCp.sessionsUsed + 1;
+          const currentItem = parsed.find((item: any) => item.week === nextWeek);
+          if (currentItem?.serviceId) {
+            setFormSelectedServices([currentItem.serviceId]);
+          } else if (services.length > 0) {
+            setFormSelectedServices([services[0].id]);
+          }
+        } catch (e) {
+          if (services.length > 0) setFormSelectedServices([services[0].id]);
+        }
+      } else if (services.length > 0) {
+        setFormSelectedServices([services[0].id]);
+      }
+    } else {
+      setFormClientPackageId("");
+    }
+  };
+
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formClient || !formProf || formSelectedServices.length === 0) {
+
+    let targetServices = [...formSelectedServices];
+    if (targetServices.length === 0 && formClientPackageId) {
+      const activeCp = clientPackages.find((cp: any) => cp.id === formClientPackageId);
+      const pkgObj = packages.find((p: any) => p.id === activeCp?.packageId);
+      if (pkgObj?.weeklyServices) {
+        try {
+          const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
+          const nextWeek = (activeCp?.sessionsUsed || 0) + 1;
+          const currentItem = parsed.find((item: any) => item.week === nextWeek);
+          if (currentItem?.serviceId) {
+            targetServices = [currentItem.serviceId];
+          }
+        } catch (e) {}
+      }
+      if (targetServices.length === 0 && services.length > 0) {
+        targetServices = [services[0].id];
+      }
+    }
+
+    if (!formClient || !formProf || targetServices.length === 0) {
       alert("Por favor, selecione a cliente, a profissional e ao menos 1 serviço.");
       return;
     }
@@ -225,7 +281,7 @@ export default function AgendaPage() {
         professionalId: formProf,
         date: formDate,
         startTime: formTime,
-        serviceIds: formSelectedServices,
+        serviceIds: targetServices,
         discount: Number(formDiscount),
         depositPaid: Number(formDeposit),
         notes: formNotes,
@@ -1196,7 +1252,7 @@ export default function AgendaPage() {
                 <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
                 <select
                   value={formClient}
-                  onChange={(e) => setFormClient(e.target.value)}
+                  onChange={(e) => handleSelectClient(e.target.value)}
                   className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
                 >
