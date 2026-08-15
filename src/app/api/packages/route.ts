@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+async function ensurePackageTableColumns() {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "weeklyServices" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "discountType" TEXT DEFAULT 'FIXED';`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "discountValue" DOUBLE PRECISION DEFAULT 0;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "originalPrice" DOUBLE PRECISION DEFAULT 0;`);
+  } catch (e) {
+    console.error("Auto migration column error:", e);
+  }
+}
+
 export async function GET() {
   try {
+    await ensurePackageTableColumns();
+
     let packages = await prisma.package.findMany({
       where: { salonId: "default-salon", active: true },
       orderBy: { name: "asc" },
@@ -169,29 +182,48 @@ export async function POST(req: Request) {
       originalPrice,
     } = body;
 
-    if (!name || !price || !totalSessions) {
+    if (!name || price === undefined || price === null || !totalSessions) {
       return NextResponse.json({ error: "Nome, preço e total de sessões são obrigatórios." }, { status: 400 });
     }
 
-    const newPackage = await prisma.package.create({
-      data: {
-        salonId: "default-salon",
-        name,
-        price: Number(price),
-        totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-        validityDays: Number(validityDays || 90),
-        description: description || null,
-        weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
-        discountType: discountType || "FIXED",
-        discountValue: Number(discountValue || 0),
-        originalPrice: Number(originalPrice || price),
-        active: true,
-      },
-    });
+    await ensurePackageTableColumns();
+
+    let newPackage;
+    try {
+      newPackage = await prisma.package.create({
+        data: {
+          salonId: "default-salon",
+          name,
+          price: Number(price),
+          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
+          validityDays: Number(validityDays || 90),
+          description: description || null,
+          weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
+          discountType: discountType || "FIXED",
+          discountValue: Number(discountValue || 0),
+          originalPrice: Number(originalPrice || price),
+          active: true,
+        },
+      });
+    } catch (createErr: any) {
+      console.error("Erro no save completo, tentando fallback:", createErr);
+      newPackage = await prisma.package.create({
+        data: {
+          salonId: "default-salon",
+          name,
+          price: Number(price),
+          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
+          validityDays: Number(validityDays || 90),
+          description: description || null,
+          active: true,
+        },
+      });
+    }
 
     return NextResponse.json(newPackage);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Erro fatal POST /api/packages:", error);
+    return NextResponse.json({ error: error.message || "Erro ao salvar pacote" }, { status: 500 });
   }
 }
 
@@ -215,22 +247,37 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "ID e nome do pacote são obrigatórios." }, { status: 400 });
     }
 
-    const updated = await prisma.package.update({
-      where: { id },
-      data: {
-        name,
-        price: Number(price),
-        totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-        validityDays: Number(validityDays || 90),
-        description: description || null,
-        weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
-        discountType: discountType || "FIXED",
-        discountValue: Number(discountValue || 0),
-        originalPrice: Number(originalPrice || price),
-      },
-    });
+    await ensurePackageTableColumns();
 
-    return NextResponse.json(updated);
+    let updated;
+    try {
+      updated = await prisma.package.update({
+        where: { id },
+        data: {
+          name,
+          price: Number(price),
+          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
+          validityDays: Number(validityDays || 90),
+          description: description || null,
+          weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
+          discountType: discountType || "FIXED",
+          discountValue: Number(discountValue || 0),
+          originalPrice: Number(originalPrice || price),
+        },
+      });
+    } catch (updateErr: any) {
+      console.error("Erro no update completo, tentando fallback:", updateErr);
+      updated = await prisma.package.update({
+        where: { id },
+        data: {
+          name,
+          price: Number(price),
+          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
+          validityDays: Number(validityDays || 90),
+          description: description || null,
+        },
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error: any) {

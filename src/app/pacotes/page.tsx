@@ -189,31 +189,36 @@ export default function PacotesPage() {
     e.preventDefault();
     if (!name || totalSessions <= 0) return;
 
-    const res = await fetch("/api/packages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        price: createTotals.finalPrice,
-        originalPrice: createTotals.subtotal,
-        totalSessions,
-        validityDays,
-        description,
-        weeklyServices: JSON.stringify(weeklyServices),
-        discountType,
-        discountValue,
-      }),
-    });
+    try {
+      const res = await fetch("/api/packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          price: createTotals.finalPrice,
+          originalPrice: createTotals.subtotal,
+          totalSessions,
+          validityDays,
+          description,
+          weeklyServices: JSON.stringify(weeklyServices),
+          discountType,
+          discountValue,
+        }),
+      });
 
-    if (res.ok) {
-      alert("✨ Novo pacote de sessões criado com sucesso!");
-      setShowCreateModal(false);
-      setName("");
-      setDescription("");
-      setManualPrice(null);
-      loadData();
-    } else {
-      alert("Erro ao cadastrar pacote.");
+      if (res.ok) {
+        alert("✨ Novo pacote de sessões criado com sucesso!");
+        setShowCreateModal(false);
+        setName("");
+        setDescription("");
+        setManualPrice(null);
+        loadData();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`Erro ao cadastrar pacote: ${errJson.error || errJson.message || "Verifique os dados preenchidos."}`);
+      }
+    } catch (e: any) {
+      alert(`Erro de conexão ao cadastrar pacote: ${e.message || "Tente novamente."}`);
     }
   };
 
