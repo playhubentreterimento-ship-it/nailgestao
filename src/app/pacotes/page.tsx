@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package as PackageIcon, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar as CalendarIcon, X, Sparkles, Percent, DollarSign } from "lucide-react";
+import { Package as PackageIcon, Plus, Edit2, Trash2, UserCheck, CheckCircle2, Clock, Calendar as CalendarIcon, X, Sparkles, Percent, DollarSign, CreditCard } from "lucide-react";
 
 const getTodayString = () => {
   const now = new Date();
@@ -50,9 +50,12 @@ export default function PacotesPage() {
   const [editDiscountValue, setEditDiscountValue] = useState<number>(0);
   const [editManualPrice, setEditManualPrice] = useState<number | null>(null);
 
-  // Form Vincular a Cliente
+  // Form Vincular a Cliente (Venda do Pacote)
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [assignPaymentDate, setAssignPaymentDate] = useState<string>(getTodayString());
+  const [assignPaymentMethod, setAssignPaymentMethod] = useState<string>("PIX");
+  const [assignAmountPaid, setAssignAmountPaid] = useState<number | null>(null);
 
   // Form Agendar Sessão na Agenda
   const [selectedClientPackage, setSelectedClientPackage] = useState<any>(null);
@@ -319,12 +322,17 @@ export default function PacotesPage() {
 
   const handleOpenAssign = (pkg: any) => {
     setSelectedPackage(pkg);
+    setAssignPaymentDate(getTodayString());
+    setAssignPaymentMethod("PIX");
+    setAssignAmountPaid(pkg.price);
     setShowAssignModal(true);
   };
 
   const handleAssignPackage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPackage || !selectedClientId) return;
+
+    const finalAmount = assignAmountPaid !== null && assignAmountPaid !== undefined ? assignAmountPaid : selectedPackage.price;
 
     const res = await fetch("/api/packages", {
       method: "POST",
@@ -333,11 +341,15 @@ export default function PacotesPage() {
         action: "ASSIGN_TO_CLIENT",
         packageId: selectedPackage.id,
         clientId: selectedClientId,
+        paymentDate: assignPaymentDate,
+        paymentMethod: assignPaymentMethod,
+        amountPaid: finalAmount,
       }),
     });
 
     if (res.ok) {
-      alert(`✨ Pacote "${selectedPackage.name}" vinculado à cliente com sucesso!`);
+      const clientObj = clients.find((c: any) => c.id === selectedClientId);
+      alert(`✨ Pacote "${selectedPackage.name}" vinculado a ${clientObj?.name || "Cliente"} com sucesso!\n💰 Pagamento total de R$ ${finalAmount.toFixed(2)} registrado na data ${assignPaymentDate}.`);
       setShowAssignModal(false);
       loadData();
     } else {
@@ -413,7 +425,7 @@ export default function PacotesPage() {
     });
 
     if (res.ok) {
-      alert(`✨ Agendamento de Pacote confirmado para a cliente ${clientObj?.name || "Cliente"} no dia ${scheduleDate} às ${scheduleTime}!`);
+      alert(`✨ Agendamento de Pacote confirmado para a cliente ${clientObj?.name || "Cliente"} no dia ${scheduleDate} às ${scheduleTime}!\n💡 O valor do atendimento é R$ 0,00 pois o pacote já foi quitado.`);
       setShowScheduleModal(false);
       loadData();
     } else {
@@ -431,7 +443,7 @@ export default function PacotesPage() {
             📦 Pacotes & Planos de Sessões
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Defina o cronograma semanal de procedimentos (até 6 semanas), aplique descontos especiais e agende clientes diretamente na Agenda.
+            Defina o cronograma semanal de procedimentos (até 6 semanas), aplique descontos especiais e lance a venda no financeiro.
           </p>
         </div>
 
@@ -534,7 +546,7 @@ export default function PacotesPage() {
                     onClick={() => handleOpenAssign(pkg)}
                     className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 font-extrabold text-white shadow-sm hover:opacity-95 text-xs"
                   >
-                    🤝 Vincular a Cliente
+                    🤝 Vender / Vincular a Cliente
                   </button>
                 </div>
               </div>
@@ -576,7 +588,7 @@ export default function PacotesPage() {
                     </p>
 
                     <p className="mt-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                      Validade até: {new Date(cp.expiryDate).toLocaleDateString("pt-BR")}
+                      Venda: {new Date(cp.purchaseDate).toLocaleDateString("pt-BR")} | Validade: {new Date(cp.expiryDate).toLocaleDateString("pt-BR")}
                     </p>
 
                     {/* Exibir o próximo procedimento da semana a ser feito */}
@@ -613,7 +625,7 @@ export default function PacotesPage() {
                           className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-sm hover:opacity-95 flex items-center space-x-1"
                         >
                           <CalendarIcon className="h-3.5 w-3.5" />
-                          <span>📅 Agendar na Agenda</span>
+                          <span>📅 Agendar Sessão</span>
                         </button>
 
                         <button
@@ -632,10 +644,129 @@ export default function PacotesPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-xs font-bold text-slate-500">
-            Nenhum pacote vinculado a cliente ainda. Clique em "🤝 Vincular a Cliente" em qualquer pacote acima para associar!
+            Nenhum pacote vinculado a cliente ainda. Clique em "🤝 Vender / Vincular a Cliente" em qualquer pacote acima para associar!
           </div>
         )}
       </div>
+
+      {/* MODAL VINCULAR E REGISTRAR VENDA DO PACOTE NO FINANCEIRO */}
+      {showAssignModal && selectedPackage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="my-8 w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+                  🤝 Vender / Vincular Pacote "{selectedPackage.name}"
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  O valor do pacote será registrado no financeiro/caixa na data de venda selecionada.
+                </p>
+              </div>
+              <button onClick={() => setShowAssignModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignPackage} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 dark:text-slate-200">Selecione a Cliente *</label>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                >
+                  {clients.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      👤 {c.name} ({c.whatsapp || c.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Data de Venda / Pagamento *</label>
+                  <input
+                    type="date"
+                    value={assignPaymentDate}
+                    onChange={(e) => setAssignPaymentDate(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Forma de Pagamento Recebida *</label>
+                  <select
+                    value={assignPaymentMethod}
+                    onChange={(e) => setAssignPaymentMethod(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value="PIX">⚡ PIX</option>
+                    <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+                    <option value="DEBIT_CARD">💳 Cartão de Débito</option>
+                    <option value="CASH">💵 Dinheiro em Espécie</option>
+                    <option value="FIADO">📝 Fiado / A Prazo</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Detalhes do Valor do Combo */}
+              <div className="rounded-2xl bg-amber-50 p-4 text-amber-900 dark:bg-slate-800 dark:text-amber-300 font-semibold space-y-2 border border-amber-200/80">
+                <p className="font-serif font-extrabold text-sm text-amber-950 dark:text-amber-200">
+                  📦 Resumo do Pacote Combo:
+                </p>
+
+                {selectedPackage.weeklyServices && (
+                  <div className="space-y-1 text-[11px] bg-white/70 p-2.5 rounded-xl dark:bg-slate-900 border border-amber-100">
+                    {(() => {
+                      try {
+                        const parsed = typeof selectedPackage.weeklyServices === "string" ? JSON.parse(selectedPackage.weeklyServices) : selectedPackage.weeklyServices;
+                        return parsed.map((item: any) => (
+                          <div key={item.week} className="flex justify-between">
+                            <span>🗓️ Semana {item.week}: {item.serviceName}</span>
+                            <span>R$ {item.price?.toFixed(2)}</span>
+                          </div>
+                        ));
+                      } catch (e) {
+                        return null;
+                      }
+                    })()}
+                  </div>
+                )}
+
+                <div className="flex justify-between text-xs pt-1 border-t border-amber-200/60">
+                  <span>✨ Total de Sessões:</span>
+                  <strong>{selectedPackage.totalSessions} Semanas / Sessões</strong>
+                </div>
+
+                <div className="flex justify-between items-center text-sm font-extrabold text-rose-700 dark:text-rose-300 pt-1 border-t border-amber-200">
+                  <span>💰 VALOR COBRADO DO PACOTE:</span>
+                  <div className="flex items-center space-x-1">
+                    <span>R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={assignAmountPaid !== null ? assignAmountPaid : selectedPackage.price}
+                      onChange={(e) => setAssignAmountPaid(Number(e.target.value))}
+                      className="w-24 rounded-lg border border-rose-300 p-1 text-right font-serif text-sm font-extrabold text-rose-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-rose-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="mt-4 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95 flex items-center justify-center space-x-2"
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>LANÇAR VENDA NO CAIXA E REGISTRAR PACOTE 🤝</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL AGENDAR SESSÃO NA AGENDA */}
       {showScheduleModal && selectedClientPackage && (
@@ -657,9 +788,9 @@ export default function PacotesPage() {
 
             <form onSubmit={handleSchedulePackageSession} className="space-y-4 text-xs">
               {/* Informações da Cliente e do Pacote */}
-              <div className="rounded-2xl bg-amber-50 p-3.5 dark:bg-slate-800 border border-amber-200/80 space-y-1">
+              <div className="rounded-2xl bg-emerald-50 p-3.5 dark:bg-emerald-950/40 border border-emerald-300/80 space-y-1">
                 <p className="font-extrabold text-slate-900 dark:text-white">
-                  👤 Cliente: <span className="text-amber-900 dark:text-amber-200">{clients.find((c: any) => c.id === selectedClientPackage.clientId)?.name}</span>
+                  👤 Cliente: <span className="text-emerald-900 dark:text-emerald-200">{clients.find((c: any) => c.id === selectedClientPackage.clientId)?.name}</span>
                 </p>
                 <p className="font-semibold text-slate-700 dark:text-slate-300">
                   📦 Pacote: {packages.find((p: any) => p.id === selectedClientPackage.packageId)?.name}
@@ -675,16 +806,17 @@ export default function PacotesPage() {
                       const currentItem = parsed.find((item: any) => item.week === nextWeek);
                       if (currentItem) {
                         return (
-                          <div className="mt-1 bg-white p-2 rounded-xl text-rose-700 font-extrabold dark:bg-slate-900 border border-amber-100">
-                            💅 Sessão {nextWeek} de {selectedClientPackage.totalSessions}: {currentItem.serviceName}
+                          <div className="mt-1 bg-white p-2 rounded-xl text-emerald-800 font-extrabold dark:bg-slate-900 border border-emerald-200 flex justify-between items-center">
+                            <span>💅 Sessão {nextWeek} de {selectedClientPackage.totalSessions}: {currentItem.serviceName}</span>
+                            <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[10px]">R$ 0,00 (Já Quitado)</span>
                           </div>
                         );
                       }
                     } catch (e) {}
                   }
                   return (
-                    <p className="font-bold text-rose-700">
-                      💅 Sessão {selectedClientPackage.sessionsUsed + 1} de {selectedClientPackage.totalSessions}
+                    <p className="font-bold text-emerald-800">
+                      💅 Sessão {selectedClientPackage.sessionsUsed + 1} de {selectedClientPackage.totalSessions} (R$ 0,00 - Já Quitado no Pacote)
                     </p>
                   );
                 })()}
@@ -1119,85 +1251,6 @@ export default function PacotesPage() {
                 className="mt-4 w-full rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
               >
                 SALVAR ALTERAÇÕES DO PACOTE ✨
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL VINCULAR PACOTE A CLIENTE */}
-      {showAssignModal && selectedPackage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
-              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
-                🤝 Vincular "{selectedPackage.name}"
-              </h3>
-              <button onClick={() => setShowAssignModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAssignPackage} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Selecione a Cliente *</label>
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                >
-                  {clients.map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.whatsapp || c.phone})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Detalhes do Cronograma Semanal */}
-              <div className="rounded-2xl bg-amber-50 p-4 text-amber-900 dark:bg-slate-800 dark:text-amber-300 font-semibold space-y-2 border border-amber-200/80">
-                <p className="font-serif font-extrabold text-sm text-amber-950 dark:text-amber-200">
-                  📦 Resumo do Combo Selecionado:
-                </p>
-
-                {selectedPackage.weeklyServices && (
-                  <div className="space-y-1 text-[11px] bg-white/70 p-2.5 rounded-xl dark:bg-slate-900 border border-amber-100">
-                    {(() => {
-                      try {
-                        const parsed = typeof selectedPackage.weeklyServices === "string" ? JSON.parse(selectedPackage.weeklyServices) : selectedPackage.weeklyServices;
-                        return parsed.map((item: any) => (
-                          <div key={item.week} className="flex justify-between">
-                            <span>🗓️ Semana {item.week}: {item.serviceName}</span>
-                            <span>R$ {item.price?.toFixed(2)}</span>
-                          </div>
-                        ));
-                      } catch (e) {
-                        return null;
-                      }
-                    })()}
-                  </div>
-                )}
-
-                <div className="flex justify-between text-xs pt-1 border-t border-amber-200/60">
-                  <span>✨ Total de Sessões:</span>
-                  <strong>{selectedPackage.totalSessions} Semanas / Sessões</strong>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span>⏳ Validade:</span>
-                  <strong>{selectedPackage.validityDays} dias a partir de hoje</strong>
-                </div>
-                <div className="flex justify-between text-sm font-extrabold text-rose-700 dark:text-rose-300 pt-1 border-t border-amber-200">
-                  <span>💰 VALOR FINAL DO PACOTE:</span>
-                  <span>R$ {selectedPackage.price?.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="mt-4 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
-              >
-                CONFIRMAR VÍNCULO DO PACOTE 🤝
               </button>
             </form>
           </div>

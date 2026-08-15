@@ -1394,43 +1394,64 @@ export default function AgendaPage() {
               </div>
 
               {/* Resumo Financeiro do Agendamento */}
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
-                <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
-                  <div>Duração Total: <span className="font-extrabold text-rose-600 dark:text-rose-400">{calcDuration} min</span></div>
-                  <div>Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
-                    <input
-                      type="number"
-                      value={formDiscount}
-                      onChange={(e) => setFormDiscount(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
-                    <input
-                      type="number"
-                      value={formDeposit}
-                      onChange={(e) => setFormDeposit(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
-                    <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                      R$ {calcRemaining.toFixed(2)}
+              {formClientPackageId ? (
+                <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-extrabold text-emerald-950 dark:text-emerald-200 text-xs flex items-center space-x-1">
+                        <span>🎁 Sessão de Pacote (Valor Quitado na Compra)</span>
+                      </p>
+                      <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold mt-0.5">
+                        O valor total deste combo foi contabilizado na data de venda do pacote.
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="block text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300">Cobrança nesta Data</span>
+                      <span className="font-serif text-lg font-extrabold text-emerald-700 dark:text-emerald-300">
+                        R$ 0,00
+                      </span>
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
+                    <div>Duração Total: <span className="font-extrabold text-rose-600 dark:text-rose-400">{calcDuration} min</span></div>
+                    <div>Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
+                  </div>
 
-                <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
-                  Valor Total: R$ {calcTotal.toFixed(2)}
+                  <div className="mt-3 grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
+                      <input
+                        type="number"
+                        value={formDiscount}
+                        onChange={(e) => setFormDiscount(Number(e.target.value))}
+                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
+                      <input
+                        type="number"
+                        value={formDeposit}
+                        onChange={(e) => setFormDeposit(Number(e.target.value))}
+                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
+                      <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                        R$ {calcRemaining.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
+                    Valor Total: R$ {calcTotal.toFixed(2)}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Observações */}
               <div>

@@ -166,10 +166,11 @@ export async function POST(req: Request) {
       ];
     }
 
+    const isPackageSession = Boolean(body.clientPackageId);
     const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
-    const subtotal = services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
-    const total = Math.max(0, subtotal - discount);
-    const remainingAmount = Math.max(0, total - depositPaid);
+    const subtotal = isPackageSession ? 0 : services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+    const total = isPackageSession ? 0 : Math.max(0, subtotal - discount);
+    const remainingAmount = isPackageSession ? 0 : Math.max(0, total - depositPaid);
 
     // Calcular horário de término (HH:mm)
     const [hours, minutes] = startTime.split(":").map(Number);
@@ -219,13 +220,13 @@ export async function POST(req: Request) {
         endTime,
         totalDurationMinutes: totalDuration,
         subtotal,
-        discount,
-        depositPaid,
+        discount: isPackageSession ? 0 : discount,
+        depositPaid: isPackageSession ? 0 : depositPaid,
         remainingAmount,
         total,
-        paymentStatus: depositPaid > 0 ? "SINAL_PAGO" : "PENDENTE",
+        paymentStatus: isPackageSession ? "PACOTE" : (depositPaid > 0 ? "SINAL_PAGO" : "PENDENTE"),
         status: "AGUARDANDO_CONFIRMACAO",
-        notes,
+        notes: isPackageSession ? `📦 Sessão de Pacote (Pago no Combo) | ${notes || ""}` : notes,
         services: {
           create: services.map((s) => ({
             serviceId: s.id,
