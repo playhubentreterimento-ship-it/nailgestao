@@ -172,20 +172,39 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  const handleZeroCommission = async (p: any) => {
+    if (confirm(`Deseja definir a comissão de "${p.name}" para 0% (Proprietária / Sem repasse)?`)) {
+      const res = await fetch("/api/professionals", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, commissionRatePercent: 0 }),
+      });
+      if (res.ok) {
+        alert(`✨ Comissão de ${p.name} zerada para 0%!`);
+        loadData();
+      }
+    }
+  };
+
   const handleResetDemo = async (action: "RESEED" | "CLEAR_ALL") => {
     const confirmMsg =
       action === "CLEAR_ALL"
-        ? "⚠️ Tem certeza que deseja apagar TODOS os dados fictícios para iniciar em Produção?"
+        ? "⚠️ Tem certeza que deseja ZERAR todos os dados, agendamentos, histórico financeiro e extratos de comissão para iniciar em Produção?"
         : "Restaurar os dados de demonstração iniciais?";
 
     if (confirm(confirmMsg)) {
-      await fetch("/api/seed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      alert("Ação concluída com sucesso! Recarregando página...");
-      window.location.reload();
+      try {
+        await fetch("/api/finance?action=reset_all", { method: "DELETE" });
+        await fetch("/api/seed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: action === "CLEAR_ALL" ? "RESET_METRICS" : action }),
+        });
+        alert("✨ Métricas, atendimentos e comissões zerados com sucesso! Recarregando página...");
+        window.location.reload();
+      } catch (e: any) {
+        alert("Erro ao zerar dados: " + (e.message || "Tente novamente."));
+      }
     }
   };
 
@@ -247,6 +266,14 @@ export default function ConfiguracoesPage() {
               </div>
 
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleZeroCommission(p)}
+                  className="flex items-center space-x-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                  title="Definir comissão para 0% (Proprietária / Sem repasse)"
+                >
+                  <span>💰 Zerar (0%)</span>
+                </button>
+
                 <button
                   onClick={() => handleEditProfClick(p)}
                   className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"

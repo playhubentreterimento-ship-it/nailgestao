@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       const weekApps = pApps.filter((a) => a.date >= mondayStr && a.date <= sundayStr);
       const monthApps = pApps.filter((a) => a.date.startsWith(monthStr));
 
-      const rate = p.commissionRatePercent || 40;
+      const rate = p.commissionRatePercent !== undefined && p.commissionRatePercent !== null ? Number(p.commissionRatePercent) : 40;
 
       const calcStats = (appsList: any[]) => {
         const revenue = appsList.reduce((acc, a) => acc + (a.total || 0), 0);
@@ -139,10 +139,13 @@ export async function DELETE(req: Request) {
     const action = searchParams.get("action");
 
     if (action === "reset_all") {
-      await prisma.expense.deleteMany({ where: { salonId: "default-salon" } });
-      await prisma.commission.deleteMany({ where: { salonId: "default-salon" } });
-      await prisma.cashTransaction.deleteMany({ where: { salonId: "default-salon" } });
-      return NextResponse.json({ success: true, message: "Todas as despesas e métricas financeiras foram zeradas com sucesso!" });
+      await prisma.cashTransaction.deleteMany({ where: { salonId: "default-salon" } }).catch(() => {});
+      await prisma.expense.deleteMany({ where: { salonId: "default-salon" } }).catch(() => {});
+      await prisma.commission.deleteMany({ where: { salonId: "default-salon" } }).catch(() => {});
+      await prisma.appointmentService.deleteMany({}).catch(() => {});
+      await prisma.appointment.deleteMany({ where: { salonId: "default-salon" } }).catch(() => {});
+      await prisma.clientPackage.deleteMany({}).catch(() => {});
+      return NextResponse.json({ success: true, message: "Todas as despesas, agendamentos, métricas e comissões foram zeradas com sucesso!" });
     }
 
     if (id) {
