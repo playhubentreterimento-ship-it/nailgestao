@@ -285,14 +285,13 @@ export default function AgendaPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            clientId: "system-lunch",
+            action: "UNLOCK_LUNCH",
             professionalId: filterProf !== "all" ? filterProf : (professionals[0]?.id || "prof-default"),
             date: selectedDate,
             startTime: "11:30",
             endTime: "13:00",
             status: "ALMOCO_LIBERADO",
             notes: "LIBERADO_ALMOCO",
-            serviceIds: [],
           }),
         });
 

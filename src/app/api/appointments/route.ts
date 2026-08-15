@@ -49,26 +49,41 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Ação Especial: Bloqueio de Almoço (11:00 às 13:00) ou Bloqueio Personalizado
-    if (body.action === "BLOCK_LUNCH" || body.action === "BLOCK_SLOT") {
-      const { date, professionalId, startTime = "11:00", endTime = "13:00", notes = "🍱 Pausa de Almoço" } = body;
+    // Ação Especial: Bloqueio ou Liberação de Almoço (11:30 às 13:00)
+    if (
+      body.action === "BLOCK_LUNCH" ||
+      body.action === "BLOCK_SLOT" ||
+      body.action === "UNLOCK_LUNCH" ||
+      body.status === "ALMOCO_LIBERADO" ||
+      body.notes === "LIBERADO_ALMOCO"
+    ) {
+      const {
+        date,
+        professionalId,
+        startTime = "11:30",
+        endTime = "13:00",
+        notes = body.action === "UNLOCK_LUNCH" || body.notes === "LIBERADO_ALMOCO" || body.status === "ALMOCO_LIBERADO"
+          ? "LIBERADO_ALMOCO"
+          : "🍱 Pausa de Almoço",
+      } = body;
+
       if (!date) return NextResponse.json({ error: "Data é obrigatória." }, { status: 400 });
 
       let targetProfId = professionalId;
-      if (!targetProfId || targetProfId === "all") {
+      if (!targetProfId || targetProfId === "all" || targetProfId === "system-lunch" || targetProfId === "prof-default") {
         const firstProf = await prisma.professional.findFirst({ where: { salonId: "default-salon" } });
         targetProfId = firstProf?.id || "prof-default";
       }
 
-      // Buscar ou criar cliente especial de bloqueio
-      let blockClient = await prisma.client.findFirst({
-        where: { name: "🍱 Pausa de Almoço / Bloqueio" },
+      // Buscar ou criar cliente especial de sistema para bloqueio/liberação
+      let systemClient = await prisma.client.findFirst({
+        where: { name: "🍱 Pausa / Liberação de Almoço" },
       });
-      if (!blockClient) {
-        blockClient = await prisma.client.create({
+      if (!systemClient) {
+        systemClient = await prisma.client.create({
           data: {
             salonId: "default-salon",
-            name: "🍱 Pausa de Almoço / Bloqueio",
+            name: "🍱 Pausa / Liberação de Almoço",
             phone: "0000000000",
             whatsapp: "0000000000",
             tag: "SISTEMA",
@@ -80,27 +95,30 @@ export async function POST(req: Request) {
       const [eH, eM] = endTime.split(":").map(Number);
       const durationMins = (eH * 60 + eM) - (sH * 60 + sM);
 
-      const blockApp = await prisma.appointment.create({
+      const isUnlock =
+        body.action === "UNLOCK_LUNCH" || body.notes === "LIBERADO_ALMOCO" || body.status === "ALMOCO_LIBERADO";
+
+      const blockOrUnlockApp = await prisma.appointment.create({
         data: {
           salonId: "default-salon",
-          clientId: blockClient.id,
+          clientId: systemClient.id,
           professionalId: targetProfId,
           date,
           startTime,
           endTime,
-          totalDurationMinutes: durationMins > 0 ? durationMins : 120,
+          totalDurationMinutes: durationMins > 0 ? durationMins : 90,
           subtotal: 0,
           discount: 0,
           depositPaid: 0,
           remainingAmount: 0,
           total: 0,
           paymentStatus: "ISENTO",
-          status: "BLOQUEADO",
+          status: isUnlock ? "ALMOCO_LIBERADO" : "BLOQUEADO",
           notes,
         },
       });
 
-      return NextResponse.json(blockApp);
+      return NextResponse.json(blockOrUnlockApp);
     }
 
     const {
