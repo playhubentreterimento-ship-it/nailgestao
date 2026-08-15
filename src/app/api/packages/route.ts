@@ -56,11 +56,42 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    const services = await prisma.service.findMany({
-      where: { salonId: "default-salon", active: true },
+    let services = await prisma.service.findMany({
+      where: { salonId: "default-salon" },
       select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
       orderBy: { name: "asc" },
     });
+
+    if (services.length === 0) {
+      services = await prisma.service.findMany({
+        select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
+        orderBy: { name: "asc" },
+      });
+    }
+
+    if (services.length === 0) {
+      let defaultCat = await prisma.serviceCategory.findFirst({ where: { salonId: "default-salon" } });
+      if (!defaultCat) {
+        defaultCat = await prisma.serviceCategory.create({
+          data: { salonId: "default-salon", name: "Alongamento & Estética de Unhas" },
+        });
+      }
+      await prisma.service.createMany({
+        data: [
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Aplicação Fibra de Vidro Premium", price: 180.0, durationMinutes: 120 },
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Manutenção de Fibra de Vidro", price: 110.0, durationMinutes: 90 },
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Banho de Gel / Gel Moldado", price: 130.0, durationMinutes: 90 },
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Esmaltação em Gel & Cutilagem", price: 70.0, durationMinutes: 60 },
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Spa das Mãos & Nivelamento", price: 60.0, durationMinutes: 45 },
+          { salonId: "default-salon", categoryId: defaultCat.id, name: "Remoção & Blindagem de Unhas", price: 80.0, durationMinutes: 60 },
+        ],
+      });
+      services = await prisma.service.findMany({
+        where: { salonId: "default-salon" },
+        select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
+        orderBy: { name: "asc" },
+      });
+    }
 
     return NextResponse.json({ packages, clientPackages, clients, services });
   } catch (error: any) {
@@ -147,7 +178,7 @@ export async function POST(req: Request) {
         salonId: "default-salon",
         name,
         price: Number(price),
-        totalSessions: Math.min(5, Math.max(1, Number(totalSessions))),
+        totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
         validityDays: Number(validityDays || 90),
         description: description || null,
         weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
@@ -189,7 +220,7 @@ export async function PUT(req: Request) {
       data: {
         name,
         price: Number(price),
-        totalSessions: Math.min(5, Math.max(1, Number(totalSessions))),
+        totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
         validityDays: Number(validityDays || 90),
         description: description || null,
         weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),

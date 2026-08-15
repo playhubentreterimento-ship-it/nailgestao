@@ -14,15 +14,15 @@ export default function PacotesPage() {
   // Form Novo Pacote
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [totalSessions, setTotalSessions] = useState(4); // 1 a 5 semanas
+  const [totalSessions, setTotalSessions] = useState(4); // 1 a 6 semanas
   const [validityDays, setValidityDays] = useState(90);
   const [weeklyServices, setWeeklyServices] = useState<
     { week: number; serviceId: string; serviceName: string; price: number }[]
   >([
-    { week: 1, serviceId: "", serviceName: "Aplicação / Manutenção em Fibra", price: 120 },
-    { week: 2, serviceId: "", serviceName: "Esmaltação em Gel", price: 80 },
-    { week: 3, serviceId: "", serviceName: "Manutenção & Cutilagem", price: 100 },
-    { week: 4, serviceId: "", serviceName: "Spa das Mãos & Nivelamento", price: 80 },
+    { week: 1, serviceId: "", serviceName: "Aplicação Fibra de Vidro Premium", price: 180 },
+    { week: 2, serviceId: "", serviceName: "Esmaltação em Gel & Cutilagem", price: 70 },
+    { week: 3, serviceId: "", serviceName: "Manutenção de Fibra de Vidro", price: 110 },
+    { week: 4, serviceId: "", serviceName: "Spa das Mãos & Nivelamento", price: 60 },
   ]);
   const [discountType, setDiscountType] = useState<"FIXED" | "PERCENT">("FIXED");
   const [discountValue, setDiscountValue] = useState<number>(40);
@@ -48,8 +48,16 @@ export default function PacotesPage() {
   const loadData = () => {
     fetch("/api/packages", { cache: "no-store" })
       .then((r) => r.json())
-      .then((res) => {
+      .then(async (res) => {
+        if (!res.services || res.services.length === 0) {
+          try {
+            const srvRes = await fetch("/api/services", { cache: "no-store" }).then((r) => r.json());
+            res.services = srvRes.services || [];
+          } catch (e) {}
+        }
+
         setData(res);
+
         if (res.clients && res.clients.length > 0 && !selectedClientId) {
           setSelectedClientId(res.clients[0].id);
         }
@@ -64,9 +72,9 @@ export default function PacotesPage() {
 
   const { packages = [], clientPackages = [], clients = [], services = [] } = data || {};
 
-  // Ajustar número de semanas (1 a 5) no formulário de criação
+  // Ajustar número de semanas (1 a 6) no formulário de criação
   const handleSessionsCountChange = (count: number) => {
-    const num = Math.min(5, Math.max(1, count));
+    const num = Math.min(6, Math.max(1, count));
     setTotalSessions(num);
     const updated = [];
     for (let i = 1; i <= num; i++) {
@@ -102,15 +110,15 @@ export default function PacotesPage() {
         return {
           ...item,
           serviceId,
-          serviceName: customName || item.serviceName,
+          serviceName: customName !== undefined ? customName : item.serviceName,
         };
       })
     );
   };
 
-  // Ajustar número de semanas no formulário de edição
+  // Ajustar número de semanas no formulário de edição (1 a 6)
   const handleEditSessionsCountChange = (count: number) => {
-    const num = Math.min(5, Math.max(1, count));
+    const num = Math.min(6, Math.max(1, count));
     setEditTotalSessions(num);
     const updated = [];
     for (let i = 1; i <= num; i++) {
@@ -146,7 +154,7 @@ export default function PacotesPage() {
         return {
           ...item,
           serviceId,
-          serviceName: customName || item.serviceName,
+          serviceName: customName !== undefined ? customName : item.serviceName,
         };
       })
     );
@@ -341,7 +349,7 @@ export default function PacotesPage() {
             📦 Pacotes & Planos de Sessões
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Defina o cronograma semanal de procedimentos (até 5 semanas), aplique descontos especiais do pacote e gerencie clientes.
+            Defina o cronograma semanal de procedimentos (até 6 semanas), aplique descontos especiais do pacote e gerencie clientes.
           </p>
         </div>
 
@@ -543,7 +551,7 @@ export default function PacotesPage() {
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
               <div>
                 <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">✨ Criar Novo Pacote de Sessões</h3>
-                <p className="text-[11px] text-slate-500">Configure procedimentos para até 5 semanas e defina o desconto especial do combo.</p>
+                <p className="text-[11px] text-slate-500">Configure procedimentos para até 6 semanas e defina o desconto especial do combo.</p>
               </div>
               <button onClick={() => setShowCreateModal(false)} className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100">
                 <X className="h-5 w-5" />
@@ -558,14 +566,14 @@ export default function PacotesPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Combo Club 4 Semanas de Manutenção"
+                    placeholder="Ex: Combo Club 4 a 6 Semanas"
                     className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Quantidade de Semanas / Sessões (Até 5) *</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Quantidade de Semanas / Sessões (Até 6) *</label>
                   <select
                     value={totalSessions}
                     onChange={(e) => handleSessionsCountChange(Number(e.target.value))}
@@ -576,6 +584,7 @@ export default function PacotesPage() {
                     <option value={3}>3 Semanas (3 Sessões)</option>
                     <option value={4}>4 Semanas (4 Sessões)</option>
                     <option value={5}>5 Semanas (5 Sessões)</option>
+                    <option value={6}>6 Semanas (6 Sessões)</option>
                   </select>
                 </div>
               </div>
@@ -597,7 +606,7 @@ export default function PacotesPage() {
                   <h4 className="font-serif text-xs font-extrabold text-amber-900 dark:text-amber-300">
                     💅 Procedimentos Selecionados para Cada Semana ({totalSessions} Semanas):
                   </h4>
-                  <span className="text-[10px] text-amber-700 font-semibold">Altere os procedimentos abaixo</span>
+                  <span className="text-[10px] text-amber-700 font-semibold">Escolha o serviço ou digite o nome</span>
                 </div>
 
                 <div className="space-y-2">
@@ -610,12 +619,12 @@ export default function PacotesPage() {
                       <select
                         value={ws.serviceId}
                         onChange={(e) => handleWeeklyServiceChange(ws.week, e.target.value)}
-                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       >
-                        <option value="">-- Selecione o Procedimento --</option>
+                        <option value="">-- Selecione dos Serviços Cadastrados --</option>
                         {services.map((srv: any) => (
                           <option key={srv.id} value={srv.id}>
-                            {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
+                            💅 {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
                           </option>
                         ))}
                       </select>
@@ -625,7 +634,7 @@ export default function PacotesPage() {
                         placeholder="Nome do procedimento..."
                         value={ws.serviceName}
                         onChange={(e) => handleWeeklyServiceChange(ws.week, ws.serviceId, e.target.value)}
-                        className="w-full sm:w-44 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full sm:w-48 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   ))}
@@ -756,7 +765,7 @@ export default function PacotesPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Semanas / Sessões (Até 5) *</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Semanas / Sessões (Até 6) *</label>
                   <select
                     value={editTotalSessions}
                     onChange={(e) => handleEditSessionsCountChange(Number(e.target.value))}
@@ -767,6 +776,7 @@ export default function PacotesPage() {
                     <option value={3}>3 Semanas</option>
                     <option value={4}>4 Semanas</option>
                     <option value={5}>5 Semanas</option>
+                    <option value={6}>6 Semanas</option>
                   </select>
                 </div>
               </div>
@@ -797,12 +807,12 @@ export default function PacotesPage() {
                       <select
                         value={ws.serviceId}
                         onChange={(e) => handleEditWeeklyServiceChange(ws.week, e.target.value)}
-                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="flex-1 rounded-xl border border-slate-200 p-2 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       >
                         <option value="">-- Selecione o Procedimento --</option>
                         {services.map((srv: any) => (
                           <option key={srv.id} value={srv.id}>
-                            {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
+                            💅 {srv.name} (R$ {(srv.promoPrice || srv.price).toFixed(2)})
                           </option>
                         ))}
                       </select>
@@ -812,7 +822,7 @@ export default function PacotesPage() {
                         placeholder="Nome do procedimento..."
                         value={ws.serviceName}
                         onChange={(e) => handleEditWeeklyServiceChange(ws.week, ws.serviceId, e.target.value)}
-                        className="w-full sm:w-44 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        className="w-full sm:w-48 rounded-xl border border-slate-200 p-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                       />
                     </div>
                   ))}
