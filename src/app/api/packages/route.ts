@@ -329,14 +329,26 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const type = searchParams.get("type");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório para exclusão." }, { status: 400 });
     }
 
-    await prisma.package.delete({ where: { id } });
+    if (type === "CLIENT_PACKAGE") {
+      await prisma.clientPackage.delete({ where: { id } });
+      return NextResponse.json({ success: true, message: "Pacote da cliente removido com sucesso." });
+    }
 
-    return NextResponse.json({ success: true, message: "Pacote excluído." });
+    try {
+      await prisma.clientPackage.deleteMany({ where: { packageId: id } });
+      await prisma.package.delete({ where: { id } });
+    } catch (err) {
+      await prisma.clientPackage.delete({ where: { id } }).catch(() => {});
+      await prisma.package.delete({ where: { id } }).catch(() => {});
+    }
+
+    return NextResponse.json({ success: true, message: "Excluído com sucesso." });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

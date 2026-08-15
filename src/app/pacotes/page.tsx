@@ -309,7 +309,7 @@ export default function PacotesPage() {
   };
 
   const handleDeletePackage = async (id: string, pkgName: string) => {
-    if (!confirm(`Deseja realmente excluir o pacote "${pkgName}"?`)) return;
+    if (!confirm(`Deseja realmente excluir a regra de pacote "${pkgName}"?`)) return;
 
     const res = await fetch(`/api/packages?id=${id}`, { method: "DELETE" });
     if (res.ok) {
@@ -317,6 +317,18 @@ export default function PacotesPage() {
       loadData();
     } else {
       alert("Erro ao excluir pacote.");
+    }
+  };
+
+  const handleDeleteClientPackage = async (clientPackageId: string, clientName: string, pkgName: string) => {
+    if (!confirm(`Deseja realmente cancelar/excluir o pacote "${pkgName}" da cliente ${clientName}?`)) return;
+
+    const res = await fetch(`/api/packages?id=${clientPackageId}&type=CLIENT_PACKAGE`, { method: "DELETE" });
+    if (res.ok) {
+      alert(`🗑️ Pacote "${pkgName}" da cliente ${clientName} excluído com sucesso.`);
+      loadData();
+    } else {
+      alert("Erro ao excluir pacote da cliente.");
     }
   };
 
@@ -578,9 +590,19 @@ export default function PacotesPage() {
                       <span className="font-extrabold text-xs text-amber-900 dark:text-amber-300">
                         👤 {clientObj?.name || "Cliente"}
                       </span>
-                      <span className="rounded-md bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900 dark:bg-amber-900 dark:text-amber-100">
-                        {cp.sessionsUsed}/{cp.totalSessions} Usadas
-                      </span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="rounded-md bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900 dark:bg-amber-900 dark:text-amber-100">
+                          {cp.sessionsUsed}/{cp.totalSessions} Usadas
+                        </span>
+                        <button
+                          onClick={() => handleDeleteClientPackage(cp.id, clientObj?.name || "Cliente", pkgObj?.name || "Pacote")}
+                          className="p-1 rounded-lg text-rose-600 hover:bg-rose-100 hover:text-rose-800 dark:hover:bg-rose-950/60 transition flex items-center space-x-0.5 text-[11px] font-bold"
+                          title="Excluir / Cancelar Pacote desta Cliente"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Excluir</span>
+                        </button>
+                      </div>
                     </div>
 
                     <p className="mt-2 font-serif text-sm font-extrabold text-slate-900 dark:text-white">
