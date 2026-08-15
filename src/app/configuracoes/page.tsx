@@ -404,6 +404,15 @@ export default function ConfiguracoesPage() {
             <label className="block font-bold">Endereço Completo</label>
             <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
           </div>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/40 space-y-1 text-xs">
+            <div className="flex items-center space-x-2 font-bold text-amber-900 dark:text-amber-300">
+              <span>🍽️ Horário de Almoço da Agenda (11:30 às 13:00)</span>
+            </div>
+            <p className="text-slate-600 dark:text-amber-100 text-[11px] leading-relaxed">
+              O intervalo das <strong>11:30 às 13:00</strong> permanece bloqueado por padrão no site de Agendamento Online dos clientes. Na agenda interna do salão, a equipe pode realizar encaixes e agendamentos manuais livremente!
+            </p>
+          </div>
         </div>
 
         <button type="submit" className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95">

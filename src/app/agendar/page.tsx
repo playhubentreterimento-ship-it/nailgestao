@@ -104,11 +104,11 @@ export default function AgendarPublicPage() {
       if (slotStart <= currentMins) return false;
     }
 
-    // 4. Horário de Almoço (11:00 = 660 mins, 13:00 = 780 mins)
-    // Bloqueado por padrão em TODOS OS DIAS, exceto se houver liberação manual do salão
+    // 4. Horário de Almoço (11:30 = 690 mins, 13:00 = 780 mins)
+    // Bloqueado por padrão na agenda virtual (11:30 às 13:00)
     const isLunchUnlocked = isLunchUnlockedOnDate();
     if (!isLunchUnlocked) {
-      if (slotStart < 780 && slotEnd > 660) {
+      if (slotStart < 780 && slotEnd > 690) {
         return false;
       }
     }
@@ -384,7 +384,7 @@ export default function AgendarPublicPage() {
                       const available = isSlotAvailable(slot);
                       const isSelected = selectedTime === slot;
                       const slotStart = timeToMins(slot);
-                      const isLunchSlot = slotStart >= 660 && slotStart < 780 && !isLunchUnlockedOnDate();
+                      const isLunchSlot = slotStart >= 690 && slotStart < 780 && !isLunchUnlockedOnDate();
 
                       return (
                         <button

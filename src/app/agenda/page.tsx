@@ -274,13 +274,13 @@ export default function AgendaPage() {
     );
 
     if (unlockedEntry) {
-      if (confirm(`Bloquear novamente o horário de almoço (11:00 às 13:00) no dia ${selectedDate}?`)) {
+      if (confirm(`Bloquear novamente o horário de almoço na agenda virtual (11:30 às 13:00) no dia ${selectedDate}?`)) {
         await fetch(`/api/appointments?id=${unlockedEntry.id}`, { method: "DELETE" });
-        alert("🍱 Horário de almoço (11h-13h) bloqueado com sucesso na agenda!");
+        alert("🍱 Horário de almoço (11:30h-13h) bloqueado na agenda virtual do cliente!");
         loadAgenda();
       }
     } else {
-      if (confirm(`Liberar manualmente o horário de almoço (11:00 às 13:00) para agendamentos no dia ${selectedDate}?`)) {
+      if (confirm(`Liberar manualmente o horário de almoço (11:30 às 13:00) para agendamentos online de clientes no dia ${selectedDate}?`)) {
         const res = await fetch("/api/appointments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -288,7 +288,7 @@ export default function AgendaPage() {
             clientId: "system-lunch",
             professionalId: filterProf !== "all" ? filterProf : (professionals[0]?.id || "prof-default"),
             date: selectedDate,
-            startTime: "11:00",
+            startTime: "11:30",
             endTime: "13:00",
             status: "ALMOCO_LIBERADO",
             notes: "LIBERADO_ALMOCO",
@@ -297,7 +297,7 @@ export default function AgendaPage() {
         });
 
         if (res.ok) {
-          alert("🔓 Horário de Almoço (11h às 13h) LIBERADO com sucesso para o dia " + selectedDate + "!");
+          alert("🔓 Horário de Almoço (11:30h às 13h) LIBERADO na agenda virtual do cliente para o dia " + selectedDate + "!");
           loadAgenda();
         } else {
           alert("Erro ao liberar horário de almoço.");
@@ -376,9 +376,9 @@ export default function AgendaPage() {
                   ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
                   : "bg-slate-900 text-amber-300 border-2 border-amber-400 hover:bg-slate-800"
               }`}
-              title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
+              title="O horário de almoço (11:30-13h) fica bloqueado na agenda online dos clientes. Clique para liberar ou bloquear manualmente nesta data."
             >
-              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
+              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11:30-13h)" : "🔓 Liberar Almoço Online (11:30-13h)"}</span>
             </button>
           );
         })()}
