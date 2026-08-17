@@ -34,11 +34,18 @@ export function MobileNav({ userRole }: MobileNavProps) {
   const pathname = usePathname();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+  const isReception = userRole === "RECEPÇÃO" || userRole === "RECEPCAO";
+  const isProfessional = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+  const isCollaborator = isReception || isProfessional;
 
-  const mainItems = isCollaborator
+  const mainItems = isReception
     ? [
         { href: "/agenda", label: "Agenda", icon: Calendar },
+      ]
+    : isProfessional
+    ? [
+        { href: "/agenda", label: "Agenda", icon: Calendar },
+        { href: "/caixa", label: "Caixa", icon: Receipt },
         { href: "/atendimento", label: "Atendimento", icon: PlayCircle },
       ]
     : [

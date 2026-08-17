@@ -552,8 +552,8 @@ export default function ConfiguracoesPage() {
                       onChange={(e) => setProfRole(e.target.value)}
                       className="mt-1 w-full rounded-xl border p-2.5 font-bold dark:bg-slate-800"
                     >
-                      <option value="PROFISSIONAL">PROFISSIONAL (Visualiza sua agenda)</option>
-                      <option value="RECEPÇÃO">RECEPÇÃO (Agenda e Caixa)</option>
+                      <option value="RECEPÇÃO">RECEPÇÃO (Apenas Visualização da Agenda)</option>
+                      <option value="PROFISSIONAL">PROFISSIONAL (Agenda, Caixa e Tela de Atendimento)</option>
                       <option value="GERENTE">GERENTE (Gestão total exceto financeiro avançado)</option>
                       <option value="ADMINISTRADOR">ADMINISTRADOR (Acesso total)</option>
                     </select>

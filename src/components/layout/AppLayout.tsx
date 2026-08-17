@@ -33,9 +33,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const role = data.user.role || "PROFISSIONAL";
         setUserRole(role);
 
-        // Se for colaboradora / profissional, restringir rotas exclusivamente para /agenda e /atendimento
+        // Se for RECEPÇÃO, restringir acesso estritamente para /agenda
+        if (role === "RECEPÇÃO" || role === "RECEPCAO") {
+          if (pathname !== "/agenda") {
+            router.push("/agenda");
+          }
+        }
+
+        // Se for PROFISSIONAL, permitir exclusivamente /agenda, /caixa e /atendimento
         if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
-          if (pathname !== "/agenda" && pathname !== "/atendimento") {
+          if (pathname !== "/agenda" && pathname !== "/caixa" && pathname !== "/atendimento") {
             router.push("/agenda");
           }
         }

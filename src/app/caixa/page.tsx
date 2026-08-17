@@ -32,7 +32,7 @@ export default function CaixaPage() {
         if (res.authenticated && res.user) {
           setCurrentUser(res.user);
           const role = res.user.role;
-          if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
+          if (role === "RECEPÇÃO" || role === "RECEPCAO") {
             window.location.href = "/agenda";
           }
         }

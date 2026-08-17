@@ -52,7 +52,9 @@ export function Sidebar({ userRole }: SidebarProps) {
     return () => window.removeEventListener("salon-settings-updated", handleSettingsUpdate);
   }, []);
 
-  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+  const isReception = userRole === "RECEPÇÃO" || userRole === "RECEPCAO";
+  const isProfessional = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
+  const isCollaborator = isReception || isProfessional;
 
   const adminMenuGroups = [
     {
@@ -100,17 +102,31 @@ export function Sidebar({ userRole }: SidebarProps) {
     },
   ];
 
-  const collaboratorMenuGroups = [
+  const receptionMenuGroups = [
     {
-      title: "PAINEL DA COLABORADORA",
+      title: "PAINEL DA RECEPÇÃO",
       items: [
         { href: "/agenda", label: "Agenda Visual", icon: Calendar },
+      ],
+    },
+  ];
+
+  const professionalMenuGroups = [
+    {
+      title: "PAINEL DA PROFISSIONAL",
+      items: [
+        { href: "/agenda", label: "Agenda Visual", icon: Calendar },
+        { href: "/caixa", label: "Caixa do Dia", icon: Receipt },
         { href: "/atendimento", label: "Tela de Atendimento", icon: PlayCircle },
       ],
     },
   ];
 
-  const menuGroups = isCollaborator ? collaboratorMenuGroups : adminMenuGroups;
+  const menuGroups = isReception
+    ? receptionMenuGroups
+    : isProfessional
+    ? professionalMenuGroups
+    : adminMenuGroups;
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-rose-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-md dark:border-rose-900/50 dark:bg-[#20121C] md:flex">
