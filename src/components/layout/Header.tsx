@@ -317,7 +317,7 @@ export function Header({ userRole }: HeaderProps) {
         <img
           src={salon?.logoUrl && salon.logoUrl !== "/logo.png" ? salon.logoUrl : "/salon-logo-official.png"}
           alt={salon?.name || "Selma Gloor Nails Studio"}
-          className="h-10 w-10 rounded-xl object-contain bg-white p-0.5 border-2 border-amber-300/80 shadow-md"
+          className="h-11 w-11 shrink-0 rounded-2xl object-cover border-2 border-amber-300 shadow-md"
         />
         <div>
           <h1 className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">
