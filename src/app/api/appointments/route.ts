@@ -16,9 +16,14 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || searchParams.get("q");
 
     const whereClause: any = { salonId: "default-salon" };
-    if (date && date !== "all") whereClause.date = date;
-    if (monthParam) whereClause.date = { startsWith: monthParam };
-    if (startDate && endDate) whereClause.date = { gte: startDate, lte: endDate };
+    
+    // Se NAO houver busca por texto, aplicamos as restrições de data
+    if (!search || search.trim() === "") {
+      if (date && date !== "all") whereClause.date = date;
+      if (monthParam) whereClause.date = { startsWith: monthParam };
+      if (startDate && endDate) whereClause.date = { gte: startDate, lte: endDate };
+    }
+
     if (professionalId && professionalId !== "all") whereClause.professionalId = professionalId;
     if (status && status !== "all") whereClause.status = status;
 
@@ -36,16 +41,11 @@ export async function GET(req: Request) {
       });
       const clientIds = matchingClients.map((c) => c.id);
 
-      // Também buscar por observações ou nome direto se houver
+      // Buscar agendamentos do cliente ou notas
       whereClause.OR = [
         { clientId: { in: clientIds } },
         { notes: { contains: q, mode: "insensitive" } },
       ];
-
-      // Se estive buscando por cliente específico, remover trava de data única se a data for "all" ou padrao
-      if (!date) {
-        delete whereClause.date;
-      }
     }
 
     const appointments = await prisma.appointment.findMany({

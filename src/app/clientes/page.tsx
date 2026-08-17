@@ -522,20 +522,25 @@ export default function ClientesPage() {
 
                 <div className="mt-3 space-y-2">
                   {selectedClient.canceledAppointments && selectedClient.canceledAppointments.length > 0 ? (
-                    selectedClient.canceledAppointments.map((app: any) => (
-                      <div key={app.id} className="rounded-xl border border-rose-200 bg-white p-3 shadow-sm text-xs dark:bg-slate-900 dark:border-slate-800 space-y-1">
-                        <div className="flex items-center justify-between font-extrabold text-rose-700 dark:text-rose-400">
-                          <span>🗓️ {app.date} às {app.startTime}h</span>
-                          <span className="rounded-md bg-rose-600 text-white px-2 py-0.5 text-[10px] font-extrabold uppercase">❌ DESMARCADO</span>
-                        </div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">💅 Procedimento: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}</p>
-                        {app.cancelReason && (
-                          <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 italic bg-rose-100/60 dark:bg-rose-950/60 p-1.5 rounded-lg">
-                            💬 Motivo: {app.cancelReason}
+                    selectedClient.canceledAppointments.map((app: any) => {
+                      const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
+                      return (
+                        <div key={app.id} className="rounded-xl border border-rose-200 bg-white p-3 shadow-sm text-xs dark:bg-slate-900 dark:border-slate-800 space-y-1">
+                          <div className="flex items-center justify-between font-extrabold text-rose-700 dark:text-rose-400">
+                            <span>🗓️ {dateDDMMYYYY} às {app.startTime}h</span>
+                            <span className="rounded-md bg-rose-600 text-white px-2 py-0.5 text-[10px] font-extrabold uppercase">❌ DESMARCADO</span>
+                          </div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200">
+                            💅 Procedimento: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
                           </p>
-                        )}
-                      </div>
-                    ))
+                          {app.cancelReason ? (
+                            <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 italic bg-rose-100 p-1.5 rounded-lg">
+                              💬 Motivo: {app.cancelReason}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })
                   ) : (
                     <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold italic">
                       ✨ Excelente! Esta cliente não possui histórico de horários desmarcados.
@@ -650,18 +655,23 @@ export default function ClientesPage() {
                 </h4>
                 <div className="mt-2 space-y-2">
                   {selectedClient.appointments && selectedClient.appointments.length > 0 ? (
-                    selectedClient.appointments.map((app: any) => (
-                      <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-                        <div>
-                          <p className="font-bold text-slate-800 dark:text-white">{app.date} às {app.startTime}</p>
-                          <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                    selectedClient.appointments.map((app: any) => {
+                      const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
+                      return (
+                        <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                          <div>
+                            <p className="font-bold text-slate-800 dark:text-white">{dateDDMMYYYY} às {app.startTime}</p>
+                            <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                            <span className={`block text-[10px] font-bold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {app.status}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                          <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="text-slate-400">Nenhum atendimento registrado anteriormente.</p>
                   )}
