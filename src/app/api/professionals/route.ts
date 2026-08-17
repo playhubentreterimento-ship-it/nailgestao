@@ -4,13 +4,10 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const professionals = await prisma.professional.findMany({
-      where: { salonId: "default-salon" },
       orderBy: { name: "asc" },
-    });
+    }).catch(() => []);
 
-    const users = await prisma.user.findMany({
-      where: { salonId: "default-salon" },
-    });
+    const users = await prisma.user.findMany({}).catch(() => []);
 
     const enriched = professionals.map((p) => {
       const u = users.find((usr) => usr.id === p.userId || usr.email === p.email);

@@ -54,11 +54,11 @@ export async function GET(req: Request) {
         services: true,
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
-    });
+    }).catch(() => []);
 
-    const clients = await prisma.client.findMany();
-    const professionals = await prisma.professional.findMany();
-    const allServices = await prisma.service.findMany();
+    const clients = await prisma.client.findMany().catch(() => []);
+    const professionals = await prisma.professional.findMany().catch(() => []);
+    const allServices = await prisma.service.findMany().catch(() => []);
 
     const populated = appointments.map((app) => {
       const clientObj = clients.find((c) => c.id === app.clientId);
