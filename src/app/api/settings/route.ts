@@ -20,16 +20,10 @@ function isDummyPhone(phone?: string | null): boolean {
 export async function GET() {
   try {
     let salon = await prisma.salon.findFirst().catch(() => null);
-    if (!salon) {
-      salon = await prisma.salon.create({
-        data: { id: "default-salon", name: "Studio Selma Gloor" },
-      }).catch(() => null);
-    }
 
     const professionals = await prisma.professional.findMany({
-      where: { salonId: "default-salon" },
       orderBy: { createdAt: "asc" },
-    });
+    }).catch(() => []);
 
     // Buscar usuário Administrador Master
     const adminUser = await prisma.user.findFirst({
@@ -48,7 +42,7 @@ export async function GET() {
     }
     // 3. Tentar Telefone das profissionais cadastradas
     else {
-      const validProf = professionals.find((p) => p.phone && !isDummyPhone(p.phone));
+      const validProf = (professionals || []).find((p) => p.phone && !isDummyPhone(p.phone));
       if (validProf) {
         realPhone = validProf.phone;
       }
@@ -56,13 +50,36 @@ export async function GET() {
 
     const activeWhatsApp = realPhone ? formatPhoneWithDDI(realPhone) : "";
 
+    const defaultSalonObj = {
+      id: "default-salon",
+      name: "Studio Selma Gloor",
+      ownerName: "Selma Gloor",
+      slogan: "Especialista em Unhas & Nails Art de Alta Performance",
+      logoUrl: "/salon-logo-official.png",
+      phone: "(67) 99963-5783",
+      whatsapp: "5567999635783",
+      primaryColor: "#6B1615",
+    };
+
     return NextResponse.json({
-      ...(salon || { id: "default-salon", name: "Studio Selma Gloor" }),
-      activeWhatsApp,
-      adminEmail: adminUser?.email || "juliana@studioluxe.com.br",
+      ...defaultSalonObj,
+      ...(salon || {}),
+      activeWhatsApp: activeWhatsApp || "5567999635783",
+      adminEmail: adminUser?.email || "sfgloorwms078@gmail.com",
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      id: "default-salon",
+      name: "Studio Selma Gloor",
+      ownerName: "Selma Gloor",
+      slogan: "Especialista em Unhas & Nails Art de Alta Performance",
+      logoUrl: "/salon-logo-official.png",
+      phone: "(67) 99963-5783",
+      whatsapp: "5567999635783",
+      activeWhatsApp: "5567999635783",
+      primaryColor: "#6B1615",
+      adminEmail: "sfgloorwms078@gmail.com",
+    });
   }
 }
 
