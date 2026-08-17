@@ -393,6 +393,7 @@ export async function PUT(req: Request) {
     const updateData: any = {};
 
     if (status) updateData.status = status;
+    if (body.cancelReason !== undefined) updateData.cancelReason = body.cancelReason;
     if (notes !== undefined) updateData.notes = notes;
     if (date) updateData.date = date;
     if (startTime) updateData.startTime = startTime;
@@ -461,14 +462,28 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const hard = searchParams.get("hard");
+    const reason = searchParams.get("reason") || "Cliente desmarcou horário";
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
-    await prisma.appointment.delete({
+    if (hard === "true") {
+      await prisma.appointment.delete({
+        where: { id },
+      });
+      return NextResponse.json({ success: true, message: "Agendamento excluído permanentemente." });
+    }
+
+    // Por padrão, marcar como CANCELADO liberando o horário e mantendo o histórico de cancelamento no cadastro da cliente
+    await prisma.appointment.update({
       where: { id },
+      data: {
+        status: "CANCELADO",
+        cancelReason: reason,
+      },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "Horário liberado na agenda e cancelamento contabilizado no cadastro da cliente!" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

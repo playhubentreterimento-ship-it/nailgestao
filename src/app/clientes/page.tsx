@@ -345,19 +345,31 @@ export default function ClientesPage() {
                     📝 {client.notes}
                   </p>
                 )}
-              </div>
+                {/* Métricas do Cliente */}
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                    <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
+                    <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                    <span className="block text-[10px] text-slate-400">VISITAS</span>
+                    <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                    <span className="block text-[10px] text-slate-400">DESMARCOU</span>
+                    <span className={`font-serif font-bold ${client.cancellationsThisMonth > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-slate-900 dark:text-white'}`}>
+                      {client.cancellationsThisMonth || 0}x no mês
+                    </span>
+                  </div>
+                </div>
 
-              {/* Métricas do Cliente */}
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                  <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                  <span className="block text-[10px] text-slate-400">VISITAS</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                {client.cancellationsThisMonth > 0 && (
+                  <div className="mt-2.5 rounded-xl bg-rose-100 border border-rose-200 px-3 py-1.5 text-[11px] font-extrabold text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-200 flex items-center justify-between">
+                    <span>⚠️ {client.cancellationsThisMonth} Desmarcação(ões) este mês</span>
+                    <span className="text-[10px] underline">Ver relatório</span>
+                  </div>
+                )}
+                <div className="mt-3 text-center text-xs">
                   <span className="block text-[10px] text-slate-400">TICKET MÉDIO</span>
                   <span className="font-serif font-bold text-slate-900 dark:text-white">
                     R$ {client.attendanceCount > 0 ? ((client.totalSpent || 0) / client.attendanceCount).toFixed(0) : "0"}
@@ -490,11 +502,46 @@ export default function ClientesPage() {
                       );
                     })}
                   </div>
-                ) : (
+                 ) : (
                   <p className="mt-2 text-[11px] text-slate-500 italic">
                     Esta cliente não possui nenhum pacote ativo no momento. Acesse a área de Pacotes para vincular.
                   </p>
                 )}
+              </div>
+
+              {/* Relatório de Desmarcações & Cancelamentos da Cliente */}
+              <div className="rounded-2xl border-2 border-rose-200 bg-rose-50/50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
+                    <span>⚠️ Relatório de Desmarcações</span>
+                    <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-extrabold text-rose-900 dark:bg-rose-900 dark:text-rose-100">
+                      {selectedClient.cancellationsThisMonth || 0} este mês / {selectedClient.cancellationsTotal || 0} total
+                    </span>
+                  </h4>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {selectedClient.canceledAppointments && selectedClient.canceledAppointments.length > 0 ? (
+                    selectedClient.canceledAppointments.map((app: any) => (
+                      <div key={app.id} className="rounded-xl border border-rose-200 bg-white p-3 shadow-sm text-xs dark:bg-slate-900 dark:border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between font-extrabold text-rose-700 dark:text-rose-400">
+                          <span>🗓️ {app.date} às {app.startTime}h</span>
+                          <span className="rounded-md bg-rose-600 text-white px-2 py-0.5 text-[10px] font-extrabold uppercase">❌ DESMARCADO</span>
+                        </div>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">💅 Procedimento: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}</p>
+                        {app.cancelReason && (
+                          <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 italic bg-rose-100/60 dark:bg-rose-950/60 p-1.5 rounded-lg">
+                            💬 Motivo: {app.cancelReason}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold italic">
+                      ✨ Excelente! Esta cliente não possui histórico de horários desmarcados.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Ficha Técnica de Unhas Expandida */}

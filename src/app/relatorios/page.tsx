@@ -5,11 +5,17 @@ import { FileText, Download, Printer, Filter, DollarSign, Users, Sparkles } from
 
 export default function RelatoriosPage() {
   const [data, setData] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
 
   const loadData = () => {
     fetch("/api/dashboard", { cache: "no-store" })
       .then((r) => r.json())
       .then(setData);
+
+    fetch("/api/clients", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((res) => setClients(Array.isArray(res) ? res : []))
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -23,6 +29,7 @@ export default function RelatoriosPage() {
   };
 
   const { salon, month, charts } = data || {};
+  const clientsWithCancellations = clients.filter((c: any) => c.cancellationsThisMonth > 0);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -32,7 +39,7 @@ export default function RelatoriosPage() {
             Relatório Executivo do Salão
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Relatórios consolidados em tempo real para análise de gestão, contabilidade e tomada de decisão.
+            Relatórios consolidados em tempo real para análise de gestão, controle de desmarcações e tomada de decisão.
           </p>
         </div>
 
@@ -102,6 +109,51 @@ export default function RelatoriosPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/40">
               Nenhum procedimento concluído no período ainda. Conforme os agendamentos forem realizados, o relatório atualizará os valores automaticamente.
+            </div>
+          )}
+        </div>
+
+        {/* Relatório de Desmarcações por Cliente */}
+        <div className="border-t pt-6 dark:border-slate-800 space-y-4">
+          <div className="flex items-center justify-between border-b pb-3 border-rose-100 dark:border-slate-800">
+            <div>
+              <h4 className="font-serif text-base font-extrabold text-rose-800 dark:text-rose-300 flex items-center space-x-2">
+                <span>⚠️ Relatório de Desmarcações de Clientes (Mês Atual)</span>
+              </h4>
+              <p className="text-xs font-semibold text-slate-500">
+                Identificação de clientes com agendamentos desmarcados para controle de faltas e tomada de medidas.
+              </p>
+            </div>
+            <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-extrabold text-rose-800 dark:bg-rose-950 dark:text-rose-200">
+              {clientsWithCancellations.length} cliente(s) com desmarcações
+            </span>
+          </div>
+
+          {clientsWithCancellations.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {clientsWithCancellations.map((client: any) => (
+                <div key={client.id} className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 shadow-sm text-xs dark:bg-slate-800 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between font-extrabold">
+                    <span className="text-slate-900 dark:text-white">👤 {client.name}</span>
+                    <span className="rounded-full bg-rose-600 text-white px-2.5 py-0.5 text-[10px] font-extrabold">
+                      ⚠️ {client.cancellationsThisMonth}x desmarcou
+                    </span>
+                  </div>
+                  <p className="text-slate-500">📞 WhatsApp: {client.phone}</p>
+                  <div className="border-t border-rose-200/80 pt-2 dark:border-slate-700">
+                    <p className="font-bold text-rose-700 dark:text-rose-400">Datas e horários desmarcados:</p>
+                    {client.canceledAppointments?.map((app: any) => (
+                      <p key={app.id} className="text-[11px] font-medium text-slate-700 dark:text-slate-300 mt-1">
+                        🗓️ {app.date} às {app.startTime}h {app.cancelReason ? `- (${app.cancelReason})` : ''}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/40 p-6 text-center text-xs font-extrabold text-emerald-800 dark:bg-slate-800 dark:border-slate-700 dark:text-emerald-300">
+              ✨ Excelente! Nenhuma cliente desmarcou agendamentos neste mês.
             </div>
           )}
         </div>

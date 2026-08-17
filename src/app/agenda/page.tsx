@@ -354,18 +354,21 @@ export default function AgendaPage() {
   };
 
   const handleCancelAppointment = async (app: any) => {
-    if (
-      confirm(
-        `⚠️ Tem certeza que deseja CANCELAR e EXCLUIR o agendamento da cliente "${app.clientName}" do dia ${app.date} às ${app.startTime}?\n\nEste horário será liberado imediatamente para novas clientes agendarem!`
-      )
-    ) {
-      const res = await fetch(`/api/appointments?id=${app.id}`, { method: "DELETE" });
+    const reason = prompt(
+      `⚠️ Desmarcar agendamento da cliente "${app.clientName}" no dia ${app.date} às ${app.startTime}h?\n\nDigite o motivo da desmarcação (opcional):`,
+      "Cliente desmarcou horário"
+    );
+
+    if (reason !== null) {
+      const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
-        alert("✨ Agendamento cancelado e excluído com sucesso! Horário liberado na agenda.");
-        loadAgenda();
+        alert("✨ Horário liberado na agenda! Cancelamento contabilizado com sucesso no cadastro da cliente.");
+        refreshAllData();
       } else {
         const err = await res.json();
-        alert("Erro ao excluir agendamento: " + err.error);
+        alert("Erro ao desmarcar: " + err.error);
       }
     }
   };
@@ -563,6 +566,134 @@ export default function AgendaPage() {
             </button>
           </div>
         </div>
+
+      {/* ==================== PAINEL DE CONSULTA POR CLIENTE (LUPA) ==================== */}
+      {searchQuery.trim().length >= 2 && (
+        <div className="rounded-3xl border-2 border-amber-400 bg-white p-6 shadow-xl dark:border-amber-600 dark:bg-slate-900 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 border-amber-200 dark:border-slate-800 gap-2">
+            <div>
+              <h3 className="font-serif text-lg font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
+                <span>🔍 Agendamentos Encontrados para Cliente:</span>
+                <span className="text-rose-600 dark:text-rose-400">"{searchQuery}"</span>
+              </h3>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+                {isSearching
+                  ? "Buscando datas marcadas..."
+                  : `${searchResults.length} agendamento(s) localizado(s) nos meses e semanas.`}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setSearchQuery("")}
+              className="self-start sm:self-auto rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+            >
+              ✖️ Limpar Busca
+            </button>
+          </div>
+
+          {searchResults.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {searchResults.map((app: any) => {
+                const formattedDate = app.date ? app.date.split("-").reverse().join("/") : "";
+                const weekDayName = app.date
+                  ? new Date(app.date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long" })
+                  : "";
+                const isPackage = app.paymentStatus === "PACOTE" || app.notes?.includes("Pacote");
+                const isCanceled = app.status === "CANCELADO";
+
+                return (
+                  <div
+                    key={app.id}
+                    className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm space-y-3 ${
+                      isCanceled
+                        ? "border-rose-300 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/40"
+                        : "border-amber-200 bg-amber-50/40 dark:border-slate-800 dark:bg-slate-800/80"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between border-b border-amber-200/60 pb-2 dark:border-slate-700">
+                        <span className="font-extrabold text-xs text-amber-950 dark:text-amber-200">
+                          👤 {app.clientName}
+                        </span>
+                        <span
+                          className={`rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                            isCanceled
+                              ? "bg-rose-600 text-white"
+                              : isPackage
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : "bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-100"
+                          }`}
+                        >
+                          {isCanceled ? "❌ DESMARCADO" : isPackage ? "🎁 PACOTE" : app.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 space-y-1 text-xs">
+                        <p className="font-extrabold text-slate-900 dark:text-white flex items-center space-x-1">
+                          <span>🗓️ {formattedDate} ({weekDayName})</span>
+                        </p>
+                        <p className="font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1">
+                          <span>⏰ Horário: {app.startTime}</span>
+                        </p>
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">
+                          💅 Procedimento: <strong>{app.serviceNames?.join(", ") || "Atendimento"}</strong>
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          👤 Atendida por: {app.professionalName}
+                        </p>
+                        {app.cancelReason && (
+                          <p className="text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 p-1.5 rounded-lg mt-1">
+                            ⚠️ Motivo da Desmarcação: {app.cancelReason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between border-t border-amber-200/60 pt-2.5 dark:border-slate-700 text-xs font-bold gap-1">
+                      {!isCanceled && (
+                        <>
+                          <button
+                            onClick={() => handleOpenEditModal(app)}
+                            className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2.5 py-1.5 text-xs text-white shadow-sm hover:opacity-95 flex items-center space-x-1"
+                          >
+                            <span>✏️ Remarcar</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleCancelAppointment(app)}
+                            className="rounded-xl border border-rose-300 bg-rose-100 px-2.5 py-1.5 text-[11px] text-rose-800 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
+                            title="Desmarcar horário, liberar na agenda e contabilizar no relatório da cliente"
+                          >
+                            <span>🚫 Desmarcar</span>
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setSelectedDate(app.date);
+                          setViewMode("day");
+                          setSearchQuery("");
+                        }}
+                        className="rounded-xl border border-amber-300 bg-white px-2.5 py-1.5 text-[11px] text-amber-900 hover:bg-amber-50 dark:bg-slate-900 dark:text-amber-200 dark:border-slate-700"
+                        title="Ver na grade do dia"
+                      >
+                        <span>📅 Ir para o Dia</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            !isSearching && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-xs font-bold text-slate-500 dark:bg-slate-900 dark:border-slate-800">
+                Nenhum agendamento encontrado para a cliente "{searchQuery}".
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
       {viewMode === "day" && (

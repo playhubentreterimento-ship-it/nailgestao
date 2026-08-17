@@ -23,9 +23,16 @@ export async function GET() {
       where: { salonId: "default-salon" },
     });
 
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const todayStr = now.toISOString().split("T")[0];
+
     // Enriquecer clientes com o histórico completo de agendamentos e pacotes ativos
     const enriched = clients.map((cli) => {
       const cliApps = appointments.filter((a) => a.clientId === cli.id);
+      const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
+      const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
+
       const cliPkgs = clientPackages
         .filter((cp) => cp.clientId === cli.id)
         .map((cp) => {
@@ -41,8 +48,11 @@ export async function GET() {
         ...cli,
         appointments: cliApps,
         packages: cliPkgs,
-        lastAppointment: cliApps[0] || null,
-        nextAppointment: cliApps.find((a) => new Date(a.date) >= new Date()) || null,
+        cancellationsTotal: cliCanceledApps.length,
+        cancellationsThisMonth: cliCanceledThisMonth.length,
+        canceledAppointments: cliCanceledApps,
+        lastAppointment: cliApps.find((a) => a.status !== "CANCELADO") || null,
+        nextAppointment: cliApps.find((a) => a.status !== "CANCELADO" && a.date >= todayStr) || null,
       };
     });
 
