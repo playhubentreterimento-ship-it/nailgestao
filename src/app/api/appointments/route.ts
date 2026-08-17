@@ -13,12 +13,40 @@ export async function GET(req: Request) {
     const professionalId = searchParams.get("professionalId");
     const status = searchParams.get("status");
 
+    const search = searchParams.get("search") || searchParams.get("q");
+
     const whereClause: any = { salonId: "default-salon" };
     if (date && date !== "all") whereClause.date = date;
     if (monthParam) whereClause.date = { startsWith: monthParam };
     if (startDate && endDate) whereClause.date = { gte: startDate, lte: endDate };
     if (professionalId && professionalId !== "all") whereClause.professionalId = professionalId;
     if (status && status !== "all") whereClause.status = status;
+
+    if (search && search.trim() !== "") {
+      const q = search.trim().toLowerCase();
+      const matchingClients = await prisma.client.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { whatsapp: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true },
+      });
+      const clientIds = matchingClients.map((c) => c.id);
+
+      // Também buscar por observações ou nome direto se houver
+      whereClause.OR = [
+        { clientId: { in: clientIds } },
+        { notes: { contains: q, mode: "insensitive" } },
+      ];
+
+      // Se estive buscando por cliente específico, remover trava de data única se a data for "all" ou padrao
+      if (!date) {
+        delete whereClause.date;
+      }
+    }
 
     const appointments = await prisma.appointment.findMany({
       where: whereClause,
@@ -30,14 +58,23 @@ export async function GET(req: Request) {
 
     const clients = await prisma.client.findMany();
     const professionals = await prisma.professional.findMany();
+    const allServices = await prisma.service.findMany();
 
-    const populated = appointments.map((app) => ({
-      ...app,
-      clientName: clients.find((c) => c.id === app.clientId)?.name || "Cliente Desconhecido",
-      clientPhone: clients.find((c) => c.id === app.clientId)?.whatsapp || "",
-      professionalName: professionals.find((p) => p.id === app.professionalId)?.name || "Profissional",
-      professionalColor: professionals.find((p) => p.id === app.professionalId)?.color || "#E0A96D",
-    }));
+    const populated = appointments.map((app) => {
+      const clientObj = clients.find((c) => c.id === app.clientId);
+      const profObj = professionals.find((p) => p.id === app.professionalId);
+      return {
+        ...app,
+        clientName: clientObj?.name || "Cliente Desconhecido",
+        clientPhone: clientObj?.whatsapp || clientObj?.phone || "",
+        professionalName: profObj?.name || "Profissional",
+        professionalColor: profObj?.color || "#E0A96D",
+        serviceNames: app.services.map((s) => {
+          const srvObj = allServices.find((srv) => srv.id === s.serviceId);
+          return srvObj?.name || s.serviceName || "Procedimento";
+        }),
+      };
+    });
 
     return NextResponse.json(populated);
   } catch (error: any) {

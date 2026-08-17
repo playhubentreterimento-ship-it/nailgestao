@@ -13,6 +13,7 @@ import {
   Search,
   CheckCircle,
   AlertTriangle,
+  X,
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
@@ -30,6 +31,15 @@ export function Header({ userRole }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [pushStatus, setPushStatus] = useState<string>("default");
+  const [headerSearch, setHeaderSearch] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("search") || params.get("q");
+      if (q) setHeaderSearch(q);
+    }
+  }, []);
 
   const knownAppIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef<boolean>(true);
@@ -323,14 +333,38 @@ export function Header({ userRole }: HeaderProps) {
       <div className="flex items-center space-x-2 sm:space-x-4">
         {/* Barra de Busca Rápida */}
         {!isCollaborator && (
-          <div className="relative hidden md:block">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (headerSearch.trim()) {
+                window.location.href = `/agenda?search=${encodeURIComponent(headerSearch.trim())}`;
+              }
+            }}
+            className="relative hidden md:block"
+          >
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar cliente, serviço..."
-              className="h-9 w-60 rounded-full bg-slate-100 pl-9 pr-4 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
+              placeholder="Buscar cliente ou agendamento..."
+              className="h-9 w-64 rounded-full bg-slate-100 pl-9 pr-8 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
             />
-          </div>
+            {headerSearch && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderSearch("");
+                  if (window.location.pathname === "/agenda") {
+                    window.location.href = "/agenda";
+                  }
+                }}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </form>
         )}
 
         {/* Botão Agendamento Rápido (Desktop) */}

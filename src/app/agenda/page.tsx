@@ -91,6 +91,11 @@ export default function AgendaPage() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Busca por Cliente / Lupa
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
   const [formProf, setFormProf] = useState("");
@@ -201,6 +206,37 @@ export default function AgendaPage() {
     window.addEventListener("focus", refreshAllData);
     return () => window.removeEventListener("focus", refreshAllData);
   }, [selectedDate, filterProf, viewMode]);
+
+  // Ler parametro search da URL se vier do topo do site
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("search") || params.get("q");
+      if (q) setSearchQuery(q);
+    }
+  }, []);
+
+  // Efeito para pesquisar agendamentos de clientes em todas as datas quando searchQuery tem 2+ caracteres
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/appointments?search=${encodeURIComponent(searchQuery.trim())}&date=all`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((res) => {
+          setSearchResults(Array.isArray(res) ? res : []);
+          setIsSearching(false);
+        })
+        .catch(() => setIsSearching(false));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleOpenModal = (presetDate?: string, presetTime?: string) => {
     refreshAllData();
@@ -458,6 +494,25 @@ export default function AgendaPage() {
       </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Lupa de Pesquisa por Cliente */}
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <input
+              type="text"
+              placeholder="🔍 Pesquisar cliente (ver datas/meses)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border-2 border-amber-300 bg-amber-50/50 pl-3 pr-8 py-2 text-xs font-bold text-slate-900 shadow-sm outline-none focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-300 dark:border-amber-700 dark:bg-slate-900 dark:text-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           {/* Seletor de data */}
           <input
             type="date"
@@ -507,26 +562,6 @@ export default function AgendaPage() {
               Mês
             </button>
           </div>
-
-          {/* Botão de Bloqueio/Liberação de Almoço */}
-          {(() => {
-            const isLunchUnlocked = appointments.some(
-              (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
-            );
-            return (
-              <button
-                onClick={handleToggleLunchBlock}
-                className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
-                  isLunchUnlocked
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
-                    : "bg-slate-800 text-amber-300 border border-amber-400 hover:bg-slate-700"
-                }`}
-                title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
-              >
-                <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
-              </button>
-            );
-          })()}
         </div>
 
       {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
