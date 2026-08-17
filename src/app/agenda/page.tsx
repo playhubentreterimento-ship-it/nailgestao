@@ -98,6 +98,7 @@ export default function AgendaPage() {
 
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
+  const [modalClientSearch, setModalClientSearch] = useState("");
   const [formProf, setFormProf] = useState("");
   const [formDate, setFormDate] = useState(getTodayString());
   const [formTime, setFormTime] = useState("10:00");
@@ -1416,19 +1417,41 @@ export default function AgendaPage() {
               {/* Cliente */}
               <div>
                 <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
-                <select
-                  value={formClient}
-                  onChange={(e) => handleSelectClient(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                >
-                  <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
-                      {c.name} - {c.whatsapp} ({c.tag})
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    placeholder="🔍 Digite o nome ou celular da cliente..."
+                    value={modalClientSearch}
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setModalClientSearch(q);
+                      if (q.trim()) {
+                        const match = clients.find((c: any) => c.name.toLowerCase().includes(q.trim().toLowerCase()) || (c.phone && c.phone.includes(q.trim())));
+                        if (match) handleSelectClient(match.id);
+                      }
+                    }}
+                    className="w-full rounded-2xl border-2 border-rose-300 bg-rose-50/60 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs shadow-sm"
+                  />
+                  <select
+                    value={formClient}
+                    onChange={(e) => handleSelectClient(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  >
+                    <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
+                    {clients
+                      .filter((c: any) => {
+                        if (!modalClientSearch.trim()) return true;
+                        const q = modalClientSearch.trim().toLowerCase();
+                        return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)) || (c.whatsapp && c.whatsapp.includes(q));
+                      })
+                      .map((c) => (
+                        <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
+                          {c.name} - {c.whatsapp} ({c.tag})
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
                 {/* Badge de Pacote Ativo da Cliente */}
                 {(() => {

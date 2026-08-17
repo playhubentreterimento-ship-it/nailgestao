@@ -53,6 +53,7 @@ export default function PacotesPage() {
   // Form Vincular a Cliente (Venda do Pacote)
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [assignPaymentDate, setAssignPaymentDate] = useState<string>(getTodayString());
   const [assignPaymentMethod, setAssignPaymentMethod] = useState<string>("PIX");
   const [assignAmountPaid, setAssignAmountPaid] = useState<number | null>(null);
@@ -691,19 +692,41 @@ export default function PacotesPage() {
 
             <form onSubmit={handleAssignPackage} className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-800 dark:text-slate-200">Selecione a Cliente *</label>
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                >
-                  {clients.map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      👤 {c.name} ({c.whatsapp || c.phone})
-                    </option>
-                  ))}
-                </select>
+                <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Selecione a Cliente *</label>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    placeholder="🔍 Digite o nome da cliente para filtrar rápida..."
+                    value={clientSearchQuery}
+                    onChange={(e) => {
+                      const q = e.target.value;
+                      setClientSearchQuery(q);
+                      if (q.trim()) {
+                        const match = clients.find((c: any) => c.name.toLowerCase().includes(q.trim().toLowerCase()) || (c.phone && c.phone.includes(q.trim())));
+                        if (match) setSelectedClientId(match.id);
+                      }
+                    }}
+                    className="w-full rounded-2xl border-2 border-rose-300 bg-rose-50/60 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs shadow-sm"
+                  />
+                  <select
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    required
+                  >
+                    {clients
+                      .filter((c: any) => {
+                        if (!clientSearchQuery.trim()) return true;
+                        const q = clientSearchQuery.trim().toLowerCase();
+                        return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)) || (c.whatsapp && c.whatsapp.includes(q));
+                      })
+                      .map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          👤 {c.name} ({c.whatsapp || c.phone})
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -863,7 +886,7 @@ export default function PacotesPage() {
                     onChange={(e) => setScheduleTime(e.target.value)}
                     className="mt-1 w-full rounded-2xl border border-slate-200 p-3 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
-                    {["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"].map((t) => (
+                    {["07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"].map((t) => (
                       <option key={t} value={t}>⏰ {t}</option>
                     ))}
                   </select>
