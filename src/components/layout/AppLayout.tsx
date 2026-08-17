@@ -33,9 +33,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         const role = data.user.role || "PROFISSIONAL";
         setUserRole(role);
 
-        // Se for colaboradora / profissional, restringir rotas exclusivamente para /agenda e /caixa
+        // Se for colaboradora / profissional, restringir rotas exclusivamente para /agenda e /atendimento
         if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
-          if (pathname !== "/agenda" && pathname !== "/caixa") {
+          if (pathname !== "/agenda" && pathname !== "/atendimento") {
             router.push("/agenda");
           }
         }

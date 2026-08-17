@@ -105,7 +105,7 @@ export function Sidebar({ userRole }: SidebarProps) {
       title: "PAINEL DA COLABORADORA",
       items: [
         { href: "/agenda", label: "Agenda Visual", icon: Calendar },
-        { href: "/caixa", label: "Caixa do Dia", icon: Receipt },
+        { href: "/atendimento", label: "Tela de Atendimento", icon: PlayCircle },
       ],
     },
   ];
