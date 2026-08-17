@@ -663,11 +663,31 @@ export default function ClientesPage() {
                             <p className="font-bold text-slate-800 dark:text-white">{dateDDMMYYYY} às {app.startTime}</p>
                             <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
                           </div>
-                          <div className="text-right">
-                            <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                            <span className={`block text-[10px] font-bold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                              {app.status}
-                            </span>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                              <span className={`block text-[10px] font-extrabold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {app.status === 'CANCELADO' ? '❌ DESMARCADO' : app.status}
+                              </span>
+                            </div>
+                            {app.status !== 'CANCELADO' && (
+                              <button
+                                onClick={async () => {
+                                  const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
+                                  if (reason !== null) {
+                                    const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
+                                    if (res.ok) {
+                                      alert("✨ Horário desmarcado e liberado na agenda!");
+                                      loadClients();
+                                    }
+                                  }
+                                }}
+                                className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
+                                title="Desmarcar horário e liberar na agenda"
+                              >
+                                🚫 Desmarcar
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

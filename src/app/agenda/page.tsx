@@ -785,9 +785,9 @@ export default function AgendaPage() {
                                 <button
                                   onClick={() => handleCancelAppointment(app)}
                                   className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
-                                  title="Cancelar e liberar este horário"
+                                  title="Desmarcar horário, liberar na agenda e contabilizar no relatório da cliente"
                                 >
-                                  🗑️ Excluir
+                                  🚫 Desmarcar
                                 </button>
                                 {app.status !== "CONCLUIDO" && (
                                   <button
@@ -972,7 +972,7 @@ export default function AgendaPage() {
                                           onClick={() => handleCancelAppointment(app)}
                                           className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
                                         >
-                                          🗑️ Excluir
+                                          🚫 Desmarcar
                                         </button>
                                       </div>
                                       {app.status !== "CONCLUIDO" && (
@@ -1822,20 +1822,34 @@ export default function AgendaPage() {
               </div>
 
               {/* Botões */}
-              <div className="flex justify-end space-x-3 pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    handleCancelAppointment(editingApp);
+                  }}
+                  className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 font-extrabold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300 shadow-sm"
+                  title="Desmarcar horário e liberar na agenda"
                 >
-                  Cancelar
+                  🚫 Desmarcar Horário
                 </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
-                >
-                  💾 Salvar Alterações &rarr;
-                </button>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
+                  >
+                    💾 Salvar Alterações &rarr;
+                  </button>
+                </div>
               </div>
             </form>
           </div>
