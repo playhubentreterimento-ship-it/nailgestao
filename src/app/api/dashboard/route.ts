@@ -19,8 +19,10 @@ export async function GET() {
       },
     });
 
-    const clientsToday = new Set(todayAppointments.map((a) => a.clientId)).size;
-    const revenueExpectedToday = todayAppointments.reduce((acc, curr) => acc + curr.total, 0);
+    const clientsToday = new Set(todayAppointments.filter((a) => a.status !== "CANCELADO").map((a) => a.clientId)).size;
+    const revenueExpectedToday = todayAppointments
+      .filter((a) => a.status !== "CANCELADO")
+      .reduce((acc, curr) => acc + curr.total, 0);
     const revenueRealizedToday = todayAppointments
       .filter((a) => a.status === "CONCLUIDO" || a.status === "EM_ATENDIMENTO")
       .reduce((acc, curr) => acc + curr.total, 0);
