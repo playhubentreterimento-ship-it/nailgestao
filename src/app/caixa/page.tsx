@@ -5,6 +5,7 @@ import { Receipt, DollarSign, ArrowUpRight, ArrowDownLeft, Lock, Unlock, Plus, A
 
 export default function CaixaPage() {
   const [data, setData] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showTxModal, setShowTxModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -25,14 +26,27 @@ export default function CaixaPage() {
 
   useEffect(() => {
     loadCaixa();
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.authenticated && res.user) {
+          setCurrentUser(res.user);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleOpenCaixa = async (e: React.FormEvent) => {
     e.preventDefault();
+    const openedName = currentUser?.name || "Selma Gloor";
     const res = await fetch("/api/cash", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "OPEN", initialAmount }),
+      body: JSON.stringify({
+        action: "OPEN",
+        initialAmount,
+        openedByName: openedName,
+      }),
     });
     if (res.ok) {
       setShowOpenModal(false);
@@ -64,10 +78,15 @@ export default function CaixaPage() {
 
   const handleCloseCaixa = async (e: React.FormEvent) => {
     e.preventDefault();
+    const closedName = currentUser?.name || "Selma Gloor";
     const res = await fetch("/api/cash", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "CLOSE", finalAmount }),
+      body: JSON.stringify({
+        action: "CLOSE",
+        finalAmount,
+        closedByName: closedName,
+      }),
     });
     if (res.ok) {
       setShowCloseModal(false);
@@ -134,7 +153,9 @@ export default function CaixaPage() {
                 <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
                   Caixa Aberto &mdash; {new Date(activeRegister.openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Responsável: Juliana Silva</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Responsável: {activeRegister.openedByName || activeRegister.openedByUserId || currentUser?.name || "Selma Gloor"}
+                </p>
               </div>
             </div>
 

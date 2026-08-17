@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const activeRegister = await prisma.cashRegister.findFirst({
+    const salon = await prisma.salon.findFirst().catch(() => null);
+    const defaultOwnerName = salon?.ownerName || "Selma Gloor";
+
+    const rawActive = await prisma.cashRegister.findFirst({
       where: { salonId: "default-salon", status: "ABERTO" },
       include: {
         transactions: {
@@ -12,15 +15,43 @@ export async function GET() {
       },
     });
 
+    const activeRegister = rawActive
+      ? {
+          ...rawActive,
+          openedByName:
+            rawActive.openedByUserId &&
+            rawActive.openedByUserId !== "usr-admin" &&
+            rawActive.openedByUserId !== "usr-admin-default"
+              ? rawActive.openedByUserId
+              : defaultOwnerName,
+        }
+      : null;
+
     const previousRegisters = await prisma.cashRegister.findMany({
       where: { salonId: "default-salon", status: "FECHADO" },
       orderBy: { openedAt: "desc" },
       take: 10,
     });
 
+    const history = previousRegisters.map((reg) => ({
+      ...reg,
+      openedByName:
+        reg.openedByUserId &&
+        reg.openedByUserId !== "usr-admin" &&
+        reg.openedByUserId !== "usr-admin-default"
+          ? reg.openedByUserId
+          : defaultOwnerName,
+      closedByName:
+        reg.closedByUserId &&
+        reg.closedByUserId !== "usr-admin" &&
+        reg.closedByUserId !== "usr-admin-default"
+          ? reg.closedByUserId
+          : defaultOwnerName,
+    }));
+
     return NextResponse.json({
       activeRegister,
-      history: previousRegisters,
+      history,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -30,7 +61,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { action, initialAmount, category, amount, paymentMethod, description, finalAmount, notes } = body;
+    const { action, initialAmount, openedByName, closedByName, category, amount, paymentMethod, description, finalAmount, notes } = body;
 
     // ABRIR CAIXA
     if (action === "OPEN") {
@@ -44,11 +75,11 @@ export async function POST(req: Request) {
       const newRegister = await prisma.cashRegister.create({
         data: {
           salonId: "default-salon",
-          openedByUserId: "usr-admin",
+          openedByUserId: openedByName || "Selma Gloor",
           initialAmount: Number(initialAmount || 0),
           expectedAmount: Number(initialAmount || 0),
           status: "ABERTO",
-          notes: notes || "Abertura de caixa",
+          notes: notes || `Abertura por ${openedByName || "Selma Gloor"}`,
         },
       });
 
@@ -128,7 +159,7 @@ export async function POST(req: Request) {
         where: { id: activeRegister.id },
         data: {
           status: "FECHADO",
-          closedByUserId: "usr-admin",
+          closedByUserId: closedByName || "Selma Gloor",
           closedAt: new Date(),
           finalAmount: reportedFinal,
           difference,
