@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const search = searchParams.get("search") || searchParams.get("q");
 
-    const whereClause: any = { salonId: "default-salon" };
+    const whereClause: any = {};
     
     // Se NAO houver busca por texto, aplicamos as restrições de data
     if (!search || search.trim() === "") {

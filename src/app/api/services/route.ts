@@ -4,15 +4,13 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const categories = await prisma.serviceCategory.findMany({
-      where: { salonId: "default-salon" },
       include: { services: true },
       orderBy: { order: "asc" },
-    });
+    }).catch(() => []);
 
     const services = await prisma.service.findMany({
-      where: { salonId: "default-salon" },
       orderBy: { name: "asc" },
-    });
+    }).catch(() => []);
 
     return NextResponse.json({ categories, services });
   } catch (error: any) {

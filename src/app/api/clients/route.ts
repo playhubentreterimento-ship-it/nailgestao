@@ -4,24 +4,20 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const clients = await prisma.client.findMany({
-      where: { salonId: "default-salon" },
       include: { photos: true },
       orderBy: { name: "asc" },
-    });
+    }).catch(() => []);
 
     const appointments = await prisma.appointment.findMany({
-      where: { salonId: "default-salon" },
       include: { services: true },
       orderBy: { date: "desc" },
-    });
+    }).catch(() => []);
 
     const clientPackages = await prisma.clientPackage.findMany({
       where: { active: true },
-    });
+    }).catch(() => []);
 
-    const packages = await prisma.package.findMany({
-      where: { salonId: "default-salon" },
-    });
+    const packages = await prisma.package.findMany({}).catch(() => []);
 
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
