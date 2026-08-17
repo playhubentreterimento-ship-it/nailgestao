@@ -227,9 +227,9 @@ export default function ConfiguracoesPage() {
 
       {/* GERENCIAMENTO DE ATENDENTES E LOGINS */}
       <div className="rounded-3xl border border-rose-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-            <Users className="h-5 w-5 text-rose-500" />
+            <Users className="h-5 w-5 text-rose-500 shrink-0" />
             <span>Atendentes / Equipe & Logins de Acesso</span>
           </h3>
           <button
@@ -241,7 +241,7 @@ export default function ConfiguracoesPage() {
               setProfPassword("");
               setShowProfModal(true);
             }}
-            className="flex items-center space-x-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-600"
+            className="flex items-center justify-center space-x-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-600 w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             <span>Adicionar Nova Atendente</span>
@@ -250,14 +250,14 @@ export default function ConfiguracoesPage() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {professionals.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60 flex items-center justify-between">
-              <div>
+            <div key={p.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="w-full sm:flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
-                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: p.color || "#E0A96D" }}></span>
-                  <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm">{p.name}</h4>
+                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: p.color || "#E0A96D" }}></span>
+                  <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm truncate">{p.name}</h4>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">📞 {p.phone}</p>
-                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 break-all">
                   ✉️ Login: {p.userEmail || "Sem email cadastrado"}
                 </p>
                 <span className="inline-block mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -265,7 +265,7 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60 justify-start sm:justify-end">
                 <button
                   onClick={() => handleZeroCommission(p)}
                   className="flex items-center space-x-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
@@ -347,7 +347,7 @@ export default function ConfiguracoesPage() {
             <span>Dados Principais do Salão</span>
           </h3>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-bold">Nome da Administradora / Proprietária *</label>
               <input
@@ -413,7 +413,7 @@ export default function ConfiguracoesPage() {
             <p className="text-[10px] text-slate-400 mt-1.5">Escolha uma foto da galeria do seu celular/computador (até 5MB) ou cole o link de uma imagem da internet.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-bold">Telefone / WhatsApp Comercial</label>
               <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
