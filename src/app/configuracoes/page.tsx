@@ -371,18 +371,18 @@ export default function ConfiguracoesPage() {
           </div>
 
           <div>
-            <label className="block font-bold">Foto / Logotipo do Salão</label>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-2">
+            <label className="block font-bold mb-1">Foto / Logotipo do Salão</label>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row items-center gap-4">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo Preview" className="h-16 w-16 rounded-2xl object-cover border border-rose-200 shadow-sm" />
+                <img src={logoUrl} alt="Logo Preview" className="h-20 w-20 shrink-0 rounded-2xl object-cover border-2 border-rose-300 shadow-md" />
               ) : (
-                <div className="h-16 w-16 rounded-2xl bg-rose-100 dark:bg-slate-800 flex items-center justify-center font-bold text-rose-600 text-xs shadow-inner">💅 Logo</div>
+                <div className="h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br from-rose-100 to-amber-100 dark:from-slate-800 dark:to-slate-800/80 flex items-center justify-center font-bold text-rose-700 dark:text-amber-200 text-xs shadow-inner border border-rose-200">💅 Foto Logo</div>
               )}
 
-              <div className="flex-1 space-y-2 w-full">
-                <div className="flex items-center space-x-2">
-                  <label className="cursor-pointer inline-flex items-center space-x-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-600 transition">
-                    <span>📁 Escolher da Galeria / Computador</span>
+              <div className="flex-1 space-y-2.5 w-full">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95 transition">
+                    <span>📁 Escolher Foto da Galeria / Computador</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -394,7 +394,7 @@ export default function ConfiguracoesPage() {
                     <button
                       type="button"
                       onClick={() => setLogoUrl("")}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300"
+                      className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300"
                     >
                       Remover Foto
                     </button>
@@ -405,12 +405,14 @@ export default function ConfiguracoesPage() {
                   type="text"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="Ou cole o link da imagem (URL)..."
-                  className="w-full rounded-xl border p-2.5 font-medium text-xs dark:bg-slate-800"
+                  placeholder="Ou cole o link direto da imagem (URL)..."
+                  className="w-full rounded-xl border border-slate-200 p-3 font-medium text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-rose-400"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1.5">Escolha uma foto da galeria do seu celular/computador (até 5MB) ou cole o link de uma imagem da internet.</p>
+            <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
+              Escolha uma foto da galeria do celular/computador (até 5MB) ou cole o link direto de uma imagem. Ela será exibida no seu perfil e no site de agendamento online dos clientes!
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

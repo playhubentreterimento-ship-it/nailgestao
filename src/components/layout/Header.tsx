@@ -485,12 +485,16 @@ export function Header({ userRole }: HeaderProps) {
         {/* Avatar do Usuário Logado + Logout */}
         <div className="flex items-center space-x-3 border-l border-white/20 pl-3 dark:border-slate-700">
           <div className="flex items-center space-x-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 font-bold text-white shadow-sm text-xs border border-white/30">
-              {initials}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 font-bold text-white shadow-md text-xs border-2 border-white/40 overflow-hidden">
+              {salon?.logoUrl || currentUser?.avatarUrl ? (
+                <img src={salon?.logoUrl || currentUser?.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
-            <div className="hidden text-left xl:block">
-              <p className="text-xs font-bold text-white leading-tight">{displayName}</p>
-              <p className="text-[10px] text-amber-200 font-medium leading-tight">{displayRole}</p>
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-extrabold text-white leading-tight">{displayName}</p>
+              <p className="text-[10px] text-amber-200 font-bold leading-tight">{displayRole}</p>
             </div>
           </div>
 
