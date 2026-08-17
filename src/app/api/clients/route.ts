@@ -44,8 +44,33 @@ export async function GET() {
           };
         });
 
+      const completedApps = cliApps.filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO");
+      const visitsCount = completedApps.length;
+      const totalSpent = cliApps.filter((a) => a.status === "CONCLUIDO").reduce((acc, a) => acc + (a.total || 0), 0);
+
+      let daysSinceLastVisit = 0;
+      const lastApp = completedApps[0];
+      if (lastApp && lastApp.date) {
+        const lastDate = new Date(lastApp.date + "T12:00:00");
+        const diffTime = Math.abs(now.getTime() - lastDate.getTime());
+        daysSinceLastVisit = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+
+      // Calcular tag automatica por frequencia real
+      let computedTag = "NOVO";
+      if (visitsCount >= 5 || totalSpent >= 400) {
+        computedTag = "VIP";
+      } else if (visitsCount >= 2) {
+        computedTag = "FREQUENTE";
+      } else if (visitsCount > 0 && daysSinceLastVisit > 45) {
+        computedTag = "INATIVO";
+      } else {
+        computedTag = "NOVO";
+      }
+
       return {
         ...cli,
+        tag: computedTag,
         appointments: cliApps,
         packages: cliPkgs,
         cancellationsTotal: cliCanceledApps.length,

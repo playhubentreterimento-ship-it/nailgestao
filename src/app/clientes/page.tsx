@@ -268,6 +268,69 @@ export default function ClientesPage() {
         </button>
       </div>
 
+      {/* Card Resumo do Total de Clientes Cadastradas */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-xs">
+        <div className="rounded-2xl border border-rose-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center space-x-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 font-bold text-lg dark:bg-rose-950 dark:text-rose-300">
+            👥
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Cadastradas</span>
+            <p className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+              {clients.length} <span className="text-xs font-semibold text-slate-500">clientes</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 font-bold text-lg dark:bg-amber-950 dark:text-amber-300">
+            🌟
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Clientes VIP</span>
+            <p className="font-serif text-lg font-bold text-amber-950 dark:text-amber-200">
+              {clients.filter((c) => c.tag === "VIP").length}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-800 font-bold text-lg dark:bg-purple-950 dark:text-purple-300">
+            🔁
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wide">Frequentes</span>
+            <p className="font-serif text-lg font-bold text-purple-950 dark:text-purple-200">
+              {clients.filter((c) => c.tag === "FREQUENTE").length}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-800 font-bold text-lg dark:bg-blue-950 dark:text-blue-300">
+            🆕
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Novas</span>
+            <p className="font-serif text-lg font-bold text-blue-950 dark:text-blue-200">
+              {clients.filter((c) => c.tag === "NOVO").length}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3 col-span-2 sm:col-span-1">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-700 font-bold text-lg dark:bg-slate-800 dark:text-slate-300">
+            💤
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Inativas</span>
+            <p className="font-serif text-lg font-bold text-slate-800 dark:text-slate-200">
+              {clients.filter((c) => c.tag === "INATIVO").length}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros e Busca */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
@@ -282,19 +345,22 @@ export default function ClientesPage() {
         </div>
 
         <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-          {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilterTag(t)}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
-                filterTag === t
-                  ? "bg-rose-500 text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
-              }`}
-            >
-              {t === "all" ? "Todos os Perfis" : t}
-            </button>
-          ))}
+          {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => {
+            const count = t === "all" ? clients.length : clients.filter((c) => c.tag === t).length;
+            return (
+              <button
+                key={t}
+                onClick={() => setFilterTag(t)}
+                className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
+                  filterTag === t
+                    ? "bg-rose-500 text-white shadow-sm"
+                    : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
+                }`}
+              >
+                {t === "all" ? `Todos os Perfis (${count})` : `${t} (${count})`}
+              </button>
+            );
+          })}
         </div>
       </div>
 
