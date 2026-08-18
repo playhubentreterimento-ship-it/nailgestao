@@ -152,6 +152,50 @@ export default function AgendaPage() {
   const [editDeposit, setEditDeposit] = useState<number>(0);
   const [editNotes, setEditNotes] = useState("");
 
+  // Cadastro Rápido de Cliente Nova no Agendamento
+  const [showQuickClientModal, setShowQuickClientModal] = useState(false);
+  const [quickClientName, setQuickClientName] = useState("");
+  const [quickClientPhone, setQuickClientPhone] = useState("");
+  const [isSavingQuickClient, setIsSavingQuickClient] = useState(false);
+
+  const handleQuickSaveClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickClientName.trim() || !quickClientPhone.trim()) {
+      alert("Por favor, informe o Nome e o WhatsApp da nova cliente.");
+      return;
+    }
+    setIsSavingQuickClient(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickClientName.trim(),
+          phone: quickClientPhone.trim(),
+          whatsapp: quickClientPhone.trim(),
+          tag: "NOVA",
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        const updatedClientsRes = await fetch("/api/clients").then((r) => r.json());
+        const updatedList = Array.isArray(updatedClientsRes) ? updatedClientsRes : [];
+        setClients(updatedList);
+        handleSelectClient(created.id);
+        setQuickClientName("");
+        setQuickClientPhone("");
+        setShowQuickClientModal(false);
+      } else {
+        const err = await res.json();
+        alert("Erro ao cadastrar cliente: " + (err.error || "Tente novamente"));
+      }
+    } catch (e) {
+      alert("Erro ao cadastrar cliente.");
+    } finally {
+      setIsSavingQuickClient(false);
+    }
+  };
+
   const handleOpenEditModal = (app: any) => {
     setEditingApp(app);
     setEditProf(app.professionalId);
@@ -1468,7 +1512,70 @@ export default function AgendaPage() {
             <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               {/* Cliente */}
               <div>
-                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-extrabold text-slate-900 dark:text-slate-100">Cliente *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickClientModal(true)}
+                    className="flex items-center space-x-1 rounded-xl bg-rose-100 px-2.5 py-1 text-xs font-extrabold text-rose-800 shadow-2xs hover:bg-rose-200 transition-colors dark:bg-rose-900/60 dark:text-rose-200"
+                  >
+                    <span>✨ + Cadastrar Nova Cliente</span>
+                  </button>
+                </div>
+
+                {/* Form Inline / Popup de Cadastro Rápido de Cliente */}
+                {showQuickClientModal && (
+                  <div className="mb-3 rounded-2xl border-2 border-rose-300 bg-rose-50/80 p-3.5 shadow-sm space-y-2 dark:border-rose-800 dark:bg-slate-800">
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif text-xs font-bold text-rose-900 dark:text-rose-300">
+                        👤 Cadastro Rápido de Nova Cliente
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickClientModal(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nome completo da cliente *"
+                        value={quickClientName}
+                        onChange={(e) => setQuickClientName(e.target.value)}
+                        className="rounded-xl border border-rose-200 bg-white p-2 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white text-xs"
+                      />
+                      <input
+                        type="text"
+                        placeholder="WhatsApp / Celular com DDD *"
+                        value={quickClientPhone}
+                        onChange={(e) => setQuickClientPhone(e.target.value)}
+                        className="rounded-xl border border-rose-200 bg-white p-2 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white text-xs"
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickClientModal(false)}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleQuickSaveClient}
+                        disabled={isSavingQuickClient}
+                        className="rounded-lg bg-emerald-600 px-3.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {isSavingQuickClient ? "Salvando..." : "Salvar & Selecionar ✓"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <input
                     type="text"
@@ -1552,16 +1659,30 @@ export default function AgendaPage() {
                   <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Profissional *</label>
                   <select
                     value={formProf}
-                    onChange={(e) => setFormProf(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    onChange={(e) => {
+                      if (!currentUser || currentUser.role === "ADMINISTRADOR") {
+                        setFormProf(e.target.value);
+                      }
+                    }}
+                    disabled={currentUser && currentUser.role !== "ADMINISTRADOR"}
+                    className={`w-full rounded-2xl border p-3 font-bold outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white ${
+                      currentUser && currentUser.role !== "ADMINISTRADOR"
+                        ? "border-amber-300 bg-amber-50/90 text-amber-950 font-extrabold cursor-not-allowed dark:border-amber-800 dark:text-amber-200"
+                        : "border-slate-300 bg-white text-slate-900"
+                    }`}
                     required
                   >
                     <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione...</option>
-                    {professionals.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
-                        {p.name}
-                      </option>
-                    ))}
+                    {professionals
+                      .filter((p) => {
+                        if (!currentUser || currentUser.role === "ADMINISTRADOR") return true;
+                        return p.id === userProfId || p.email === currentUser.email || p.userId === currentUser.id;
+                      })
+                      .map((p) => (
+                        <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
+                          {p.name} {currentUser && currentUser.role !== "ADMINISTRADOR" ? "(Seu Login)" : ""}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
