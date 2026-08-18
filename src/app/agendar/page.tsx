@@ -241,17 +241,20 @@ export default function AgendarPublicPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-amber-50/50 px-4 py-8 dark:from-slate-950 dark:to-slate-900">
-      <div className="mx-auto max-w-xl">
+    <div className="relative min-h-screen w-full bg-[url('/booking-bg.jpg')] bg-cover bg-center bg-no-repeat bg-fixed px-4 py-8 sm:py-12 flex flex-col justify-start items-center">
+      {/* Overlay escuro com toque de luxo e desfoque suave para legibilidade perfeita */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none z-0" />
+
+      <div className="relative z-10 mx-auto w-full max-w-xl">
         {/* Header do Salão */}
         <div className="text-center mb-6">
-          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-[#b00054] p-1.5 shadow-xl shadow-rose-200/60 border-2 border-rose-300/80 dark:border-slate-800 overflow-hidden">
+          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-[#b00054] p-1.5 shadow-2xl shadow-black/60 border-2 border-amber-400/90 overflow-hidden">
             <img src="/salon-logo-official.png" alt="Selma Gloor Nails Studio" className="h-full w-full object-cover rounded-2xl" />
           </div>
-          <h1 className="mt-3 font-serif text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="mt-3 font-serif text-2xl sm:text-3xl font-extrabold text-white drop-shadow-lg">
             {salon?.name || "Selma Gloor Nails Studio"}
           </h1>
-          <p className="text-xs text-rose-600 font-semibold">Agendamento Online 24h &bull; Rápido & Sem Cadastro</p>
+          <p className="text-xs sm:text-sm text-amber-300 font-bold drop-shadow-md mt-0.5">Agendamento Online 24h &bull; Rápido & Sem Cadastro</p>
         </div>
 
         {/* Passo 1: Escolha de Serviço */}
