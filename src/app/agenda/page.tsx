@@ -90,6 +90,39 @@ export default function AgendaPage() {
   const [filterProf, setFilterProf] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userProfId, setUserProfId] = useState<string | null>(null);
+
+  // Buscar sessão do usuário logado e vincular profissional
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/auth/session").then((r) => r.json()).catch(() => null),
+      fetch("/api/professionals").then((r) => r.json()).catch(() => []),
+    ]).then(([sessRes, profsData]) => {
+      const u = sessRes?.user;
+      setCurrentUser(u);
+      const profList = Array.isArray(profsData) ? profsData : [];
+      setProfessionals(profList);
+
+      if (u) {
+        // Se for PROFISSIONAL (Colaboradora), filtrar estritamente a agenda dela
+        if (u.role === "PROFISSIONAL" || u.role !== "ADMINISTRADOR") {
+          const matched = profList.find(
+            (p: any) =>
+              p.userId === u.id ||
+              (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase()) ||
+              p.name.toLowerCase().includes(u.name.toLowerCase()) ||
+              u.name.toLowerCase().includes(p.name.toLowerCase())
+          );
+          if (matched) {
+            setUserProfId(matched.id);
+            setFilterProf(matched.id);
+            setFormProf(matched.id);
+          }
+        }
+      }
+    });
+  }, []);
 
   // Busca por Cliente / Lupa
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -244,6 +277,9 @@ export default function AgendaPage() {
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
     setFormClientPackageId("");
+    if (userProfId && currentUser && currentUser.role !== "ADMINISTRADOR") {
+      setFormProf(userProfId);
+    }
     setShowModal(true);
   };
 
@@ -528,15 +564,31 @@ export default function AgendaPage() {
           {/* Filtro por Profissional */}
           <select
             value={filterProf}
-            onChange={(e) => setFilterProf(e.target.value)}
-            className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+            onChange={(e) => {
+              if (!currentUser || currentUser.role === "ADMINISTRADOR") {
+                setFilterProf(e.target.value);
+              }
+            }}
+            disabled={currentUser && currentUser.role !== "ADMINISTRADOR"}
+            className={`rounded-xl border px-3 py-2 text-xs font-semibold shadow-sm outline-none focus:ring-2 dark:bg-slate-900 ${
+              currentUser && currentUser.role !== "ADMINISTRADOR"
+                ? "border-amber-300 bg-amber-50/80 text-amber-950 font-extrabold cursor-not-allowed dark:border-amber-800 dark:text-amber-200"
+                : "border-rose-200 bg-white text-slate-800 focus:ring-rose-400 dark:border-slate-800 dark:text-white"
+            }`}
           >
-            <option value="all">Todas as Profissionais</option>
-            {professionals.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
+            {(!currentUser || currentUser.role === "ADMINISTRADOR") && (
+              <option value="all">Todas as Profissionais</option>
+            )}
+            {professionals
+              .filter((p) => {
+                if (!currentUser || currentUser.role === "ADMINISTRADOR") return true;
+                return p.id === userProfId || p.email === currentUser.email || p.userId === currentUser.id;
+              })
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {currentUser && currentUser.role !== "ADMINISTRADOR" ? "(Sua Agenda Exclusiva)" : ""}
+                </option>
+              ))}
           </select>
 
           {/* Visualizações (Dia, Semana, Mês) */}
