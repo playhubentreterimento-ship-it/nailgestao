@@ -57,6 +57,7 @@ export default function PacotesPage() {
   const [assignPaymentDate, setAssignPaymentDate] = useState<string>(getTodayString());
   const [assignPaymentMethod, setAssignPaymentMethod] = useState<string>("PIX");
   const [assignAmountPaid, setAssignAmountPaid] = useState<number | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Form Agendar Sessão na Agenda
   const [selectedClientPackage, setSelectedClientPackage] = useState<any>(null);
@@ -343,30 +344,37 @@ export default function PacotesPage() {
 
   const handleAssignPackage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPackage || !selectedClientId) return;
+    if (!selectedPackage || !selectedClientId || isAssigning) return;
 
-    const finalAmount = assignAmountPaid !== null && assignAmountPaid !== undefined ? assignAmountPaid : selectedPackage.price;
+    setIsAssigning(true);
+    try {
+      const finalAmount = assignAmountPaid !== null && assignAmountPaid !== undefined ? assignAmountPaid : selectedPackage.price;
 
-    const res = await fetch("/api/packages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "ASSIGN_TO_CLIENT",
-        packageId: selectedPackage.id,
-        clientId: selectedClientId,
-        paymentDate: assignPaymentDate,
-        paymentMethod: assignPaymentMethod,
-        amountPaid: finalAmount,
-      }),
-    });
+      const res = await fetch("/api/packages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ASSIGN_TO_CLIENT",
+          packageId: selectedPackage.id,
+          clientId: selectedClientId,
+          paymentDate: assignPaymentDate,
+          paymentMethod: assignPaymentMethod,
+          amountPaid: finalAmount,
+        }),
+      });
 
-    if (res.ok) {
-      const clientObj = clients.find((c: any) => c.id === selectedClientId);
-      alert(`✨ Pacote "${selectedPackage.name}" vinculado a ${clientObj?.name || "Cliente"} com sucesso!\n💰 Pagamento total de R$ ${finalAmount.toFixed(2)} registrado na data ${assignPaymentDate}.`);
-      setShowAssignModal(false);
-      loadData();
-    } else {
+      if (res.ok) {
+        const clientObj = clients.find((c: any) => c.id === selectedClientId);
+        alert(`✨ Pacote "${selectedPackage.name}" vinculado a ${clientObj?.name || "Cliente"} com sucesso!\n💰 Pagamento total de R$ ${finalAmount.toFixed(2)} registrado na data ${assignPaymentDate}.`);
+        setShowAssignModal(false);
+        loadData();
+      } else {
+        alert("Erro ao vincular pacote à cliente.");
+      }
+    } catch (err) {
       alert("Erro ao vincular pacote à cliente.");
+    } finally {
+      setIsAssigning(false);
     }
   };
 

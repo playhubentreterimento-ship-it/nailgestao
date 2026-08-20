@@ -3,13 +3,28 @@ import { prisma } from "@/lib/prisma";
 
 const sanitizeTxList = (txs: any[]) => {
   if (!txs) return [];
+
+  const seenPackageKeys = new Set<string>();
+
   return txs
     .filter((tx: any) => {
       const desc = (tx.description || "").toLowerCase();
       const cat = (tx.category || "").toLowerCase();
+
       // Excluir lancamentos de sinal/deposito automatico de agendamentos passados
       const isSignal = desc.includes("sinal") || desc.includes("depósito") || desc.includes("deposito") || cat.includes("sinal");
-      return !isSignal;
+      if (isSignal) return false;
+
+      // Deduplicar vendas de pacote repetidas para a mesma cliente e pacote no mesmo caixa
+      if (cat === "venda_pacote" || desc.includes("venda do pacote")) {
+        const key = `${cat}_${desc.trim()}`;
+        if (seenPackageKeys.has(key)) {
+          return false; // Ignorar duplicadas extras
+        }
+        seenPackageKeys.add(key);
+      }
+
+      return true;
     })
     .map((tx: any) => ({
       ...tx,
