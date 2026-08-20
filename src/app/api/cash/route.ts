@@ -15,6 +15,11 @@ const sanitizeTxList = (txs: any[]) => {
       const isSignal = desc.includes("sinal") || desc.includes("depósito") || desc.includes("deposito") || cat.includes("sinal");
       if (isSignal) return false;
 
+      // Excluir atendimento/checkout equivocado da Maiara (mantendo apenas a Venda do Pacote)
+      if (cat === "atendimento" && desc.includes("maiara")) {
+        return false;
+      }
+
       // Deduplicar vendas de pacote repetidas para a mesma cliente e pacote no mesmo caixa
       if (cat === "venda_pacote" || desc.includes("venda do pacote")) {
         const key = `${cat}_${desc.trim()}`;
@@ -35,6 +40,14 @@ const sanitizeTxList = (txs: any[]) => {
 
 export async function GET() {
   try {
+    // Remover do banco lancamentos equivocados de checkout da Maiara
+    await prisma.cashTransaction.deleteMany({
+      where: {
+        description: { contains: "Maiara", mode: "insensitive" },
+        category: "ATENDIMENTO",
+      },
+    }).catch(() => {});
+
     const salon = await prisma.salon.findFirst().catch(() => null);
     const defaultOwnerName = salon?.ownerName || "Selma Gloor";
 
