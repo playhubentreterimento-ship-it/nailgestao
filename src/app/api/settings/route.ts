@@ -59,11 +59,15 @@ export async function GET() {
       phone: "(67) 99963-5783",
       whatsapp: "5567999635783",
       primaryColor: "#6B1615",
+      requireDeposit: false,
+      defaultDepositAmount: 0,
     };
 
     return NextResponse.json({
       ...defaultSalonObj,
       ...(salon || {}),
+      requireDeposit: false,
+      defaultDepositAmount: 0,
       activeWhatsApp: activeWhatsApp || "5567999635783",
       adminEmail: adminUser?.email || "sfgloorwms078@gmail.com",
     });
@@ -78,6 +82,8 @@ export async function GET() {
       whatsapp: "5567999635783",
       activeWhatsApp: "5567999635783",
       primaryColor: "#6B1615",
+      requireDeposit: false,
+      defaultDepositAmount: 0,
       adminEmail: "sfgloorwms078@gmail.com",
     });
   }

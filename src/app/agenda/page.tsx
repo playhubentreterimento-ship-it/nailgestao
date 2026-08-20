@@ -137,7 +137,7 @@ export default function AgendaPage() {
   const [formTime, setFormTime] = useState("10:00");
   const [formSelectedServices, setFormSelectedServices] = useState<string[]>([]);
   const [formDiscount, setFormDiscount] = useState<number>(0);
-  const [formDeposit, setFormDeposit] = useState<number>(50);
+  const [formDeposit, setFormDeposit] = useState<number>(0);
   const [formNotes, setFormNotes] = useState("");
   const [formClientPackageId, setFormClientPackageId] = useState<string>("");
 
@@ -321,6 +321,8 @@ export default function AgendaPage() {
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
     setFormClientPackageId("");
+    setFormDeposit(0);
+    setFormDiscount(0);
     if (userProfId && currentUser && currentUser.role !== "ADMINISTRADOR") {
       setFormProf(userProfId);
     }

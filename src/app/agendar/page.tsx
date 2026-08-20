@@ -210,7 +210,7 @@ export default function AgendarPublicPage() {
         date: selectedDate,
         startTime: selectedTime,
         serviceIds: [selectedService.id],
-        depositPaid: 50,
+        depositPaid: 0,
       }),
     });
 
