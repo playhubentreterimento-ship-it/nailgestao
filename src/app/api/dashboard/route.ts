@@ -14,6 +14,9 @@ export async function GET() {
         salonId: salon.id,
         date: todayStr,
       },
+      orderBy: [
+        { startTime: "asc" },
+      ],
       include: {
         services: true,
       },

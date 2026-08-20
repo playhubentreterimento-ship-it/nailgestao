@@ -29,7 +29,10 @@ export default function AtendimentoPage() {
     fetch(`/api/appointments?date=${today}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        setAppointments(data);
+        const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) =>
+          (a.startTime || "").localeCompare(b.startTime || "")
+        );
+        setAppointments(sorted);
       })
       .catch(() => {});
   };

@@ -189,6 +189,51 @@ export default function CaixaPage() {
               </p>
             </div>
           </div>
+
+          {/* Tabela de Lançamentos do Caixa Aberto Ordenada por Horário */}
+          {activeRegister.transactions && activeRegister.transactions.length > 0 && (
+            <div className="mt-4 border-t border-emerald-200/80 pt-4 dark:border-slate-800">
+              <h4 className="font-serif text-xs font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                <span>📋</span> Movimentações do Caixa Aberto (Ordenadas por Horário)
+              </h4>
+              <div className="overflow-x-auto rounded-xl border border-emerald-200/60 bg-white dark:bg-slate-800 dark:border-slate-700">
+                <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                  <thead className="bg-emerald-100/60 text-[10px] font-bold uppercase tracking-wider text-emerald-950 dark:bg-slate-900 dark:text-slate-300">
+                    <tr>
+                      <th className="px-3 py-2">Horário</th>
+                      <th className="px-3 py-2">Tipo</th>
+                      <th className="px-3 py-2">Categoria</th>
+                      <th className="px-3 py-2">Descrição</th>
+                      <th className="px-3 py-2">Forma Pgto</th>
+                      <th className="px-3 py-2 text-right">Valor Bruto</th>
+                      <th className="px-3 py-2 text-right">Taxa</th>
+                      <th className="px-3 py-2 text-right">Valor Líquido</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-emerald-100/80 dark:divide-slate-700">
+                    {[...activeRegister.transactions]
+                      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                      .map((tx: any) => (
+                        <tr key={tx.id}>
+                          <td className="px-3 py-2 font-semibold">{new Date(tx.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${tx.type === "ENTRADA" || tx.type === "SUPRIMENTO" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-medium">{tx.category}</td>
+                          <td className="px-3 py-2">{tx.description}</td>
+                          <td className="px-3 py-2 font-bold text-slate-800 dark:text-slate-200">{tx.paymentMethod}</td>
+                          <td className="px-3 py-2 text-right font-bold">R$ {tx.amount?.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right text-rose-500">R$ {tx.feeAmount?.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-bold text-emerald-600">R$ {tx.netAmount?.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800 dark:border-slate-800 dark:bg-slate-900 dark:text-amber-300">
@@ -473,7 +518,9 @@ export default function CaixaPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {selectedHistoryReg.transactions && selectedHistoryReg.transactions.length > 0 ? (
-                    selectedHistoryReg.transactions.map((tx: any) => (
+                    [...selectedHistoryReg.transactions]
+                      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                      .map((tx: any) => (
                       <tr key={tx.id}>
                         <td className="px-3 py-2 font-semibold">{new Date(tx.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
                         <td className="px-3 py-2">

@@ -380,7 +380,9 @@ export default function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {today?.appointments && today.appointments.length > 0 ? (
-                today.appointments.map((app: any) => (
+                [...today.appointments]
+                  .sort((a: any, b: any) => (a.startTime || "").localeCompare(b.startTime || ""))
+                  .map((app: any) => (
                   <tr key={app.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                     <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-white">{app.startTime} - {app.endTime}</td>
                     <td className="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
