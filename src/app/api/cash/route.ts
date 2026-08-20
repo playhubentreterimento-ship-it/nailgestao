@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const sanitizeTxList = (txs: any[]) => {
+  if (!txs) return [];
+  return txs
+    .filter((tx: any) => {
+      const desc = (tx.description || "").toLowerCase();
+      const cat = (tx.category || "").toLowerCase();
+      // Excluir lancamentos de sinal/deposito automatico de agendamentos passados
+      const isSignal = desc.includes("sinal") || desc.includes("depósito") || desc.includes("deposito") || cat.includes("sinal");
+      return !isSignal;
+    })
+    .map((tx: any) => ({
+      ...tx,
+      feeAmount: 0,
+      netAmount: tx.amount || 0,
+    }));
+};
+
 export async function GET() {
   try {
     const salon = await prisma.salon.findFirst().catch(() => null);
@@ -24,6 +41,7 @@ export async function GET() {
             rawActive.openedByUserId !== "usr-admin-default"
               ? rawActive.openedByUserId
               : defaultOwnerName,
+          transactions: sanitizeTxList(rawActive.transactions),
         }
       : null;
 
@@ -52,6 +70,7 @@ export async function GET() {
         reg.closedByUserId !== "usr-admin-default"
           ? reg.closedByUserId
           : defaultOwnerName,
+      transactions: sanitizeTxList(reg.transactions),
     }));
 
     return NextResponse.json({
@@ -114,12 +133,8 @@ export async function POST(req: Request) {
       const isOut = category === "SANGRIA" || category === "DESPESA";
       const type = isOut ? "SANGRIA" : "SUPRIMENTO";
 
-      const salon = await prisma.salon.findFirst();
-      let feeAmount = 0;
-      if (paymentMethod === "CREDITO") feeAmount = numAmount * ((salon?.creditFeePercent || 2.99) / 100);
-      if (paymentMethod === "DEBITO") feeAmount = numAmount * ((salon?.debitFeePercent || 1.49) / 100);
-
-      const netAmount = numAmount - feeAmount;
+      const feeAmount = 0;
+      const netAmount = numAmount;
 
       const tx = await prisma.cashTransaction.create({
         data: {
