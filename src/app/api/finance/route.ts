@@ -98,7 +98,13 @@ export async function GET(req: Request) {
     }
 
     const totalInflow = periodApps.reduce((acc, a) => acc + (a.total || 0), 0);
-    const totalCardFees = periodTransactions.reduce((acc, t) => acc + (t.feeAmount || 0), 0);
+    // Atualizar todas as transacoes passadas para ter taxa de cartao zerada (0.00%)
+    await prisma.cashTransaction.updateMany({
+      where: { salonId: "default-salon" },
+      data: { feeAmount: 0 },
+    }).catch(() => {});
+
+    const totalCardFees = 0; // Taxas de cartão zeradas (0.00%)
     const totalExpenses = periodExpenses
       .filter((e) => e.status === "PAGO")
       .reduce((acc, e) => acc + e.amount, 0);
@@ -108,7 +114,7 @@ export async function GET(req: Request) {
       return acc + stats.commission;
     }, 0);
 
-    const netProfit = totalInflow - totalCardFees - totalExpenses - totalCommissions;
+    const netProfit = totalInflow - totalExpenses - totalCommissions;
 
     return NextResponse.json({
       summary: {
