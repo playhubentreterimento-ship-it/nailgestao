@@ -150,33 +150,39 @@ export async function POST(req: Request) {
         },
       });
 
-      // Lançar valor total do pacote no caixa / histórico financeiro
+      // Lançar valor total do pacote no caixa na data de pagamento informada
       const finalAmount = amountPaid !== undefined && amountPaid !== null ? Number(amountPaid) : targetPackage.price;
       if (finalAmount > 0) {
         try {
           const clientObj = await prisma.client.findUnique({ where: { id: clientId } });
-          const openCash = await prisma.cashRegister.findFirst({
-            where: { salonId: "default-salon", status: "ABERTO" },
-          });
+          const selectedDateStr = paymentDate || new Date().toISOString().split("T")[0];
+          const todayStr = new Date().toISOString().split("T")[0];
 
-          if (openCash) {
-            const mappedMethod =
-              paymentMethod === "CREDIT_CARD" ? "CARTAO_CREDITO" :
-              paymentMethod === "DEBIT_CARD" ? "CARTAO_DEBITO" :
-              paymentMethod === "CASH" ? "DINHEIRO" : "PIX";
-
-            await prisma.cashTransaction.create({
-              data: {
-                cashRegisterId: openCash.id,
-                salonId: "default-salon",
-                type: "ENTRADA",
-                category: "VENDA_PACOTE",
-                amount: finalAmount,
-                paymentMethod: mappedMethod,
-                netAmount: finalAmount,
-                description: `Venda do Pacote "${targetPackage.name}" para ${clientObj?.name || "Cliente"} (${targetPackage.totalSessions} sessões)`,
-              },
+          // Apenas lançar no caixa aberto se a data de pagamento for a data de hoje (ou se o caixa estiver aberto no dia)
+          if (selectedDateStr === todayStr) {
+            const openCash = await prisma.cashRegister.findFirst({
+              where: { salonId: "default-salon", status: "ABERTO" },
             });
+
+            if (openCash) {
+              const mappedMethod =
+                paymentMethod === "CREDIT_CARD" ? "CARTAO_CREDITO" :
+                paymentMethod === "DEBIT_CARD" ? "CARTAO_DEBITO" :
+                paymentMethod === "CASH" ? "DINHEIRO" : "PIX";
+
+              await prisma.cashTransaction.create({
+                data: {
+                  cashRegisterId: openCash.id,
+                  salonId: "default-salon",
+                  type: "ENTRADA",
+                  category: "VENDA_PACOTE",
+                  amount: finalAmount,
+                  paymentMethod: mappedMethod,
+                  netAmount: finalAmount,
+                  description: `Venda do Pacote "${targetPackage.name}" para ${clientObj?.name || "Cliente"} (${targetPackage.totalSessions} sessões)`,
+                },
+              });
+            }
           }
         } catch (cashErr) {
           console.error("Erro ao lançar venda de pacote no caixa:", cashErr);
