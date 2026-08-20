@@ -31,11 +31,18 @@ const sanitizeTxList = (txs: any[]) => {
 
       return true;
     })
-    .map((tx: any) => ({
-      ...tx,
-      feeAmount: 0,
-      netAmount: tx.amount || 0,
-    }));
+    .map((tx: any) => {
+      // Padronizar entradas de vendas/checkouts para exibir como ENTRADA em vez de SUPRIMENTO
+      const isOut = tx.type === "SANGRIA" || tx.category === "SANGRIA" || tx.category === "DESPESA";
+      const normalizedType = isOut ? "SANGRIA" : "ENTRADA";
+
+      return {
+        ...tx,
+        type: normalizedType,
+        feeAmount: 0,
+        netAmount: tx.amount || 0,
+      };
+    });
 };
 
 export async function GET() {
@@ -159,7 +166,7 @@ export async function POST(req: Request) {
 
       const numAmount = Number(amount);
       const isOut = category === "SANGRIA" || category === "DESPESA";
-      const type = isOut ? "SANGRIA" : "SUPRIMENTO";
+      const type = isOut ? "SANGRIA" : "ENTRADA";
 
       const feeAmount = 0;
       const netAmount = numAmount;
