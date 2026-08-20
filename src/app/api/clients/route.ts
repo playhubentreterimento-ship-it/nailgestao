@@ -10,7 +10,7 @@ export async function GET() {
 
     const appointments = await prisma.appointment.findMany({
       include: { services: true },
-      orderBy: { date: "desc" },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
     }).catch(() => []);
 
     const clientPackages = await prisma.clientPackage.findMany({
@@ -25,7 +25,9 @@ export async function GET() {
 
     // Enriquecer clientes com o histórico completo de agendamentos e pacotes ativos
     const enriched = clients.map((cli) => {
-      const cliApps = appointments.filter((a) => a.clientId === cli.id);
+      const cliApps = appointments
+        .filter((a) => a.clientId === cli.id)
+        .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
       const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
       const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
 

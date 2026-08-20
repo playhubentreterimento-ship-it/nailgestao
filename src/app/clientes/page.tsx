@@ -714,52 +714,64 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              {/* Histórico de Atendimentos */}
+              {/* Histórico & Agendamentos Marcados da Cliente */}
               <div>
-                <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white">
-                  📅 Histórico Completo de Atendimentos
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                    <span>📅 Agendamentos & Horários Marcados (Ordem Cronológica)</span>
+                  </h4>
+                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                    {selectedClient.appointments?.length || 0} horários
+                  </span>
+                </div>
+
                 <div className="mt-2 space-y-2">
                   {selectedClient.appointments && selectedClient.appointments.length > 0 ? (
-                    selectedClient.appointments.map((app: any) => {
-                      const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
-                      return (
-                        <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-                          <div>
-                            <p className="font-bold text-slate-800 dark:text-white">{dateDDMMYYYY} às {app.startTime}</p>
-                            <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <div className="text-right">
-                              <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                              <span className={`block text-[10px] font-extrabold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {app.status === 'CANCELADO' ? '❌ DESMARCADO' : app.status}
-                              </span>
+                    [...selectedClient.appointments]
+                      .sort((a: any, b: any) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")))
+                      .map((app: any) => {
+                        const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
+                        return (
+                          <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200/60 dark:bg-slate-800 dark:border-slate-700">
+                            <div>
+                              <p className="font-extrabold text-slate-900 dark:text-white text-xs">
+                                🗓️ {dateDDMMYYYY} às {app.startTime}h
+                              </p>
+                              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                                💅 Serviços: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
+                              </p>
                             </div>
-                            {app.status !== 'CANCELADO' && (
-                              <button
-                                onClick={async () => {
-                                  const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
-                                  if (reason !== null) {
-                                    const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
-                                    if (res.ok) {
-                                      alert("✨ Horário desmarcado e liberado na agenda!");
-                                      loadClients();
+                            <div className="flex items-center space-x-3">
+                              <div className="text-right">
+                                <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                                <span className={`block text-[10px] font-extrabold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {app.status === 'CANCELADO' ? '❌ DESMARCADO' : app.status}
+                                </span>
+                              </div>
+                              {app.status !== 'CANCELADO' && (
+                                <button
+                                  onClick={async () => {
+                                    const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
+                                    if (reason !== null) {
+                                      const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
+                                      if (res.ok) {
+                                        alert("✨ Horário desmarcado e liberado na agenda!");
+                                        loadClients();
+                                      }
                                     }
-                                  }
-                                }}
-                                className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
-                                title="Desmarcar horário e liberar na agenda"
-                              >
-                                🚫 Desmarcar
-                              </button>
-                            )}
+                                  }}
+                                  className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
+                                  title="Desmarcar horário e liberar na agenda"
+                                >
+                                  🚫 Desmarcar
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })
                   ) : (
-                    <p className="text-slate-400">Nenhum atendimento registrado anteriormente.</p>
+                    <p className="text-slate-400 text-xs italic">Nenhum atendimento registrado para esta cliente.</p>
                   )}
                 </div>
               </div>
