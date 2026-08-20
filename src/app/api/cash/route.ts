@@ -29,9 +29,14 @@ export async function GET() {
 
     const previousRegisters = await prisma.cashRegister.findMany({
       where: { salonId: "default-salon", status: "FECHADO" },
+      include: {
+        transactions: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
       orderBy: { openedAt: "desc" },
-      take: 10,
-    });
+      take: 60,
+    }).catch(() => []);
 
     const history = previousRegisters.map((reg) => ({
       ...reg,
