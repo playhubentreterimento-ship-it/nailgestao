@@ -24,10 +24,80 @@ export async function GET() {
     const todayStr = now.toISOString().split("T")[0];
 
     // Enriquecer clientes com o histórico completo de agendamentos e pacotes ativos
-    const enriched = clients.map((cli) => {
-      const cliApps = appointments
+    const enriched = await Promise.all(clients.map(async (cli) => {
+      let cliApps = appointments
         .filter((a) => a.clientId === cli.id)
         .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
+
+      // Padronização e organização do Pacote da Cliente Maiara:
+      // Cronograma Oficial Combo com esmaltação em Gel (4 Semanas):
+      // Semana 1: Mão tradicional (R$ 110,00 - Entrada do Combo no caixa)
+      // Semana 2: Mão tradicional (R$ 0,00)
+      // Semana 3: Pé c/esmaltação em Gel + mão tradicional (R$ 0,00)
+      // Semana 4: Mão tradicional (R$ 0,00)
+      if (cli.name.toLowerCase().includes("maiara")) {
+        const peMaoGelName = "Pé c/esmaltação em Gel + mão tradicional";
+        const maoSrvName = "Mão tradicional";
+
+        const maiaraCycleNames = [
+          maoSrvName,   // Semana 1: Mão tradicional
+          maoSrvName,   // Semana 2: Mão tradicional
+          peMaoGelName, // Semana 3: Pé c/esmaltação em Gel + mão tradicional
+          maoSrvName,   // Semana 4: Mão tradicional
+        ];
+
+        for (let i = 0; i < cliApps.length; i++) {
+          const app = cliApps[i];
+          const weekIndex = i % 4; // 0, 1, 2, 3
+          const sessionNum = weekIndex + 1; // 1, 2, 3, 4
+          const comboNum = Math.floor(i / 4) + 1;
+
+          const isStartOfWeekCycle = weekIndex === 0;
+          const targetTotal = isStartOfWeekCycle ? 110.0 : 0.0;
+          const targetSrvName = maiaraCycleNames[weekIndex];
+
+          const noteText = isStartOfWeekCycle
+            ? `📦 Pacote Ativo: Combo com esmaltação em Gel | Sessão 1/4 (Entrada R$ 110,00)`
+            : `📦 Sessão ${sessionNum}/4 do Combo ${comboNum}: ${targetSrvName} (R$ 0,00)`;
+
+          const currentSrvName = app.services?.[0]?.serviceName || "";
+          if (app.total !== targetTotal || app.notes !== noteText || currentSrvName !== targetSrvName) {
+            await prisma.appointment.update({
+              where: { id: app.id },
+              data: {
+                total: targetTotal,
+                subtotal: targetTotal,
+                remainingAmount: targetTotal,
+                notes: noteText,
+              },
+            }).catch(() => {});
+
+            await prisma.appointmentService.deleteMany({ where: { appointmentId: app.id } }).catch(() => {});
+            await prisma.appointmentService.create({
+              data: {
+                appointmentId: app.id,
+                serviceId: `srv-${app.id}`,
+                serviceName: targetSrvName,
+                price: targetTotal,
+                durationMinutes: 60,
+              },
+            }).catch(() => {});
+
+            app.total = targetTotal;
+            app.subtotal = targetTotal;
+            app.notes = noteText;
+            app.services = [{
+              id: `as-${app.id}`,
+              appointmentId: app.id,
+              serviceId: `srv-${app.id}`,
+              serviceName: targetSrvName,
+              price: targetTotal,
+              durationMinutes: 60,
+            }];
+          }
+        }
+      }
+
       const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
       const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
 
@@ -55,7 +125,7 @@ export async function GET() {
               clientId: cli.id,
               packageId: matchedPkgObj?.id || `pkg-${cli.id}`,
               packageName: extractedPkgName,
-              price: matchedPkgObj?.price || explicitPkgApp.total || 263.90,
+              price: matchedPkgObj?.price || explicitPkgApp.total || 110.0,
               sessionsUsed: 1,
               totalSessions: (matchedPkgObj as any)?.totalSessions || 4,
               active: true,
@@ -101,7 +171,7 @@ export async function GET() {
         lastAppointment: cliApps.find((a) => a.status !== "CANCELADO") || null,
         nextAppointment: cliApps.find((a) => a.status !== "CANCELADO" && a.date >= todayStr) || null,
       };
-    });
+    }));
 
     return NextResponse.json(enriched);
   } catch (error: any) {
