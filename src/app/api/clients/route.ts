@@ -79,13 +79,20 @@ export async function GET() {
           targetSrv = gelSrv;
         }
 
-        // Definir valor correto conforme a regra
+        // Definir valor correto conforme a regra:
+        // 1. Semana 1 de CADA um dos 4 combos (i=0, 4, 8, 12) -> R$ 263.90 (Entrada do Combo no caixa)
+        // 2. Semanas 2, 3 e 4 de cada combo -> R$ 0.00
+        // 3. Dezembro pós-combos: 11/12 (R$ 0), 18/12 (R$ 80), 24/12 (R$ 50), 31/12 (R$ 80)
         let targetTotal = 0;
         let noteText = "";
 
-        if (appDate === "2026-08-21" || appDate === todayStr) {
+        const weekInCycle = (i % 4) + 1;
+        const comboNum = Math.floor(i / 4) + 1;
+
+        if (i < 16 && weekInCycle === 1) {
+          // Início de cada combo -> R$ 263.90
           targetTotal = 263.90;
-          noteText = `📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)`;
+          noteText = `📦 Pacote Ativo: Combo ${comboNum}/4 | Sessão 1/4 (Entrada do Combo R$ 263,90)`;
         } else if (appDate === "2026-12-18") {
           targetTotal = 80.0;
           noteText = `Pé e mão tradicional (R$ 80,00)`;
@@ -97,8 +104,9 @@ export async function GET() {
           noteText = `Pé e mão tradicional (R$ 80,00)`;
         } else {
           targetTotal = 0.0;
-          const weekNum = (i % 4) + 1;
-          noteText = `📦 Sessão ${weekNum}/4 de Pacote: ${targetSrv.name} (R$ 0,00)`;
+          noteText = i < 16
+            ? `📦 Sessão ${weekInCycle}/4 do Combo ${comboNum}/4: ${targetSrv.name} (R$ 0,00)`
+            : `📦 Sessão de Pacote: ${targetSrv.name} (R$ 0,00)`;
         }
 
         // Atualizar no banco de dados o agendamento
