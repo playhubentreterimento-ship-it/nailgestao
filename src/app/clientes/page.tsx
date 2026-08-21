@@ -406,6 +406,20 @@ export default function ClientesPage() {
                   <div>Cor: <span className="font-semibold text-slate-900 dark:text-white">{client.nailColor || "Nude"}</span></div>
                   <div>Tamanho: <span className="font-semibold text-slate-900 dark:text-white">{client.nailSize || "Médio"}</span></div>
                 </div>
+
+                {/* Exibição em Destaque do Pacote Ativo */}
+                {client.packages && client.packages.length > 0 ? (
+                  <div className="mt-2.5 rounded-xl bg-amber-100/90 border border-amber-300 p-2 text-[11px] font-extrabold text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center justify-between">
+                    <span>📦 Pacote Ativo:</span>
+                    <span className="font-extrabold text-amber-950 dark:text-amber-100">
+                      {client.packages[0].packageName} ({client.packages[0].sessionsUsed || 1}/{client.packages[0].totalSessions || 4} sessões)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-[10px] font-semibold text-slate-500 italic">
+                    Nenhum pacote ativo no momento.
+                  </div>
+                )}
                 {client.notes && (
                   <p className="mt-2 border-t border-rose-200/60 pt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 italic truncate">
                     📝 {client.notes}
@@ -616,11 +630,19 @@ export default function ClientesPage() {
               </div>
 
               {/* Ficha Técnica de Unhas Expandida */}
-              <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80">
-                <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300">
-                  💅 Histórico Técnico de Unhas
-                </h4>
-                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300">
+                    💅 Histórico Técnico de Unhas
+                  </h4>
+                  {selectedClient.packages && selectedClient.packages.length > 0 && (
+                    <span className="rounded-full bg-amber-200 border border-amber-300 px-3 py-1 text-xs font-extrabold text-amber-950 dark:bg-amber-900 dark:text-amber-100 shadow-2xs">
+                      📦 PACOTE ATIVO: {selectedClient.packages[0].packageName} ({selectedClient.packages[0].sessionsUsed || 1}/{selectedClient.packages[0].totalSessions || 4} sessões)
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
                     <span className="block text-[10px] text-slate-500">FORMATO DA UNHA</span>
                     <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailForm || "Amendoado"}</span>

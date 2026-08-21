@@ -1232,6 +1232,12 @@ export default function AgendaPage() {
                         <p className="text-[10px] text-slate-800 dark:text-slate-200 line-clamp-1" title={app.services?.map((s: any) => s.serviceName).join(", ")}>
                           💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                         </p>
+
+                        {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo")) && (
+                          <div className="rounded-md bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 text-[9px] font-extrabold truncate" title={app.notes}>
+                            📦 {app.notes.includes("263") || app.notes.includes("1/4") ? "Entrada Combo R$ 263,90" : "Sessão Coberta (R$ 0,00)"}
+                          </div>
+                        )}
                         <div className="flex items-center justify-between pt-1 border-t border-black/10 text-[9px] font-bold">
                           <span>👩 {app.professionalName}</span>
                           <div className="flex items-center space-x-1.5">
