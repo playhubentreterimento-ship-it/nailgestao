@@ -220,6 +220,11 @@ export default function AtendimentoPage() {
                 </div>
                 <p className="mt-1 text-xs font-bold text-slate-900 dark:text-white">{app.clientName}</p>
                 <p className="text-[11px] text-slate-500">{app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão")) && (
+                  <span className="mt-1 block text-[10px] font-extrabold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-md w-fit border border-amber-200">
+                    📦 {app.notes.includes("1/4") ? "Combo (Sessão 1/4)" : app.notes.includes("2/4") ? "Combo (Sessão 2/4)" : app.notes.includes("3/4") ? "Combo (Sessão 3/4)" : app.notes.includes("4/4") ? "Combo (Sessão 4/4)" : "Atendimento de Pacote"}
+                  </span>
+                )}
                 {!isProfessionalUser && (
                   <p className="text-[10px] text-amber-700 dark:text-amber-300 font-bold mt-1">👤 {app.professionalName}</p>
                 )}
@@ -245,6 +250,20 @@ export default function AtendimentoPage() {
                     {activeApp.clientName}
                   </h3>
                   <p className="text-xs text-slate-500">Profissional: {activeApp.professionalName}</p>
+
+                  {/* Badge de Observação de Pacote Ativo */}
+                  {activeApp.notes && (activeApp.notes.includes("Pacote") || activeApp.notes.includes("Combo") || activeApp.notes.includes("Sessão")) && (
+                    <div className="mt-2.5 inline-flex items-center space-x-2 rounded-xl bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 shadow-2xs">
+                      <span>📦 ATENDIMENTO DE PACOTE:</span>
+                      <span>
+                        {activeApp.notes.includes("1/4") ? "Combo Banho de Gel com adicional (Sessão 1/4 - R$ 263,90)" :
+                         activeApp.notes.includes("2/4") ? "Combo Banho de Gel com adicional (Sessão 2/4 - Coberta R$ 0,00)" :
+                         activeApp.notes.includes("3/4") ? "Combo Banho de Gel com adicional (Sessão 3/4 - Coberta R$ 0,00)" :
+                         activeApp.notes.includes("4/4") ? "Combo Banho de Gel com adicional (Sessão 4/4 - Coberta R$ 0,00)" :
+                         activeApp.notes}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="block text-xs text-slate-400">VALOR DO ATENDIMENTO</span>

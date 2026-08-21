@@ -864,6 +864,21 @@ export default function AgendaPage() {
                               <p className={`text-xs font-bold ${app.status === 'BLOQUEADO' ? 'text-rose-200' : 'text-slate-800 dark:text-slate-200'}`}>
                                 💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                               </p>
+
+                              {/* Observação / Badge de Pacote Ativo e Número da Sessão */}
+                              {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão")) && (
+                                <div className="mt-1.5 rounded-lg bg-amber-100/90 border border-amber-300 px-2 py-1 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center space-x-1 shadow-2xs">
+                                  <span>📦 PACOTE ATIVO:</span>
+                                  <span className="truncate">
+                                    {app.notes.includes("1/4") ? "Combo Banho de Gel (Sessão 1/4)" :
+                                     app.notes.includes("2/4") ? "Combo Banho de Gel (Sessão 2/4)" :
+                                     app.notes.includes("3/4") ? "Combo Banho de Gel (Sessão 3/4)" :
+                                     app.notes.includes("4/4") ? "Combo Banho de Gel (Sessão 4/4)" :
+                                     "Atendimento de Pacote"}
+                                  </span>
+                                </div>
+                              )}
+
                               <p className={`mt-1 text-[11px] font-semibold ${app.status === 'BLOQUEADO' ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'}`}>
                                 👩 {app.professionalName} ({app.startTime} até {app.endTime})
                               </p>
