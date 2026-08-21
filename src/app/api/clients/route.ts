@@ -44,38 +44,69 @@ export async function GET() {
         if (juPackage) (clientPackages as any[]).push(juPackage);
       }
 
-      // Corrigir agendamentos da Ju Arcanjo
+      // Restaurar valores corretos para agendamentos da Ju Arcanjo
       const juApps = appointments.filter((a) => a.clientId === juClient.id);
-      const firstSessionApp = juApps.find((a) => a.date === "2026-08-21" || a.date === todayStr) || juApps[0];
-      if (firstSessionApp) {
-        await prisma.appointment.update({
-          where: { id: firstSessionApp.id },
-          data: {
-            total: 263.90,
-            subtotal: 263.90,
-            remainingAmount: 263.90,
-            notes: '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)',
-          },
-        }).catch(() => {});
-        firstSessionApp.total = 263.90;
-        firstSessionApp.subtotal = 263.90;
-        firstSessionApp.notes = '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)';
-      }
+      let gelSessionCount = 0;
 
-      const futureSessions = juApps.filter((a) => a.id !== firstSessionApp?.id);
-      for (const fApp of futureSessions) {
-        await prisma.appointment.update({
-          where: { id: fApp.id },
-          data: {
-            total: 0,
-            subtotal: 0,
-            remainingAmount: 0,
-            notes: '📦 Sessão de Pacote (Sessão Coberta pelo Combo - R$ 0,00)',
-          },
-        }).catch(() => {});
-        fApp.total = 0;
-        fApp.subtotal = 0;
-        fApp.notes = '📦 Sessão de Pacote (Sessão Coberta pelo Combo - R$ 0,00)';
+      for (const app of juApps) {
+        const serviceNames = (app.services || []).map((s: any) => (s.serviceName || "").toLowerCase()).join(" ");
+        const isGelPackageService = serviceNames.includes("banho de gel");
+
+        if (isGelPackageService) {
+          gelSessionCount++;
+          if (gelSessionCount === 1) {
+            // 1ª Sessão do Combo (Entrada do valor total do combo R$ 263.90)
+            await prisma.appointment.update({
+              where: { id: app.id },
+              data: {
+                total: 263.90,
+                subtotal: 263.90,
+                remainingAmount: 263.90,
+                notes: '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)',
+              },
+            }).catch(() => {});
+            app.total = 263.90;
+            app.subtotal = 263.90;
+            app.notes = '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)';
+          } else {
+            // Sessões 2, 3 e 4 do Combo (Cobertas pelo combo R$ 0.00)
+            await prisma.appointment.update({
+              where: { id: app.id },
+              data: {
+                total: 0,
+                subtotal: 0,
+                remainingAmount: 0,
+                notes: `📦 Sessão de Pacote (Sessão ${gelSessionCount}/4 Coberta pelo Combo - R$ 0,00)`,
+              },
+            }).catch(() => {});
+            app.total = 0;
+            app.subtotal = 0;
+            app.notes = `📦 Sessão de Pacote (Sessão ${gelSessionCount}/4 Coberta pelo Combo - R$ 0,00)`;
+          }
+        } else {
+          // Agendamentos avulsos normais (NÃO fazem parte do pacote) -> Restaurar preço integral original do serviço
+          let stdPrice = 80.0;
+          if (serviceNames.includes("mão tradicional") || serviceNames.includes("mao tradicional")) {
+            stdPrice = serviceNames.includes("pé") || serviceNames.includes("pe") ? 80.0 : 50.0;
+          } else if (serviceNames.includes("pé tradicional") || serviceNames.includes("pe tradicional")) {
+            stdPrice = 50.0;
+          } else {
+            stdPrice = app.services?.reduce((acc: number, s: any) => acc + (s.price || 80), 0) || 80.0;
+          }
+
+          await prisma.appointment.update({
+            where: { id: app.id },
+            data: {
+              total: stdPrice,
+              subtotal: stdPrice,
+              remainingAmount: stdPrice,
+              notes: (app.notes || "").replace(/📦.*Combo.*/g, "").trim(),
+            },
+          }).catch(() => {});
+          app.total = stdPrice;
+          app.subtotal = stdPrice;
+          app.notes = (app.notes || "").replace(/📦.*Combo.*/g, "").trim();
+        }
       }
 
       // Lançar/Atualizar caixa aberto de hoje para R$ 263.90 (PIX)
