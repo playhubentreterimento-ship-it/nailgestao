@@ -27,6 +27,20 @@ export async function GET() {
         data: [
           {
             salonId: "default-salon",
+            name: "Combo banho de gel com adicional",
+            price: 263.90,
+            totalSessions: 4,
+            validityDays: 90,
+            description: "Cronograma 4 Semanas: Semana 1: Banho de Gel com adicional, Semana 2: Pé e mão tradicional, Semana 3: Mão tradicional, Semana 4: Pé e mão tradicional",
+            weeklyServices: JSON.stringify([
+              "Banho de Gel com adicional",
+              "Pé e mão tradicional",
+              "Mão tradicional",
+              "Pé e mão tradicional"
+            ]),
+          },
+          {
+            salonId: "default-salon",
             name: "Combo Club 3 Manutenções em Fibra",
             price: 330.0,
             totalSessions: 3,
