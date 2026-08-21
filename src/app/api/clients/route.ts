@@ -44,7 +44,7 @@ export async function GET() {
         if (juPackage) (clientPackages as any[]).push(juPackage);
       }
 
-      // Padronizar serviços da Ju Arcanjo estritamente de acordo com o cronograma de 4 semanas do combo:
+      // Padronizar serviços da Ju Arcanjo estritamente de acordo com o cronograma de 4 semanas do combo oficial:
       // Semana 1: Banho de Gel com adicional
       // Semana 2: Pé e mão tradicional
       // Semana 3: Mão tradicional
@@ -54,11 +54,18 @@ export async function GET() {
         .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
 
       const allServices = await prisma.service.findMany({}).catch(() => []);
-      const gelSrv = allServices.find((s) => s.name.toLowerCase().includes("banho de gel")) || { id: "srv-gel", name: "Banho de Gel com adicional" };
-      const peMaoSrv = allServices.find((s) => s.name.toLowerCase().includes("pé e mão") || s.name.toLowerCase().includes("pe e mao")) || { id: "srv-pemao", name: "Pé e mão tradicional" };
-      const maoSrv = allServices.find((s) => s.name.toLowerCase().includes("mão tradicional") || s.name.toLowerCase().includes("mao tradicional")) || { id: "srv-mao", name: "Mão tradicional" };
+      const gelSrv = allServices.find((s) => s.name.toLowerCase().includes("adicional") || s.name.toLowerCase().includes("banho de gel com adicional")) || { id: "srv-gel", name: "Banho de Gel com adicional" };
+      const peMaoSrv = allServices.find((s) => s.name.toLowerCase().includes("tradicional") && (s.name.toLowerCase().includes("pé") || s.name.toLowerCase().includes("pe"))) || { id: "srv-pemao", name: "Pé e mão tradicional" };
+      const maoSrv = allServices.find((s) => s.name.toLowerCase().includes("tradicional") && (s.name.toLowerCase().includes("mão") || s.name.toLowerCase().includes("mao")) && !s.name.toLowerCase().includes("pé") && !s.name.toLowerCase().includes("pe")) || { id: "srv-mao", name: "Mão tradicional" };
 
-      const cyclePattern = [
+      const cyclePatternNames = [
+        "Banho de Gel com adicional", // Semana 1
+        "Pé e mão tradicional",       // Semana 2
+        "Mão tradicional",             // Semana 3
+        "Pé e mão tradicional",       // Semana 4
+      ];
+
+      const cyclePatternObjects = [
         gelSrv,   // Semana 1
         peMaoSrv, // Semana 2
         maoSrv,   // Semana 3
@@ -70,13 +77,18 @@ export async function GET() {
         const appDate = app.date || "";
 
         // Serviço correto do ciclo
-        let targetSrv = cyclePattern[i % 4];
+        let targetSrvObj = cyclePatternObjects[i % 4];
+        let targetSrvName = cyclePatternNames[i % 4];
+
         if (appDate === "2026-12-18" || appDate === "2026-12-31") {
-          targetSrv = peMaoSrv;
+          targetSrvObj = peMaoSrv;
+          targetSrvName = "Pé e mão tradicional";
         } else if (appDate === "2026-12-24") {
-          targetSrv = maoSrv;
+          targetSrvObj = maoSrv;
+          targetSrvName = "Mão tradicional";
         } else if (appDate === "2026-12-11") {
-          targetSrv = gelSrv;
+          targetSrvObj = gelSrv;
+          targetSrvName = "Banho de Gel com adicional";
         }
 
         // Definir valor correto conforme a regra:
@@ -105,8 +117,8 @@ export async function GET() {
         } else {
           targetTotal = 0.0;
           noteText = i < 16
-            ? `📦 Sessão ${weekInCycle}/4 do Combo ${comboNum}/4: ${targetSrv.name} (R$ 0,00)`
-            : `📦 Sessão de Pacote: ${targetSrv.name} (R$ 0,00)`;
+            ? `📦 Sessão ${weekInCycle}/4 do Combo ${comboNum}/4: ${targetSrvName} (R$ 0,00)`
+            : `📦 Sessão de Pacote: ${targetSrvName} (R$ 0,00)`;
         }
 
         // Atualizar no banco de dados o agendamento
@@ -125,10 +137,10 @@ export async function GET() {
         await prisma.appointmentService.create({
           data: {
             appointmentId: app.id,
-            serviceId: targetSrv.id,
-            serviceName: targetSrv.name,
+            serviceId: targetSrvObj.id,
+            serviceName: targetSrvName,
             price: targetTotal,
-            durationMinutes: (targetSrv as any).durationMinutes || 60,
+            durationMinutes: (targetSrvObj as any).durationMinutes || 60,
           },
         }).catch(() => {});
 
@@ -139,10 +151,10 @@ export async function GET() {
         app.services = [{
           id: `as-${app.id}`,
           appointmentId: app.id,
-          serviceId: targetSrv.id,
-          serviceName: targetSrv.name,
+          serviceId: targetSrvObj.id,
+          serviceName: targetSrvName,
           price: targetTotal,
-          durationMinutes: (targetSrv as any).durationMinutes || 60,
+          durationMinutes: (targetSrvObj as any).durationMinutes || 60,
         }];
       }
 
