@@ -105,6 +105,9 @@ export async function GET() {
           // Início de cada combo -> R$ 263.90
           targetTotal = 263.90;
           noteText = `📦 Pacote Ativo: Combo ${comboNum}/4 | Sessão 1/4 (Entrada do Combo R$ 263,90)`;
+        } else if (appDate === "2026-12-11") {
+          targetTotal = 130.0;
+          noteText = `Banho de Gel com adicional (R$ 130,00)`;
         } else if (appDate === "2026-12-18") {
           targetTotal = 80.0;
           noteText = `Pé e mão tradicional (R$ 80,00)`;
@@ -116,9 +119,7 @@ export async function GET() {
           noteText = `Pé e mão tradicional (R$ 80,00)`;
         } else {
           targetTotal = 0.0;
-          noteText = i < 16
-            ? `📦 Sessão ${weekInCycle}/4 do Combo ${comboNum}/4: ${targetSrvName} (R$ 0,00)`
-            : `📦 Sessão de Pacote: ${targetSrvName} (R$ 0,00)`;
+          noteText = `📦 Sessão ${weekInCycle}/4 do Combo ${comboNum}/4: ${targetSrvName} (R$ 0,00)`;
         }
 
         // Atualizar no banco de dados o agendamento
