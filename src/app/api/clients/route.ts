@@ -37,32 +37,33 @@ export async function GET() {
           const pkgObj = packages.find((p) => p.id === cp.packageId);
           return {
             ...cp,
-            packageName: pkgObj?.name || "Combo banho de gel com adicional",
-            price: pkgObj?.price || 263.90,
+            packageName: pkgObj?.name || cp.packageName || "Pacote de Sessões",
+            price: pkgObj?.price || cp.price || 180.0,
           };
         });
 
-      // Se a cliente possui agendamentos marcados como Pacote/Combo na agenda, mas cliPkgs estava vazio, adicionar pacote ativo para exibição na ficha técnica
-      const pkgApps = cliApps.filter((a) => (a.notes || "").includes("Pacote") || (a.notes || "").includes("Combo") || (a.notes || "").includes("Sessão"));
-      if (cliPkgs.length === 0 && pkgApps.length > 0) {
-        const comboPkgObj = packages.find((p) => p.name.toLowerCase().includes("combo") || p.name.toLowerCase().includes("banho de gel")) || {
-          id: "pkg-combo-default",
-          name: "Combo banho de gel com adicional",
-          price: 263.90,
-          totalSessions: 4,
-        };
-        cliPkgs.push({
-          id: `pkg-synthetic-${cli.id}`,
-          clientId: cli.id,
-          packageId: comboPkgObj.id,
-          packageName: comboPkgObj.name || "Combo banho de gel com adicional",
-          price: comboPkgObj.price || 263.90,
-          sessionsUsed: 1,
-          totalSessions: (comboPkgObj as any).totalSessions || 4,
-          active: true,
-          purchaseDate: new Date(),
-          expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-        });
+      // Se a cliente não tem registro em clientPackages, mas possui nota explícita de "Pacote Ativo: <NomeDoPacote>", extrair somente para essa cliente específica
+      if (cliPkgs.length === 0) {
+        const explicitPkgApp = cliApps.find((a) => (a.notes || "").includes("Pacote Ativo:"));
+        if (explicitPkgApp) {
+          const notesStr = explicitPkgApp.notes || "";
+          const extractedPkgName = notesStr.split("Pacote Ativo:")[1].split("|")[0].trim();
+          if (extractedPkgName) {
+            const matchedPkgObj = packages.find((p) => p.name.toLowerCase() === extractedPkgName.toLowerCase());
+            cliPkgs.push({
+              id: `pkg-explicit-${cli.id}`,
+              clientId: cli.id,
+              packageId: matchedPkgObj?.id || `pkg-${cli.id}`,
+              packageName: extractedPkgName,
+              price: matchedPkgObj?.price || explicitPkgApp.total || 263.90,
+              sessionsUsed: 1,
+              totalSessions: (matchedPkgObj as any)?.totalSessions || 4,
+              active: true,
+              purchaseDate: new Date(),
+              expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+            });
+          }
+        }
       }
 
       const completedApps = cliApps.filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO");
