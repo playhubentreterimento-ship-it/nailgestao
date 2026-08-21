@@ -242,7 +242,12 @@ export default function ClientesPage() {
 
   const filteredClients = clients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
-    const matchTag = filterTag === "all" || c.tag === filterTag;
+    const hasPkg = c.packages && c.packages.length > 0;
+    const matchTag = filterTag === "all"
+      ? true
+      : filterTag === "PACOTE"
+      ? hasPkg
+      : c.tag === filterTag;
     return matchSearch && matchTag;
   });
 
@@ -269,7 +274,7 @@ export default function ClientesPage() {
       </div>
 
       {/* Card Resumo do Total de Clientes Cadastradas */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-xs">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 text-xs">
         <div className="rounded-2xl border border-rose-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center space-x-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 font-bold text-lg dark:bg-rose-950 dark:text-rose-300">
             👥
@@ -278,6 +283,25 @@ export default function ClientesPage() {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Cadastradas</span>
             <p className="font-serif text-lg font-bold text-slate-900 dark:text-white">
               {clients.length} <span className="text-xs font-semibold text-slate-500">clientes</span>
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setFilterTag(filterTag === "PACOTE" ? "all" : "PACOTE")}
+          className={`cursor-pointer rounded-2xl border p-3.5 shadow-sm transition flex items-center space-x-3 ${
+            filterTag === "PACOTE"
+              ? "border-amber-400 bg-amber-100 dark:border-amber-700 dark:bg-amber-950"
+              : "border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 dark:border-slate-800 dark:bg-slate-900/60"
+          }`}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900 font-bold text-lg dark:bg-amber-950 dark:text-amber-200">
+            📦
+          </div>
+          <div>
+            <span className="text-[10px] font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wide">Com Pacote</span>
+            <p className="font-serif text-lg font-bold text-amber-950 dark:text-amber-100">
+              {clients.filter((c) => c.packages && c.packages.length > 0).length}
             </p>
           </div>
         </div>
@@ -345,8 +369,12 @@ export default function ClientesPage() {
         </div>
 
         <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-          {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => {
-            const count = t === "all" ? clients.length : clients.filter((c) => c.tag === t).length;
+          {["all", "PACOTE", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => {
+            const count = t === "all"
+              ? clients.length
+              : t === "PACOTE"
+              ? clients.filter((c) => c.packages && c.packages.length > 0).length
+              : clients.filter((c) => c.tag === t).length;
             return (
               <button
                 key={t}
@@ -357,7 +385,7 @@ export default function ClientesPage() {
                     : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
                 }`}
               >
-                {t === "all" ? `Todos os Perfis (${count})` : `${t} (${count})`}
+                {t === "all" ? `Todos os Perfis (${count})` : t === "PACOTE" ? `📦 Com Pacote (${count})` : `${t} (${count})`}
               </button>
             );
           })}
