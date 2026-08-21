@@ -44,100 +44,98 @@ export async function GET() {
         if (juPackage) (clientPackages as any[]).push(juPackage);
       }
 
-      // Ajustar precificação exata da Ju Arcanjo conforme regra do usuário:
-      // 1. Hoje (21/08/2026): R$ 263.90 (Valor integral do pacote)
-      // 2. Últimos 4 agendamentos de Dezembro: 11/12 (R$ 0), 18/12 (R$ 80), 24/12 (R$ 50), 31/12 (R$ 80)
-      // 3. Todos os demais intermediários: R$ 0.00
-      const juApps = appointments.filter((a) => a.clientId === juClient.id);
+      // Padronizar serviços da Ju Arcanjo estritamente de acordo com o cronograma de 4 semanas do combo:
+      // Semana 1: Banho de Gel com adicional
+      // Semana 2: Pé e mão tradicional
+      // Semana 3: Mão tradicional
+      // Semana 4: Pé e mão tradicional
+      const juApps = appointments
+        .filter((a) => a.clientId === juClient.id)
+        .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
 
-      for (const app of juApps) {
+      const allServices = await prisma.service.findMany({}).catch(() => []);
+      const gelSrv = allServices.find((s) => s.name.toLowerCase().includes("banho de gel")) || { id: "srv-gel", name: "Banho de Gel com adicional" };
+      const peMaoSrv = allServices.find((s) => s.name.toLowerCase().includes("pé e mão") || s.name.toLowerCase().includes("pe e mao")) || { id: "srv-pemao", name: "Pé e mão tradicional" };
+      const maoSrv = allServices.find((s) => s.name.toLowerCase().includes("mão tradicional") || s.name.toLowerCase().includes("mao tradicional")) || { id: "srv-mao", name: "Mão tradicional" };
+
+      const cyclePattern = [
+        gelSrv,   // Semana 1
+        peMaoSrv, // Semana 2
+        maoSrv,   // Semana 3
+        peMaoSrv, // Semana 4
+      ];
+
+      for (let i = 0; i < juApps.length; i++) {
+        const app = juApps[i];
         const appDate = app.date || "";
 
-        if (appDate === "2026-08-21" || appDate === todayStr) {
-          // Hoje (21/08/2026 12:30) -> R$ 263.90
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 263.90,
-              subtotal: 263.90,
-              remainingAmount: 263.90,
-              notes: '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)',
-            },
-          }).catch(() => {});
-          app.total = 263.90;
-          app.subtotal = 263.90;
-          app.notes = '📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)';
-        } else if (appDate === "2026-12-11") {
-          // 11/12/2026 -> R$ 0.00
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 0,
-              subtotal: 0,
-              remainingAmount: 0,
-              notes: '📦 Sessão 4/4 do Pacote: Banho de Gel com adicional (R$ 0,00)',
-            },
-          }).catch(() => {});
-          app.total = 0;
-          app.subtotal = 0;
-          app.notes = '📦 Sessão 4/4 do Pacote: Banho de Gel com adicional (R$ 0,00)';
-        } else if (appDate === "2026-12-18") {
-          // 18/12/2026 -> R$ 80.00
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 80.0,
-              subtotal: 80.0,
-              remainingAmount: 80.0,
-              notes: 'Pé e mão tradicional (R$ 80,00)',
-            },
-          }).catch(() => {});
-          app.total = 80.0;
-          app.subtotal = 80.0;
-          app.notes = 'Pé e mão tradicional (R$ 80,00)';
+        // Serviço correto do ciclo
+        let targetSrv = cyclePattern[i % 4];
+        if (appDate === "2026-12-18" || appDate === "2026-12-31") {
+          targetSrv = peMaoSrv;
         } else if (appDate === "2026-12-24") {
-          // 24/12/2026 -> R$ 50.00
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 50.0,
-              subtotal: 50.0,
-              remainingAmount: 50.0,
-              notes: 'Mão tradicional (R$ 50,00)',
-            },
-          }).catch(() => {});
-          app.total = 50.0;
-          app.subtotal = 50.0;
-          app.notes = 'Mão tradicional (R$ 50,00)';
-        } else if (appDate === "2026-12-31") {
-          // 31/12/2026 -> R$ 80.00
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 80.0,
-              subtotal: 80.0,
-              remainingAmount: 80.0,
-              notes: 'Pé e mão tradicional (R$ 80,00)',
-            },
-          }).catch(() => {});
-          app.total = 80.0;
-          app.subtotal = 80.0;
-          app.notes = 'Pé e mão tradicional (R$ 80,00)';
-        } else {
-          // TODOS OS DEMAIS AGENDAMENTOS INTERMEDIÁRIOS -> R$ 0.00
-          await prisma.appointment.update({
-            where: { id: app.id },
-            data: {
-              total: 0,
-              subtotal: 0,
-              remainingAmount: 0,
-              notes: '📦 Sessão de Pacote (R$ 0,00)',
-            },
-          }).catch(() => {});
-          app.total = 0;
-          app.subtotal = 0;
-          app.notes = '📦 Sessão de Pacote (R$ 0,00)';
+          targetSrv = maoSrv;
+        } else if (appDate === "2026-12-11") {
+          targetSrv = gelSrv;
         }
+
+        // Definir valor correto conforme a regra
+        let targetTotal = 0;
+        let noteText = "";
+
+        if (appDate === "2026-08-21" || appDate === todayStr) {
+          targetTotal = 263.90;
+          noteText = `📦 Pacote Ativo: Combo banho de gel com adicional | Sessão 1/4 (Entrada do Combo R$ 263,90)`;
+        } else if (appDate === "2026-12-18") {
+          targetTotal = 80.0;
+          noteText = `Pé e mão tradicional (R$ 80,00)`;
+        } else if (appDate === "2026-12-24") {
+          targetTotal = 50.0;
+          noteText = `Mão tradicional (R$ 50,00)`;
+        } else if (appDate === "2026-12-31") {
+          targetTotal = 80.0;
+          noteText = `Pé e mão tradicional (R$ 80,00)`;
+        } else {
+          targetTotal = 0.0;
+          const weekNum = (i % 4) + 1;
+          noteText = `📦 Sessão ${weekNum}/4 de Pacote: ${targetSrv.name} (R$ 0,00)`;
+        }
+
+        // Atualizar no banco de dados o agendamento
+        await prisma.appointment.update({
+          where: { id: app.id },
+          data: {
+            total: targetTotal,
+            subtotal: targetTotal,
+            remainingAmount: targetTotal,
+            notes: noteText,
+          },
+        }).catch(() => {});
+
+        // Atualizar relação de serviços no banco
+        await prisma.appointmentService.deleteMany({ where: { appointmentId: app.id } }).catch(() => {});
+        await prisma.appointmentService.create({
+          data: {
+            appointmentId: app.id,
+            serviceId: targetSrv.id,
+            serviceName: targetSrv.name,
+            price: targetTotal,
+            durationMinutes: (targetSrv as any).durationMinutes || 60,
+          },
+        }).catch(() => {});
+
+        // Atualizar objeto em memória
+        app.total = targetTotal;
+        app.subtotal = targetTotal;
+        app.notes = noteText;
+        app.services = [{
+          id: `as-${app.id}`,
+          appointmentId: app.id,
+          serviceId: targetSrv.id,
+          serviceName: targetSrv.name,
+          price: targetTotal,
+          durationMinutes: (targetSrv as any).durationMinutes || 60,
+        }];
       }
 
       // Lançar/Atualizar caixa aberto de hoje para R$ 263.90 (PIX)
