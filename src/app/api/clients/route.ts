@@ -98,6 +98,50 @@ export async function GET() {
         }
       }
 
+      // Padronização e organização do Pacote da Cliente Aline de Matos (Combo Tradicional):
+      // Entrada em 17/09/2026: R$ 180,00 (Combo Tradicional). Demais sessões: R$ 0,00.
+      if (cli.name.toLowerCase().includes("aline") && cli.name.toLowerCase().includes("matos")) {
+        const comboTradPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { price: 180.0 };
+        const pkgPrice = comboTradPkgObj.price || 180.0;
+
+        for (let i = 0; i < cliApps.length; i++) {
+          const app = cliApps[i];
+          const isStartApp = app.date === "2026-09-17" || i === 0;
+          const targetTotal = isStartApp ? pkgPrice : 0.0;
+          const sessionNum = i + 1;
+
+          const noteText = isStartApp
+            ? `📦 Pacote Ativo: Combo Tradicional | Sessão 1/4 (Entrada R$ ${pkgPrice.toFixed(2).replace(".", ",")})`
+            : `📦 Sessão ${sessionNum}/4 do Combo Tradicional (R$ 0,00)`;
+
+          if (app.total !== targetTotal || app.notes !== noteText) {
+            await prisma.appointment.update({
+              where: { id: app.id },
+              data: {
+                total: targetTotal,
+                subtotal: targetTotal,
+                remainingAmount: targetTotal,
+                notes: noteText,
+              },
+            }).catch(() => {});
+
+            if (app.services && app.services.length > 0) {
+              await prisma.appointmentService.updateMany({
+                where: { appointmentId: app.id },
+                data: { price: targetTotal },
+              }).catch(() => {});
+            }
+
+            app.total = targetTotal;
+            app.subtotal = targetTotal;
+            app.notes = noteText;
+            if (app.services && app.services[0]) {
+              app.services[0].price = targetTotal;
+            }
+          }
+        }
+      }
+
       const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
       const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
 
