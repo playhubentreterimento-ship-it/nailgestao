@@ -102,8 +102,7 @@ export async function GET() {
       // Preservar exatamente os agendamentos anteriores a 17/09 (20/08: R$ 0,0, 26/08: R$ 0,0, 02/09: R$ 0,0, 10/09: R$ 30,0)
       // Lançar o valor do pacote Combo Tradicional (R$ 172,90) apenas na data de 17/09/2026 e sessões seguintes zeradas.
       if (cli.name.toLowerCase().includes("aline") && cli.name.toLowerCase().includes("matos")) {
-        const comboTradPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { price: 172.90 };
-        const pkgPrice = comboTradPkgObj.price || 172.90;
+        const pkgPrice = 172.90;
 
         for (let i = 0; i < cliApps.length; i++) {
           const app = cliApps[i];
@@ -125,8 +124,8 @@ export async function GET() {
             targetTotal = 30.0;
             noteText = "Mão tradicional";
           } else if (appDate === "2026-09-17") {
-            targetTotal = pkgPrice;
-            noteText = `📦 Pacote Ativo: Combo Tradicional | Sessão 1/4 (Entrada R$ ${pkgPrice.toFixed(2).replace(".", ",")})`;
+            targetTotal = 172.90;
+            noteText = "📦 Pacote Ativo: Combo Tradicional | Sessão 1/4 (Entrada R$ 172,90)";
           } else if (appDate === "2026-09-24") {
             targetTotal = 0.0;
             noteText = "📦 Sessão 2/4 do Combo Tradicional (R$ 0,00)";
