@@ -99,20 +99,44 @@ export async function GET() {
       }
 
       // Padronização e organização do Pacote da Cliente Aline de Matos (Combo Tradicional):
-      // Entrada em 17/09/2026: R$ 180,00 (Combo Tradicional). Demais sessões: R$ 0,00.
+      // Preservar exatamente os agendamentos anteriores a 17/09 (20/08: R$ 0,0, 26/08: R$ 0,0, 02/09: R$ 0,0, 10/09: R$ 30,0)
+      // Lançar o valor do pacote Combo Tradicional (R$ 180,00) apenas na data de 17/09/2026 e sessões seguintes zeradas.
       if (cli.name.toLowerCase().includes("aline") && cli.name.toLowerCase().includes("matos")) {
         const comboTradPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { price: 180.0 };
         const pkgPrice = comboTradPkgObj.price || 180.0;
 
         for (let i = 0; i < cliApps.length; i++) {
           const app = cliApps[i];
-          const isStartApp = app.date === "2026-09-17" || i === 0;
-          const targetTotal = isStartApp ? pkgPrice : 0.0;
-          const sessionNum = i + 1;
+          const appDate = app.date || "";
 
-          const noteText = isStartApp
-            ? `📦 Pacote Ativo: Combo Tradicional | Sessão 1/4 (Entrada R$ ${pkgPrice.toFixed(2).replace(".", ",")})`
-            : `📦 Sessão ${sessionNum}/4 do Combo Tradicional (R$ 0,00)`;
+          let targetTotal = app.total || 0.0;
+          let noteText = app.notes || "";
+
+          if (appDate === "2026-08-20") {
+            targetTotal = 0.0;
+            noteText = "Mão tradicional";
+          } else if (appDate === "2026-08-26") {
+            targetTotal = 0.0;
+            noteText = "Pé e mão tradicional";
+          } else if (appDate === "2026-09-02") {
+            targetTotal = 0.0;
+            noteText = "Banho de Gel";
+          } else if (appDate === "2026-09-10") {
+            targetTotal = 30.0;
+            noteText = "Mão tradicional";
+          } else if (appDate === "2026-09-17") {
+            targetTotal = pkgPrice;
+            noteText = `📦 Pacote Ativo: Combo Tradicional | Sessão 1/4 (Entrada R$ ${pkgPrice.toFixed(2).replace(".", ",")})`;
+          } else if (appDate === "2026-09-24") {
+            targetTotal = 0.0;
+            noteText = "📦 Sessão 2/4 do Combo Tradicional (R$ 0,00)";
+          } else if (appDate === "2026-10-02") {
+            targetTotal = 0.0;
+            noteText = "📦 Sessão 3/4 do Combo Tradicional (R$ 0,00)";
+          } else if (appDate === "2026-10-07") {
+            targetTotal = 0.0;
+            noteText = "📦 Sessão 4/4 do Combo Tradicional (R$ 0,00)";
+          }
 
           if (app.total !== targetTotal || app.notes !== noteText) {
             await prisma.appointment.update({
