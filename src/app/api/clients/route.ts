@@ -100,10 +100,10 @@ export async function GET() {
 
       // Padronização e organização do Pacote da Cliente Aline de Matos (Combo Tradicional):
       // Preservar exatamente os agendamentos anteriores a 17/09 (20/08: R$ 0,0, 26/08: R$ 0,0, 02/09: R$ 0,0, 10/09: R$ 30,0)
-      // Lançar o valor do pacote Combo Tradicional (R$ 180,00) apenas na data de 17/09/2026 e sessões seguintes zeradas.
+      // Lançar o valor do pacote Combo Tradicional (R$ 172,90) apenas na data de 17/09/2026 e sessões seguintes zeradas.
       if (cli.name.toLowerCase().includes("aline") && cli.name.toLowerCase().includes("matos")) {
-        const comboTradPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { price: 180.0 };
-        const pkgPrice = comboTradPkgObj.price || 180.0;
+        const comboTradPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { price: 172.90 };
+        const pkgPrice = comboTradPkgObj.price || 172.90;
 
         for (let i = 0; i < cliApps.length; i++) {
           const app = cliApps[i];

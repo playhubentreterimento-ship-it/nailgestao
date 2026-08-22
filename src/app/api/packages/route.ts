@@ -57,11 +57,17 @@ export async function GET() {
           },
           {
             salonId: "default-salon",
-            name: "Pacote 4 Sessões Manicure & Pedicure",
-            price: 180.0,
+            name: "Combo Tradicional",
+            price: 172.90,
             totalSessions: 4,
             validityDays: 60,
-            description: "Manutenção completa de mãos e pés para o mês.",
+            description: "Manutenção completa de mãos e pés (4 semanas).",
+            weeklyServices: JSON.stringify([
+              "Pé e mão tradicional",
+              "Mão tradicional",
+              "Pé e mão tradicional",
+              "Mão tradicional"
+            ]),
           },
         ],
       });
@@ -71,6 +77,12 @@ export async function GET() {
         orderBy: { name: "asc" },
       });
     }
+
+    // Atualizar preço de Combo Tradicional caso estivesse cadastrado com outro valor
+    await prisma.package.updateMany({
+      where: { name: { contains: "Tradicional", mode: "insensitive" } },
+      data: { price: 172.90, name: "Combo Tradicional" },
+    }).catch(() => {});
 
     const clientPackages = await prisma.clientPackage.findMany({
       where: { active: true },
