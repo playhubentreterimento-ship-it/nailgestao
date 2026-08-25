@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Receipt, DollarSign, ArrowUpRight, ArrowDownLeft, Lock, Unlock, Plus, AlertCircle, FileText } from "lucide-react";
+import { Receipt, DollarSign, ArrowUpRight, ArrowDownLeft, Lock, Unlock, Plus, AlertCircle, FileText, Trash2 } from "lucide-react";
 
 export default function CaixaPage() {
   const [data, setData] = useState<any>(null);
@@ -78,7 +78,25 @@ export default function CaixaPage() {
     });
     if (res.ok) {
       setShowTxModal(false);
+      setTxDescription("");
       loadCaixa();
+    } else {
+      const err = await res.json();
+      alert(err.error);
+    }
+  };
+
+  const handleDeleteTx = async (tx: any) => {
+    if (!confirm(`⚠️ EXCLUSÃO DE LANÇAMENTO (ADMINISTRADORA)\n\nTem certeza que deseja excluir o lançamento de R$ ${tx.amount?.toFixed(2)} (${tx.description})?\n\nEsta ação excluirá o registro e atualizará os saldos do caixa.`)) {
+      return;
+    }
+    const res = await fetch(`/api/cash?transactionId=${tx.id}`, { method: "DELETE" });
+    if (res.ok) {
+      alert("✨ Lançamento excluído com sucesso!");
+      loadCaixa();
+      setSelectedHistoryReg(null);
+    } else {
+      alert("Erro ao excluir lançamento.");
     }
   };
 
@@ -514,6 +532,7 @@ export default function CaixaPage() {
                     <th className="px-3 py-2.5 text-right">Bruto</th>
                     <th className="px-3 py-2.5 text-right">Taxa</th>
                     <th className="px-3 py-2.5 text-right">Líquido</th>
+                    <th className="px-3 py-2.5 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -534,11 +553,20 @@ export default function CaixaPage() {
                         <td className="px-3 py-2 text-right font-bold">R$ {tx.amount?.toFixed(2)}</td>
                         <td className="px-3 py-2 text-right text-rose-500">R$ {tx.feeAmount?.toFixed(2)}</td>
                         <td className="px-3 py-2 text-right font-bold text-emerald-600">R$ {tx.netAmount?.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            onClick={() => handleDeleteTx(tx)}
+                            className="rounded-lg bg-rose-50 p-1.5 text-rose-600 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-300 transition"
+                            title="Excluir Lançamento (Administradora)"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-3 py-6 text-center text-slate-400">Nenhum lançamento registrado neste fechamento de caixa.</td>
+                      <td colSpan={9} className="px-3 py-6 text-center text-slate-400">Nenhum lançamento registrado neste fechamento de caixa.</td>
                     </tr>
                   )}
                 </tbody>

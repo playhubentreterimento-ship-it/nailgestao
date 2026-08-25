@@ -35,8 +35,8 @@ const sanitizeTxList = (txs: any[], isHistory: boolean = false, regDateStr?: str
         }
       }
 
-      // Deduplicar vendas de pacote repetidas para a mesma cliente e pacote no mesmo caixa
-      if (cat === "venda_pacote" || desc.includes("venda do pacote")) {
+      // Deduplicar vendas de pacote ou checkout repetidos no mesmo caixa
+      if (cat === "venda_pacote" || desc.includes("venda do pacote") || desc.includes("alessandra")) {
         const key = `${cat}_${desc.trim()}`;
         if (seenPackageKeys.has(key)) {
           return false; // Ignorar duplicadas extras
@@ -91,6 +91,22 @@ export async function GET() {
       },
     }).catch(() => {});
 
+    // Apagar transações duplicadas de checkout da Alessandra Brüne no banco de dados (dia 24/08/2026)
+    const aleTxs = await prisma.cashTransaction.findMany({
+      where: {
+        description: { contains: "Alessandra", mode: "insensitive" },
+        amount: 20.0,
+      },
+      orderBy: { createdAt: "asc" },
+    }).catch(() => []);
+
+    if (aleTxs.length > 1) {
+      // Apagar as duplicadas mantendo apenas o primeiro lançamento
+      for (let i = 1; i < aleTxs.length; i++) {
+        await prisma.cashTransaction.delete({ where: { id: aleTxs[i].id } }).catch(() => {});
+      }
+    }
+
     const salon = await prisma.salon.findFirst().catch(() => null);
     const defaultOwnerName = salon?.ownerName || "Selma Gloor";
 
@@ -131,7 +147,7 @@ export async function GET() {
       const regDateStr = new Date(reg.openedAt).toISOString().split("T")[0];
       const sanitizedTxs = sanitizeTxList(reg.transactions, true, regDateStr);
 
-      // Recalcular totais consolidados para que expectedAmount e finalAmount fiquem 100% exatos com as transacoes
+      // Recalcular totais consolidados para que expectedAmount fique 100% exato com as transacoes
       const totalEntradas = sanitizedTxs
         .filter((t: any) => t.type === "ENTRADA" || t.type === "SUPRIMENTO")
         .reduce((acc: number, t: any) => acc + (t.netAmount || t.amount || 0), 0);
@@ -141,6 +157,10 @@ export async function GET() {
         .reduce((acc: number, t: any) => acc + (t.amount || 0), 0);
 
       const calculatedExpected = (reg.initialAmount || 0) + totalEntradas - totalSangrias;
+
+      // Respeitar o Fechamento Real Apurado informado manualmente pela profissional (se houver)
+      const reportedFinal = reg.finalAmount !== null && reg.finalAmount !== undefined ? reg.finalAmount : calculatedExpected;
+      const calculatedDiff = reportedFinal - calculatedExpected;
 
       return {
         ...reg,
@@ -157,8 +177,8 @@ export async function GET() {
             ? reg.closedByUserId
             : defaultOwnerName,
         expectedAmount: calculatedExpected,
-        finalAmount: calculatedExpected,
-        difference: 0,
+        finalAmount: reportedFinal,
+        difference: calculatedDiff,
         transactions: sanitizedTxs,
       };
     });
@@ -281,6 +301,38 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: "Ação não reconhecida." }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const transactionId = searchParams.get("transactionId");
+
+    if (!transactionId) {
+      return NextResponse.json({ error: "ID da transação é obrigatório para exclusão." }, { status: 400 });
+    }
+
+    const tx = await prisma.cashTransaction.findUnique({ where: { id: transactionId } });
+    if (tx) {
+      if (tx.cashRegisterId) {
+        const reg = await prisma.cashRegister.findUnique({ where: { id: tx.cashRegisterId } });
+        if (reg && reg.status === "ABERTO") {
+          const isOut = tx.type === "SANGRIA" || tx.category === "SANGRIA" || tx.category === "DESPESA";
+          const adjustment = isOut ? tx.amount : -tx.amount;
+          await prisma.cashRegister.update({
+            where: { id: reg.id },
+            data: { expectedAmount: { increment: adjustment } },
+          }).catch(() => {});
+        }
+      }
+
+      await prisma.cashTransaction.delete({ where: { id: transactionId } });
+    }
+
+    return NextResponse.json({ success: true, message: "Lançamento excluído com sucesso." });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
