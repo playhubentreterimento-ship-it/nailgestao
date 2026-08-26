@@ -47,18 +47,31 @@ export async function GET() {
           const app = cliApps[i];
           const appDate = app.date || "";
 
+          // Se a Administradora editou manualmente o valor no banco (ex: notas contém EDITADO_MANUAL ou total diferente), respeitar 100%!
+          if (app.notes?.includes("EDITADO_MANUAL") || app.notes?.includes("Editado")) {
+            continue;
+          }
+
           if (appDate === "2026-08-26") {
+            // Se o total for exatamente 0 ou diferente de 110 por edição manual, respeitar o banco
+            if (app.total === 0 || (app.total !== 110.0 && app.total !== undefined && app.total !== null)) {
+              continue;
+            }
             app.total = 110.0; app.notes = "Ciclo Anterior (Mão tradicional)";
           } else if (cycleStarts.has(appDate)) {
             const cyclePrice = cycleStarts.get(appDate) || 182.0;
-            app.total = cyclePrice;
-            app.subtotal = cyclePrice;
-            app.notes = `📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ ${cyclePrice.toFixed(2)})`;
+            if (app.total === undefined || app.total === null) {
+              app.total = cyclePrice;
+              app.subtotal = cyclePrice;
+              app.notes = `📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ ${cyclePrice.toFixed(2)})`;
+            }
           } else if (cycleZeroes.has(appDate)) {
-            app.total = 0.0;
-            app.subtotal = 0.0;
-            if (!app.notes?.includes("Sessão")) {
-              app.notes = `📦 Sessão de Pacote (R$ 0,00)`;
+            if (app.total === undefined || app.total === null) {
+              app.total = 0.0;
+              app.subtotal = 0.0;
+              if (!app.notes?.includes("Sessão")) {
+                app.notes = `📦 Sessão de Pacote (R$ 0,00)`;
+              }
             }
           }
         }

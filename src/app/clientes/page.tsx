@@ -41,6 +41,10 @@ export default function ClientesPage() {
 
     setIsSavingApp(true);
     try {
+      const finalNotes = editAppNotes && !editAppNotes.includes("EDITADO_MANUAL")
+        ? `${editAppNotes} (EDITADO_MANUAL)`
+        : editAppNotes || "EDITADO_MANUAL";
+
       const res = await fetch("/api/appointments", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +52,7 @@ export default function ClientesPage() {
           id: editingApp.id,
           total: Number(editAppTotal),
           subtotal: Number(editAppTotal),
-          notes: editAppNotes,
+          notes: finalNotes,
         }),
       });
 
