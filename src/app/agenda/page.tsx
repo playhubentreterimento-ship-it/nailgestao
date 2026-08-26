@@ -78,6 +78,65 @@ function getMonthCalendar(dateStr: string) {
   return { year: y, month: m, daysInMonth, mondayOffset, days };
 }
 
+function getAppPackageBadgeText(app: any, clientPackages: any[] = []) {
+  const notes = app.notes || "";
+  const clientName = (app.clientName || "").toLowerCase();
+
+  // Caso específico da Fernanda Peças ou Aline de Matos
+  if (clientName.includes("fernanda") && (clientName.includes("peças") || clientName.includes("pecas"))) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
+    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
+  }
+
+  if (clientName.includes("aline") && clientName.includes("matos")) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
+    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
+  }
+
+  if (clientName.includes("maiara")) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
+    return `Combo com esmaltação em Gel${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
+  }
+
+  // Se as notas contêm explicitamente "Pacote Ativo: <Nome>", extrair
+  if (notes.includes("Pacote Ativo:")) {
+    const after = notes.split("Pacote Ativo:")[1];
+    const cleanName = after.split("|")[0].trim();
+    const sessionMatch = notes.match(/\(Sessão \d\/\d\)/) || notes.match(/Sessão \d\/\d/);
+    const sessionStr = sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : "";
+    return `${cleanName}${sessionStr}`;
+  }
+
+  if (notes.includes("Combo Tradicional")) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/);
+    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
+  }
+
+  if (notes.includes("esmaltação em Gel") || notes.includes("esmaltacao")) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/);
+    return `Combo com esmaltação em Gel${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
+  }
+
+  if (notes.includes("banho de gel com adicional")) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/);
+    return `Combo Banho de Gel c/ Adicional${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
+  }
+
+  // Buscar o pacote da cliente em clientPackages
+  const clientPkg = (clientPackages || []).find((cp: any) => cp.clientId === app.clientId);
+  if (clientPkg && clientPkg.packageName) {
+    const sessionMatch = notes.match(/Sessão \d\/\d/);
+    return `${clientPkg.packageName}${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
+  }
+
+  const sessionMatch = notes.match(/Sessão \d\/\d/);
+  if (sessionMatch) {
+    return `Atendimento de Pacote (${sessionMatch[0]})`;
+  }
+
+  return "Atendimento de Pacote";
+}
+
 export default function AgendaPage() {
   const [viewMode, setViewMode] = useState<"day" | "columns" | "week" | "month">("day");
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
@@ -886,15 +945,12 @@ export default function AgendaPage() {
                               </p>
 
                               {/* Observação / Badge de Pacote Ativo e Número da Sessão */}
-                              {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão")) && (
+                              {((app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão"))) ||
+                                (app.clientName && (app.clientName.toLowerCase().includes("fernanda") || app.clientName.toLowerCase().includes("maiara") || app.clientName.toLowerCase().includes("aline")))) && (
                                 <div className="mt-1.5 rounded-lg bg-amber-100/90 border border-amber-300 px-2 py-1 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center space-x-1 shadow-2xs">
                                   <span>📦 PACOTE ATIVO:</span>
                                   <span className="truncate">
-                                    {app.notes.includes("1/4") ? "Combo Banho de Gel (Sessão 1/4)" :
-                                     app.notes.includes("2/4") ? "Combo Banho de Gel (Sessão 2/4)" :
-                                     app.notes.includes("3/4") ? "Combo Banho de Gel (Sessão 3/4)" :
-                                     app.notes.includes("4/4") ? "Combo Banho de Gel (Sessão 4/4)" :
-                                     "Atendimento de Pacote"}
+                                    {getAppPackageBadgeText(app, clientPackages)}
                                   </span>
                                 </div>
                               )}
