@@ -88,53 +88,6 @@ export async function GET(req: Request) {
         }
       }
 
-      // Alinhamento exato das descrições da Cliente Maiara:
-      if (clientNameLower.includes("maiara")) {
-        const maiaraApps = appointments
-          .filter((a) => a.clientId === app.clientId)
-          .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
-        const appIndex = maiaraApps.findIndex((a) => a.id === app.id);
-        if (appIndex !== -1) {
-          const maiaraCycleNames = [
-            "Mão tradicional",
-            "Mão tradicional",
-            "Pé c/esmaltação em Gel + mão tradicional",
-            "Mão tradicional"
-          ];
-          serviceNamesList = [maiaraCycleNames[appIndex % 4]];
-        }
-      }
-
-      // Alinhamento exato das descrições da Cliente Aline de Matos:
-      if (clientNameLower.includes("aline") && clientNameLower.includes("matos")) {
-        const appDate = app.date || "";
-        if (appDate === "2026-08-20") serviceNamesList = ["Mão tradicional"];
-        else if (appDate === "2026-08-26") serviceNamesList = ["Pé e mão tradicional"];
-        else if (appDate === "2026-09-02") serviceNamesList = ["Banho de Gel"];
-        else if (appDate === "2026-09-10") serviceNamesList = ["Mão tradicional"];
-        else if (appDate === "2026-09-17") serviceNamesList = ["Pé e mão tradicional"];
-        else if (appDate === "2026-09-24") serviceNamesList = ["Mão tradicional"];
-        else if (appDate === "2026-10-02") serviceNamesList = ["Pé e mão tradicional"];
-        else if (appDate === "2026-10-07") serviceNamesList = ["Mão tradicional"];
-      }
-
-      // Alinhamento exato das descrições da Cliente Fernanda Peças:
-      if (clientNameLower.includes("fernanda") && (clientNameLower.includes("peças") || clientNameLower.includes("pecas"))) {
-        const fPecApps = appointments
-          .filter((a) => a.clientId === app.clientId && a.date !== "2026-12-30")
-          .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
-        const appIndex = fPecApps.findIndex((a) => a.id === app.id);
-        if (appIndex !== -1) {
-          const fPecCycleNames = [
-            "Pé e mão tradicional",
-            "Mão tradicional",
-            "Pé e mão tradicional",
-            "Mão tradicional"
-          ];
-          serviceNamesList = [fPecCycleNames[appIndex % 4]];
-        }
-      }
-
       return {
         ...app,
         clientName: clientObj?.name || "Cliente Desconhecido",
