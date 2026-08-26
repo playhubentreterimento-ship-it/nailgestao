@@ -421,6 +421,11 @@ export async function PUT(req: Request) {
     if (startTime) updateData.startTime = startTime;
     if (professionalId) updateData.professionalId = professionalId;
 
+    if (body.total !== undefined) {
+      updateData.total = Number(body.total);
+      updateData.subtotal = body.subtotal !== undefined ? Number(body.subtotal) : Number(body.total);
+    }
+
     if (serviceIds && Array.isArray(serviceIds) && serviceIds.length > 0) {
       const services = await prisma.service.findMany({
         where: { id: { in: serviceIds } },

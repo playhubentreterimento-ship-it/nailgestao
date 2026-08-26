@@ -29,6 +29,43 @@ export default function ClientesPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Form de Edição de Valor de Atendimento da Cliente (Administradora)
+  const [editingApp, setEditingApp] = useState<any>(null);
+  const [editAppTotal, setEditAppTotal] = useState<string>("0.00");
+  const [editAppNotes, setEditAppNotes] = useState<string>("");
+  const [isSavingApp, setIsSavingApp] = useState<boolean>(false);
+
+  const handleSaveAppValue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingApp || isSavingApp) return;
+
+    setIsSavingApp(true);
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingApp.id,
+          total: Number(editAppTotal),
+          subtotal: Number(editAppTotal),
+          notes: editAppNotes,
+        }),
+      });
+
+      if (res.ok) {
+        alert("✨ Valor e observação do atendimento atualizados com sucesso!");
+        setEditingApp(null);
+        loadClients();
+      } else {
+        alert("Erro ao atualizar valor do atendimento.");
+      }
+    } catch (err) {
+      alert("Erro ao salvar alteração de valor.");
+    } finally {
+      setIsSavingApp(false);
+    }
+  };
+
   // Form de cadastro (Novo)
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -799,22 +836,36 @@ export default function ClientesPage() {
                                 </span>
                               </div>
                               {app.status !== 'CANCELADO' && (
-                                <button
-                                  onClick={async () => {
-                                    const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
-                                    if (reason !== null) {
-                                      const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
-                                      if (res.ok) {
-                                        alert("✨ Horário desmarcado e liberado na agenda!");
-                                        loadClients();
+                                <div className="flex items-center space-x-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingApp(app);
+                                      setEditAppTotal(String((app.total || 0).toFixed(2)));
+                                      setEditAppNotes(app.notes || "");
+                                    }}
+                                    className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-extrabold text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-900 shadow-2xs"
+                                    title="Editar valor e observação deste atendimento (Administradora)"
+                                  >
+                                    ✏️ Editar Valor
+                                  </button>
+
+                                  <button
+                                    onClick={async () => {
+                                      const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
+                                      if (reason !== null) {
+                                        const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
+                                        if (res.ok) {
+                                          alert("✨ Horário desmarcado e liberado na agenda!");
+                                          loadClients();
+                                        }
                                       }
-                                    }
-                                  }}
-                                  className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
-                                  title="Desmarcar horário e liberar na agenda"
-                                >
-                                  🚫 Desmarcar
-                                </button>
+                                    }}
+                                    className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
+                                    title="Desmarcar horário e liberar na agenda"
+                                  >
+                                    🚫 Desmarcar
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -826,6 +877,107 @@ export default function ClientesPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIÇÃO DE VALOR DO ATENDIMENTO (ADMINISTRADORA) */}
+      {editingApp && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h3 className="font-serif text-base font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
+                <span>✏️ Editar Valor do Atendimento</span>
+              </h3>
+              <button
+                onClick={() => setEditingApp(null)}
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="text-xs space-y-1 bg-rose-50/50 p-3 rounded-2xl border border-rose-100 dark:bg-slate-800 dark:border-slate-700">
+              <p className="font-extrabold text-rose-900 dark:text-rose-200">
+                👤 Cliente: {selectedClient?.name}
+              </p>
+              <p className="font-semibold text-slate-700 dark:text-slate-300">
+                🗓️ Data: {editingApp.date ? editingApp.date.split("-").reverse().join("/") : ""} às {editingApp.startTime}h
+              </p>
+              <p className="font-semibold text-slate-700 dark:text-slate-300">
+                💅 Procedimento: {editingApp.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveAppValue} className="space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
+                  💰 Valor Total (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editAppTotal}
+                  onChange={(e) => setEditAppTotal(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditAppTotal("0.00")}
+                    className="rounded-xl bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    ⚡ Zerar (R$ 0,00)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditAppTotal("182.00")}
+                    className="rounded-xl bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200"
+                  >
+                    📦 R$ 182,00 (Combo MAIARA)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditAppTotal("172.90")}
+                    className="rounded-xl bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200"
+                  >
+                    📦 R$ 172,90 (Combo Trad)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
+                  📝 Observação / Descrição do Pacote (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={editAppNotes}
+                  onChange={(e) => setEditAppNotes(e.target.value)}
+                  placeholder="ex: 📦 Pacote Ativo: Combo MAIARA | Sessão 1/4"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 border-t pt-3 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingApp(null)}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingApp}
+                  className="rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 px-5 py-2 text-xs font-bold text-white shadow-md hover:from-amber-600 hover:to-rose-600 disabled:opacity-50"
+                >
+                  {isSavingApp ? "Salvando..." : "💾 Salvar Alteração"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
