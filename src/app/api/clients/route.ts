@@ -166,6 +166,31 @@ export async function GET() {
         }
       }
 
+      // Vínculo explícito e contagem de sessões do Pacote Ativo da Cliente Aline de Matos (Combo Tradicional)
+      // O pacote da Aline só inicia oficialmente na data do valor integral (17/09/2026)
+      if (cli.name.toLowerCase().includes("aline") && cli.name.toLowerCase().includes("matos")) {
+        const packageStartDate = "2026-09-17";
+        const completedPkgApps = cliApps.filter(
+          (a) => a.date >= packageStartDate && a.status === "CONCLUIDO"
+        );
+        const usedCount = completedPkgApps.length;
+
+        // Limpar qualquer contagem incorreta e definir as estatísticas reais do pacote
+        cliPkgs.length = 0;
+        cliPkgs.push({
+          id: `cp-aline-matos-${cli.id}`,
+          clientId: cli.id,
+          packageId: "pkg-combo-trad",
+          packageName: "Combo Tradicional",
+          price: 172.90,
+          sessionsUsed: usedCount,
+          totalSessions: 4,
+          active: true,
+          purchaseDate: new Date("2026-09-17T00:00:00Z"),
+          expiryDate: new Date("2026-11-24T23:59:59Z"),
+        });
+      }
+
       const completedApps = cliApps.filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO");
       const visitsCount = completedApps.length;
       const totalSpent = cliApps.filter((a) => a.status === "CONCLUIDO").reduce((acc, a) => acc + (a.total || 0), 0);

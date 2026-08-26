@@ -946,7 +946,11 @@ export default function AgendaPage() {
 
                               {/* Observação / Badge de Pacote Ativo e Número da Sessão */}
                               {((app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão"))) ||
-                                (app.clientName && (app.clientName.toLowerCase().includes("fernanda") || app.clientName.toLowerCase().includes("maiara") || app.clientName.toLowerCase().includes("aline")))) && (
+                                (app.clientName && (
+                                  app.clientName.toLowerCase().includes("fernanda") ||
+                                  app.clientName.toLowerCase().includes("maiara") ||
+                                  (app.clientName.toLowerCase().includes("aline") && app.date >= "2026-09-17")
+                                ))) && (
                                 <div className="mt-1.5 rounded-lg bg-amber-100/90 border border-amber-300 px-2 py-1 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center space-x-1 shadow-2xs">
                                   <span>📦 PACOTE ATIVO:</span>
                                   <span className="truncate">
