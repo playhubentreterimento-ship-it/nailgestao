@@ -54,10 +54,18 @@ export default function AtendimentoPage() {
       .catch(() => {});
 
     window.addEventListener("focus", loadAppointments);
-    return () => window.removeEventListener("focus", loadAppointments);
+    const interval = setInterval(loadAppointments, 8000);
+    return () => {
+      window.removeEventListener("focus", loadAppointments);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleStartAttendance = async (appId: string) => {
+    // Atualização Otimista Instantânea (0ms de espera!)
+    setAppointments((prev) =>
+      prev.map((app) => (app.id === appId ? { ...app, status: "EM_ATENDIMENTO" } : app))
+    );
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

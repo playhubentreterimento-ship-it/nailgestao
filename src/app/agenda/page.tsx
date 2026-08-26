@@ -268,21 +268,41 @@ export default function AgendaPage() {
       .catch(() => setLoading(false));
   };
 
-  const refreshAllData = () => {
-    loadAgenda();
-    fetch("/api/professionals", { cache: "no-store" }).then((r) => r.json()).then(setProfessionals).catch(() => {});
-    fetch("/api/services", { cache: "no-store" }).then((r) => r.json()).then((res) => setServices(res.services || [])).catch(() => {});
-    fetch("/api/clients", { cache: "no-store" }).then((r) => r.json()).then(setClients).catch(() => {});
-    fetch("/api/packages", { cache: "no-store" }).then((r) => r.json()).then((res) => {
+  const refreshAuxiliaryData = () => {
+    fetch("/api/professionals").then((r) => r.json()).then(setProfessionals).catch(() => {});
+    fetch("/api/services").then((r) => r.json()).then((res) => setServices(res.services || [])).catch(() => {});
+    fetch("/api/clients").then((r) => r.json()).then(setClients).catch(() => {});
+    fetch("/api/packages").then((r) => r.json()).then((res) => {
       setClientPackages(res.clientPackages || []);
       setPackages(res.packages || []);
     }).catch(() => {});
   };
 
+  const refreshAllData = () => {
+    loadAgenda();
+    refreshAuxiliaryData();
+  };
+
+  // Carregar listas auxiliares 1x ao montar a página
   useEffect(() => {
-    refreshAllData();
-    window.addEventListener("focus", refreshAllData);
-    return () => window.removeEventListener("focus", refreshAllData);
+    refreshAuxiliaryData();
+  }, []);
+
+  // Recarregar apenas os agendamentos ao mudar de data/view/profissional (Super Rápido!)
+  useEffect(() => {
+    loadAgenda();
+  }, [selectedDate, filterProf, viewMode]);
+
+  // Atualização automática em segundo plano (Sincronização em tempo real a cada 10 segundos)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadAgenda();
+    }, 10000);
+    window.addEventListener("focus", loadAgenda);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", loadAgenda);
+    };
   }, [selectedDate, filterProf, viewMode]);
 
   // Ler parametro search da URL se vier do topo do site
