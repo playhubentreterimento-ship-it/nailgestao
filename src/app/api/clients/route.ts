@@ -165,6 +165,82 @@ export async function GET() {
         }
       }
 
+      // Padronização e organização do Pacote da Cliente Fernanda Peças (Combo Tradicional):
+      // Regra Rígida: Não alterar Datas, Horários ou Descrições de Serviços!
+      // Apenas ajustar o valor (total) de cada agendamento e incluir a cliente na área de pacotes ativos.
+      // O valor integral (R$ 172,90) entra no início de cada pacote e as demais sessões zeradas (R$ 0,00).
+      // Data 30/12/2026 mantida exatamente sem alteração!
+      if (cli.name.toLowerCase().includes("fernanda") && (cli.name.toLowerCase().includes("peças") || cli.name.toLowerCase().includes("pecas"))) {
+        const comboPkgObj = packages.find((p) => p.name.toLowerCase().includes("tradicional") || p.name.toLowerCase().includes("combo")) || { id: "pkg-combo-trad", name: "Combo Tradicional", price: 172.90 };
+        const existingCp = await prisma.clientPackage.findFirst({
+          where: { clientId: cli.id },
+        }).catch(() => null);
+
+        if (!existingCp) {
+          await prisma.clientPackage.create({
+            data: {
+              id: `cp-fernanda-pecas-${cli.id}`,
+              clientId: cli.id,
+              packageId: comboPkgObj.id,
+              totalSessions: 16,
+              sessionsUsed: 1,
+              active: true,
+              expiryDate: new Date("2026-12-31T23:59:59Z"),
+            },
+          }).catch(() => {});
+        }
+
+        // Datas de início dos combos (R$ 172,90)
+        const cycleStarts = new Set(["2026-09-12", "2026-10-10", "2026-11-04", "2026-12-03"]);
+        // Datas de sessões zeradas (R$ 0,00)
+        const cycleZeroes = new Set([
+          "2026-09-17", "2026-09-25", "2026-10-01",
+          "2026-10-15", "2026-10-24", "2026-10-29",
+          "2026-11-12", "2026-11-19", "2026-11-26",
+          "2026-12-10", "2026-12-18", "2026-12-24"
+        ]);
+
+        for (let i = 0; i < cliApps.length; i++) {
+          const app = cliApps[i];
+          const appDate = app.date || "";
+
+          // 30/12/2026 deixa como está sem alterar nada
+          if (appDate === "2026-12-30") continue;
+
+          let targetTotal: number | null = null;
+
+          if (cycleStarts.has(appDate)) {
+            targetTotal = 172.90;
+          } else if (cycleZeroes.has(appDate)) {
+            targetTotal = 0.0;
+          }
+
+          if (targetTotal !== null && app.total !== targetTotal) {
+            await prisma.appointment.update({
+              where: { id: app.id },
+              data: {
+                total: targetTotal,
+                subtotal: targetTotal,
+                remainingAmount: targetTotal,
+              },
+            }).catch(() => {});
+
+            if (app.services && app.services.length > 0) {
+              await prisma.appointmentService.updateMany({
+                where: { appointmentId: app.id },
+                data: { price: targetTotal },
+              }).catch(() => {});
+            }
+
+            app.total = targetTotal;
+            app.subtotal = targetTotal;
+            if (app.services && app.services[0]) {
+              app.services[0].price = targetTotal;
+            }
+          }
+        }
+      }
+
       const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
       const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
 
