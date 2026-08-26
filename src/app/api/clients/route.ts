@@ -30,33 +30,28 @@ export async function GET() {
         .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
 
       // Padronização e organização do Pacote da Cliente Maiara:
-      // Cronograma Oficial Combo com esmaltação em Gel (4 Semanas):
-      // Semana 1: Mão tradicional (R$ 110,00 - Entrada do Combo no caixa)
-      // Semana 2: Mão tradicional (R$ 0,00)
-      // Semana 3: Pé c/esmaltação em Gel + mão tradicional (R$ 0,00)
-      // Semana 4: Mão tradicional (R$ 0,00)
-      // Padronização e organização do Pacote da Cliente Maiara em memória
+      // Novo Combo MAIARA (R$ 182,00) inicia oficialmente na 1ª sessão agendada para 16/09/2026 (Entrada R$ 182,00)
+      // Atendimentos anteriores (26/08, 02/09, 09/09) são do ciclo prévio.
       if (cli.name.toLowerCase().includes("maiara")) {
-        const peMaoGelName = "Pé c/esmaltação em Gel + mão tradicional";
-        const maoSrvName = "Mão tradicional";
-        const maiaraCycleNames = [maoSrvName, maoSrvName, peMaoGelName, maoSrvName];
-
         for (let i = 0; i < cliApps.length; i++) {
           const app = cliApps[i];
-          const weekIndex = i % 4;
-          const sessionNum = weekIndex + 1;
-          const comboNum = Math.floor(i / 4) + 1;
-          const isStartOfWeekCycle = weekIndex === 0;
-          const targetTotal = isStartOfWeekCycle ? 110.0 : 0.0;
-          const targetSrvName = maiaraCycleNames[weekIndex];
+          const appDate = app.date || "";
 
-          const noteText = isStartOfWeekCycle
-            ? `📦 Pacote Ativo: Combo com esmaltação em Gel | Sessão 1/4 (Entrada R$ 110,00)`
-            : `📦 Sessão ${sessionNum}/4 do Combo ${comboNum}: ${targetSrvName} (R$ 0,00)`;
-
-          app.total = targetTotal;
-          app.subtotal = targetTotal;
-          app.notes = noteText;
+          if (appDate === "2026-08-26") {
+            app.total = 110.0; app.notes = "Ciclo Anterior (Mão tradicional)";
+          } else if (appDate === "2026-09-02") {
+            app.total = 0.0; app.notes = "Ciclo Anterior (Pé c/esmaltação em Gel + mão tradicional)";
+          } else if (appDate === "2026-09-09") {
+            app.total = 0.0; app.notes = "Ciclo Anterior (Mão tradicional)";
+          } else if (appDate === "2026-09-16") {
+            app.total = 182.0; app.notes = "📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ 182,00)";
+          } else if (appDate === "2026-09-23") {
+            app.total = 0.0; app.notes = "📦 Sessão 2/4 do Combo MAIARA (R$ 0,00)";
+          } else if (appDate === "2026-09-30") {
+            app.total = 0.0; app.notes = "📦 Sessão 3/4 do Combo MAIARA (R$ 0,00)";
+          } else if (appDate === "2026-10-07") {
+            app.total = 0.0; app.notes = "📦 Sessão 4/4 do Combo MAIARA (R$ 0,00)";
+          }
         }
       }
 
@@ -188,6 +183,30 @@ export async function GET() {
           active: true,
           purchaseDate: new Date("2026-09-17T00:00:00Z"),
           expiryDate: new Date("2026-11-24T23:59:59Z"),
+        });
+      }
+
+      // Vínculo explícito e contagem de sessões do Pacote Ativo da Cliente Maiara (Combo MAIARA)
+      // O pacote da Maiara inicia na data do valor integral (16/09/2026 - R$ 182,00)
+      if (cli.name.toLowerCase().includes("maiara")) {
+        const packageStartDate = "2026-09-16";
+        const completedPkgApps = cliApps.filter(
+          (a) => a.date >= packageStartDate && a.status === "CONCLUIDO"
+        );
+        const usedCount = completedPkgApps.length;
+
+        cliPkgs.length = 0;
+        cliPkgs.push({
+          id: `cp-maiara-${cli.id}`,
+          clientId: cli.id,
+          packageId: "pkg-combo-maiara",
+          packageName: "Combo MAIARA",
+          price: 182.00,
+          sessionsUsed: usedCount,
+          totalSessions: 4,
+          active: true,
+          purchaseDate: new Date("2026-09-16T00:00:00Z"),
+          expiryDate: new Date("2026-10-28T23:59:59Z"),
         });
       }
 

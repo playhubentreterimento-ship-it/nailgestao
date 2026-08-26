@@ -178,6 +178,48 @@ export async function POST(req: Request) {
 
       // Lançar valor total do pacote no caixa na data de pagamento informada
       const finalAmount = amountPaid !== undefined && amountPaid !== null ? Number(amountPaid) : targetPackage.price;
+
+      // Atualizar Agendamentos da Cliente a partir da data de início do pacote (paymentDate):
+      // A 1ª sessão agendada a partir de paymentDate recebe o valor cheio do pacote (finalAmount).
+      // As sessões seguintes daquele ciclo de pacote ficam zeradas (R$ 0,00)!
+      try {
+        const startDateStr = paymentDate || new Date().toISOString().split("T")[0];
+        const clientApps = await prisma.appointment.findMany({
+          where: { clientId, date: { gte: startDateStr }, status: { not: "CANCELADO" } },
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        });
+
+        if (clientApps.length > 0) {
+          // 1ª Sessão na data do pagamento/início do pacote
+          const firstApp = clientApps[0];
+          await prisma.appointment.update({
+            where: { id: firstApp.id },
+            data: {
+              total: finalAmount,
+              subtotal: finalAmount,
+              notes: `📦 Pacote Ativo: ${targetPackage.name} | Sessão 1/${targetPackage.totalSessions} (Entrada R$ ${finalAmount.toFixed(2)})`,
+            },
+          });
+
+          // Demais sessões do ciclo zeradas (R$ 0,00)
+          const remainingCycleApps = clientApps.slice(1, targetPackage.totalSessions);
+          for (let idx = 0; idx < remainingCycleApps.length; idx++) {
+            const rApp = remainingCycleApps[idx];
+            const sessionNum = idx + 2;
+            await prisma.appointment.update({
+              where: { id: rApp.id },
+              data: {
+                total: 0.0,
+                subtotal: 0.0,
+                notes: `📦 Sessão ${sessionNum}/${targetPackage.totalSessions} do Pacote "${targetPackage.name}" (R$ 0,00)`,
+              },
+            });
+          }
+        }
+      } catch (appErr) {
+        console.error("Erro ao atualizar agendamentos do pacote:", appErr);
+      }
+
       if (finalAmount > 0) {
         try {
           const clientObj = await prisma.client.findUnique({ where: { id: clientId } });
