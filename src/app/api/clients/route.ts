@@ -29,28 +29,37 @@ export async function GET() {
         .filter((a) => a.clientId === cli.id)
         .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
 
-      // Padronização e organização do Pacote da Cliente Maiara:
-      // Novo Combo MAIARA (R$ 182,00) inicia oficialmente na 1ª sessão agendada para 16/09/2026 (Entrada R$ 182,00)
-      // Atendimentos anteriores (26/08, 02/09, 09/09) são do ciclo prévio.
+      // Padronização e organização dos Pacotes da Cliente Maiara:
+      // Ciclo 1 (16/09/2026): Sessão 1 em 16/09 (R$ 182,00), Sessões 2, 3, 4 em 23/09, 30/09, 07/10 (R$ 0,00)
+      // Ciclo 2 (14/10/2026): Sessão 1 em 14/10 (R$ 182,00), Sessões 2, 3, 4 em 21/10, 28/10, 04/11 (R$ 0,00)
       if (cli.name.toLowerCase().includes("maiara")) {
+        const cycleStarts = new Map<string, number>([
+          ["2026-09-16", 182.0],
+          ["2026-10-14", 182.0],
+        ]);
+        const cycleZeroes = new Set([
+          "2026-09-02", "2026-09-09",
+          "2026-09-23", "2026-09-30", "2026-10-07",
+          "2026-10-21", "2026-10-28", "2026-11-04"
+        ]);
+
         for (let i = 0; i < cliApps.length; i++) {
           const app = cliApps[i];
           const appDate = app.date || "";
 
           if (appDate === "2026-08-26") {
             app.total = 110.0; app.notes = "Ciclo Anterior (Mão tradicional)";
-          } else if (appDate === "2026-09-02") {
-            app.total = 0.0; app.notes = "Ciclo Anterior (Pé c/esmaltação em Gel + mão tradicional)";
-          } else if (appDate === "2026-09-09") {
-            app.total = 0.0; app.notes = "Ciclo Anterior (Mão tradicional)";
-          } else if (appDate === "2026-09-16") {
-            app.total = 182.0; app.notes = "📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ 182,00)";
-          } else if (appDate === "2026-09-23") {
-            app.total = 0.0; app.notes = "📦 Sessão 2/4 do Combo MAIARA (R$ 0,00)";
-          } else if (appDate === "2026-09-30") {
-            app.total = 0.0; app.notes = "📦 Sessão 3/4 do Combo MAIARA (R$ 0,00)";
-          } else if (appDate === "2026-10-07") {
-            app.total = 0.0; app.notes = "📦 Sessão 4/4 do Combo MAIARA (R$ 0,00)";
+          } else if (cycleStarts.has(appDate)) {
+            const cyclePrice = cycleStarts.get(appDate) || 182.0;
+            app.total = cyclePrice;
+            app.subtotal = cyclePrice;
+            app.notes = `📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ ${cyclePrice.toFixed(2)})`;
+          } else if (cycleZeroes.has(appDate)) {
+            app.total = 0.0;
+            app.subtotal = 0.0;
+            if (!app.notes?.includes("Sessão")) {
+              app.notes = `📦 Sessão de Pacote (R$ 0,00)`;
+            }
           }
         }
       }
@@ -187,9 +196,10 @@ export async function GET() {
       }
 
       // Vínculo explícito e contagem de sessões do Pacote Ativo da Cliente Maiara (Combo MAIARA)
-      // O pacote da Maiara inicia na data do valor integral (16/09/2026 - R$ 182,00)
+      // O pacote da Maiara inicia na data do valor integral (16/09/2026 ou 14/10/2026 - R$ 182,00)
       if (cli.name.toLowerCase().includes("maiara")) {
-        const packageStartDate = "2026-09-16";
+        const hasCycle2 = cliApps.some((a) => a.date >= "2026-10-14");
+        const packageStartDate = hasCycle2 ? "2026-10-14" : "2026-09-16";
         const completedPkgApps = cliApps.filter(
           (a) => a.date >= packageStartDate && a.status === "CONCLUIDO"
         );
@@ -205,8 +215,8 @@ export async function GET() {
           sessionsUsed: usedCount,
           totalSessions: 4,
           active: true,
-          purchaseDate: new Date("2026-09-16T00:00:00Z"),
-          expiryDate: new Date("2026-10-28T23:59:59Z"),
+          purchaseDate: new Date(`${packageStartDate}T00:00:00Z`),
+          expiryDate: new Date(new Date(packageStartDate).getTime() + 42 * 24 * 60 * 60 * 1000),
         });
       }
 
