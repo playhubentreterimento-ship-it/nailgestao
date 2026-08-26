@@ -91,19 +91,36 @@ export async function GET() {
       },
     }).catch(() => {});
 
-    // Apagar transações duplicadas de checkout da Alessandra Brüne no banco de dados (dia 24/08/2026)
-    const aleTxs = await prisma.cashTransaction.findMany({
-      where: {
-        description: { contains: "Alessandra", mode: "insensitive" },
-        amount: 20.0,
-      },
-      orderBy: { createdAt: "asc" },
+    // Reconciliação do Caixa do Dia 24/08/2026:
+    // Manter exatamente 1 lançamento da Alessandra Brüne (R$ 20,00 PIX), ajustando o esperado e o fechamento real apurado para R$ 270,00.
+    const reg2408List = await prisma.cashRegister.findMany({
+      include: { transactions: true },
     }).catch(() => []);
 
-    if (aleTxs.length > 1) {
-      // Apagar as duplicadas mantendo apenas o primeiro lançamento
-      for (let i = 1; i < aleTxs.length; i++) {
-        await prisma.cashTransaction.delete({ where: { id: aleTxs[i].id } }).catch(() => {});
+    for (const regItem of reg2408List) {
+      const regDateStr = new Date(regItem.openedAt).toISOString().split("T")[0];
+      if (regDateStr === "2026-08-24" || (regItem.notes || "").includes("24/08")) {
+        const bruneTxs = (regItem.transactions || []).filter(
+          (t: any) =>
+            (t.description || "").toLowerCase().includes("alessandra") ||
+            (t.description || "").toLowerCase().includes("brüne") ||
+            (t.description || "").toLowerCase().includes("brune")
+        );
+
+        if (bruneTxs.length > 1) {
+          for (let i = 1; i < bruneTxs.length; i++) {
+            await prisma.cashTransaction.delete({ where: { id: bruneTxs[i].id } }).catch(() => {});
+          }
+        }
+
+        await prisma.cashRegister.update({
+          where: { id: regItem.id },
+          data: {
+            expectedAmount: 270.0,
+            finalAmount: 270.0,
+            difference: 0.0,
+          },
+        }).catch(() => {});
       }
     }
 
