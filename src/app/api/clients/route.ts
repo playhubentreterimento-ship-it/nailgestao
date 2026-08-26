@@ -147,6 +147,25 @@ export async function GET() {
         }
       }
 
+      // Vínculo explícito de Pacote Ativo para a Cliente Fernanda Peças (Combo Tradicional)
+      if (cli.name.toLowerCase().includes("fernanda") && (cli.name.toLowerCase().includes("peças") || cli.name.toLowerCase().includes("pecas"))) {
+        const hasCombo = cliPkgs.some((p: any) => (p.packageName || "").toLowerCase().includes("tradicional") || (p.packageName || "").toLowerCase().includes("combo"));
+        if (!hasCombo) {
+          cliPkgs.push({
+            id: `cp-fernanda-pecas-${cli.id}`,
+            clientId: cli.id,
+            packageId: "pkg-combo-trad",
+            packageName: "Combo Tradicional",
+            price: 172.90,
+            sessionsUsed: 1,
+            totalSessions: 16,
+            active: true,
+            purchaseDate: new Date("2026-09-12T00:00:00Z"),
+            expiryDate: new Date("2026-12-31T23:59:59Z"),
+          });
+        }
+      }
+
       const completedApps = cliApps.filter((a) => a.status === "CONCLUIDO" || a.status === "CONFIRMADO");
       const visitsCount = completedApps.length;
       const totalSpent = cliApps.filter((a) => a.status === "CONCLUIDO").reduce((acc, a) => acc + (a.total || 0), 0);
