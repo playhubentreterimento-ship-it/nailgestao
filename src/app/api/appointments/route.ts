@@ -88,8 +88,44 @@ export async function GET(req: Request) {
         }
       }
 
+      let finalTotal = app.total;
+      let finalSubtotal = app.subtotal;
+      let finalNotes = app.notes;
+
+      // Se for cliente Maiara, aplicar regra dos 2 pacotes (Entrada R$ 182,00 em 16/09 e 14/10)
+      if (clientNameLower.includes("maiara")) {
+        const cycleStarts = new Map<string, number>([
+          ["2026-09-16", 182.0],
+          ["2026-10-14", 182.0],
+        ]);
+        const cycleZeroes = new Set([
+          "2026-09-02", "2026-09-09",
+          "2026-09-23", "2026-09-30", "2026-10-07",
+          "2026-10-21", "2026-10-28", "2026-11-04"
+        ]);
+
+        const appDate = app.date || "";
+        if (cycleStarts.has(appDate)) {
+          const price = cycleStarts.get(appDate) || 182.0;
+          finalTotal = price;
+          finalSubtotal = price;
+          if (!finalNotes || !finalNotes.includes("Pacote Ativo:")) {
+            finalNotes = `📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ ${price.toFixed(2)})`;
+          }
+        } else if (cycleZeroes.has(appDate)) {
+          finalTotal = 0.0;
+          finalSubtotal = 0.0;
+          if (!finalNotes || !finalNotes.includes("Sessão")) {
+            finalNotes = `📦 Sessão de Pacote (R$ 0,00)`;
+          }
+        }
+      }
+
       return {
         ...app,
+        total: finalTotal,
+        subtotal: finalSubtotal,
+        notes: finalNotes,
         clientName: clientObj?.name || "Cliente Desconhecido",
         clientPhone: clientObj?.whatsapp || clientObj?.phone || "",
         professionalName: profObj?.name || "Profissional",
