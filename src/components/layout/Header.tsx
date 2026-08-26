@@ -100,7 +100,9 @@ export function Header({ userRole }: HeaderProps) {
       const saved = localStorage.getItem("nailgestao_daily_notifications_v1");
       if (saved) {
         const parsed = JSON.parse(saved);
-        setNotifications(filterTodayNotifications(parsed));
+        const cleaned = filterTodayNotifications(parsed);
+        setNotifications(cleaned);
+        localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(cleaned));
       }
     } catch (e) {}
   }, []);
@@ -111,14 +113,17 @@ export function Header({ userRole }: HeaderProps) {
     const todayStr = new Date().toISOString().split("T")[0];
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-    return list.filter((item) => {
-      if (!item.timestamp) return false;
+    const filtered = list.filter((item) => {
+      if (!item || !item.timestamp) return false;
       // 1. Purgar se o item tiver mais de 24 horas
       if (now - item.timestamp > TWENTY_FOUR_HOURS) return false;
       // 2. Purgar se for de uma data anterior
       if (item.dateStr && item.dateStr !== todayStr) return false;
       return true;
     });
+
+    // Limitar a no máximo 25 notificações ativas do dia para não acumular centenas
+    return filtered.slice(0, 25);
   };
 
   const syncRealDailyEvents = async () => {
@@ -216,7 +221,7 @@ export function Header({ userRole }: HeaderProps) {
 
         if (!isInitialLoadRef.current) {
           const newApps = apps.filter(
-            (a: any) => !knownAppIdsRef.current.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO"
+            (a: any) => !knownAppIdsRef.current.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO" && (a.date >= todayStr)
           );
 
           if (newApps.length > 0) {
@@ -244,7 +249,7 @@ export function Header({ userRole }: HeaderProps) {
                   dateStr: todayStr,
                   time: "Agora",
                 };
-                const updated = [newNotification, ...filteredPrev.filter((n) => n.id !== newNotification.id)];
+                const updated = filterTodayNotifications([newNotification, ...filteredPrev.filter((n) => n.id !== newNotification.id)]);
                 try {
                   localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(updated));
                 } catch (e) {}
