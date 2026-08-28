@@ -90,7 +90,7 @@ export async function GET(req: Request) {
 
       let finalTotal = app.total;
       let finalSubtotal = app.subtotal;
-      let finalNotes = app.notes;
+      let finalNotes = app.notes || "";
 
       // Se for cliente Maiara, aplicar regra dos 2 pacotes (Entrada R$ 182,00 em 16/09 e 14/10)
       if (clientNameLower.includes("maiara")) {
@@ -117,6 +117,24 @@ export async function GET(req: Request) {
           finalSubtotal = 0.0;
           if (!finalNotes || !finalNotes.includes("Sessão")) {
             finalNotes = `📦 Sessão de Pacote (R$ 0,00)`;
+          }
+        }
+      } else {
+        // Regra universal para qualquer pacote de qualquer cliente (Leila, etc.):
+        // Se as notas indicarem 1ª Sessão com Entrada R$, extrair o valor da entrada
+        if (finalNotes.includes("Entrada R$")) {
+          const match = finalNotes.match(/Entrada R\$\s*([\d.,]+)/);
+          if (match && match[1]) {
+            const parsedVal = parseFloat(match[1].replace(",", "."));
+            if (!isNaN(parsedVal) && parsedVal > 0) {
+              finalTotal = parsedVal;
+              finalSubtotal = parsedVal;
+            }
+          }
+        } else if (finalNotes.includes("(R$ 0,00)") || finalNotes.includes("Sessão 2/") || finalNotes.includes("Sessão 3/") || finalNotes.includes("Sessão 4/")) {
+          if (!finalNotes.includes("EDITADO_MANUAL")) {
+            finalTotal = 0.0;
+            finalSubtotal = 0.0;
           }
         }
       }
@@ -263,8 +281,50 @@ export async function POST(req: Request) {
 
     const isPackageSession = Boolean(body.clientPackageId);
     const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
-    const subtotal = isPackageSession ? 0 : services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
-    const total = isPackageSession ? 0 : Math.max(0, subtotal - discount);
+    let subtotal = isPackageSession ? 0 : services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+    let total = isPackageSession ? 0 : Math.max(0, subtotal - discount);
+
+    // Se a cliente possui um pacote ativo recente, atribuir automaticamente o valor integral na 1ª sessão
+    let finalNotes = notes || "";
+    try {
+      const activeClientPkg = await prisma.clientPackage.findFirst({
+        where: { clientId, active: true },
+        orderBy: { purchaseDate: "desc" },
+      });
+
+      if (activeClientPkg) {
+        const pkgObj = await prisma.package.findUnique({ where: { id: activeClientPkg.packageId } });
+        const pkgPrice = pkgObj?.price || 95.0;
+        const totalSessions = activeClientPkg.totalSessions || 2;
+        const purchaseDateStr = new Date(activeClientPkg.purchaseDate).toISOString().split("T")[0];
+
+        const existingPkgApps = await prisma.appointment.count({
+          where: {
+            clientId,
+            date: { gte: purchaseDateStr },
+            status: { not: "CANCELADO" },
+          },
+        });
+
+        if (existingPkgApps === 0) {
+          // 1ª Sessão do Pacote -> Atribuir valor cheio do pacote!
+          total = pkgPrice;
+          subtotal = pkgPrice;
+          if (!finalNotes || !finalNotes.includes("Pacote Ativo:")) {
+            finalNotes = `📦 Pacote Ativo: ${pkgObj?.name || "Pacote"} | Sessão 1/${totalSessions} (Entrada R$ ${pkgPrice.toFixed(2)})`;
+          }
+        } else if (existingPkgApps < totalSessions && isPackageSession) {
+          total = 0.0;
+          subtotal = 0.0;
+          const sessionNum = existingPkgApps + 1;
+          if (!finalNotes || !finalNotes.includes("Sessão")) {
+            finalNotes = `📦 Sessão ${sessionNum}/${totalSessions} do Pacote "${pkgObj?.name || "Pacote"}" (R$ 0,00)`;
+          }
+        }
+      }
+    } catch (pkgCheckErr) {
+      console.error("Erro ao verificar pacote ativo na criacao do agendamento:", pkgCheckErr);
+    }
     const remainingAmount = isPackageSession ? 0 : Math.max(0, total - depositPaid);
 
     // Calcular horário de término (HH:mm)
@@ -321,7 +381,7 @@ export async function POST(req: Request) {
         total,
         paymentStatus: isPackageSession ? "PACOTE" : (depositPaid > 0 ? "SINAL_PAGO" : "PENDENTE"),
         status: "AGUARDANDO_CONFIRMACAO",
-        notes: isPackageSession ? `📦 Sessão de Pacote (Pago no Combo) | ${notes || ""}` : notes,
+        notes: finalNotes || (isPackageSession ? `📦 Sessão de Pacote (Pago no Combo)` : notes),
         services: {
           create: services.map((s) => ({
             serviceId: s.id,

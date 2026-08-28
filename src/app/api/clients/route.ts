@@ -117,6 +117,29 @@ export async function GET() {
         }
       }
 
+      // Regra universal para agendamentos de pacotes de qualquer cliente (ex: Leila Nevola, etc.):
+      if (!cli.name.toLowerCase().includes("maiara") && !cli.name.toLowerCase().includes("aline") && !cli.name.toLowerCase().includes("fernanda")) {
+        for (let i = 0; i < cliApps.length; i++) {
+          const app = cliApps[i];
+          const notesStr = app.notes || "";
+          if (notesStr.includes("EDITADO_MANUAL")) continue;
+
+          if (notesStr.includes("Entrada R$")) {
+            const match = notesStr.match(/Entrada R\$\s*([\d.,]+)/);
+            if (match && match[1]) {
+              const parsedVal = parseFloat(match[1].replace(",", "."));
+              if (!isNaN(parsedVal) && parsedVal > 0) {
+                app.total = parsedVal;
+                app.subtotal = parsedVal;
+              }
+            }
+          } else if (notesStr.includes("(R$ 0,00)") || notesStr.includes("Sessão 2/") || notesStr.includes("Sessão 3/") || notesStr.includes("Sessão 4/")) {
+            app.total = 0.0;
+            app.subtotal = 0.0;
+          }
+        }
+      }
+
       const cliCanceledApps = cliApps.filter((a) => a.status === "CANCELADO");
       const cliCanceledThisMonth = cliApps.filter((a) => a.status === "CANCELADO" && a.date.startsWith(currentYearMonth));
 

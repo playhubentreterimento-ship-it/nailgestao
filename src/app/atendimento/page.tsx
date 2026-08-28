@@ -263,13 +263,7 @@ export default function AtendimentoPage() {
                   {activeApp.notes && (activeApp.notes.includes("Pacote") || activeApp.notes.includes("Combo") || activeApp.notes.includes("Sessão")) && (
                     <div className="mt-2.5 inline-flex items-center space-x-2 rounded-xl bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 shadow-2xs">
                       <span>📦 ATENDIMENTO DE PACOTE:</span>
-                      <span>
-                        {activeApp.notes.includes("1/4") ? "Combo Banho de Gel com adicional (Sessão 1/4 - R$ 263,90)" :
-                         activeApp.notes.includes("2/4") ? "Combo Banho de Gel com adicional (Sessão 2/4 - Coberta R$ 0,00)" :
-                         activeApp.notes.includes("3/4") ? "Combo Banho de Gel com adicional (Sessão 3/4 - Coberta R$ 0,00)" :
-                         activeApp.notes.includes("4/4") ? "Combo Banho de Gel com adicional (Sessão 4/4 - Coberta R$ 0,00)" :
-                         activeApp.notes}
-                      </span>
+                      <span>{activeApp.notes}</span>
                     </div>
                   )}
                 </div>
