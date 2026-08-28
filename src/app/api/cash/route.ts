@@ -11,6 +11,11 @@ const sanitizeTxList = (txs: any[], isHistory: boolean = false, regDateStr?: str
       const desc = (tx.description || "").toLowerCase();
       const cat = (tx.category || "").toLowerCase();
 
+      // Excluir lancamentos de teste da cliente Teste
+      if (desc.includes("teste")) {
+        return false;
+      }
+
       // Excluir lancamentos de sinal/deposito automatico de agendamentos passados
       const isSignal = desc.includes("sinal") || desc.includes("depósito") || desc.includes("deposito") || cat.includes("sinal");
       if (isSignal) return false;
@@ -107,6 +112,44 @@ const sanitizeTxList = (txs: any[], isHistory: boolean = false, regDateStr?: str
 
 export async function GET() {
   try {
+    // Buscar IDs de clientes de teste (ex: Teste)
+    const testClients = await prisma.client.findMany({
+      where: { name: { contains: "Teste", mode: "insensitive" } },
+      select: { id: true },
+    }).catch(() => []);
+    const testClientIds = testClients.map((c) => c.id);
+
+    // Remover do banco lançamentos de teste da cliente Teste
+    await prisma.cashTransaction.deleteMany({
+      where: {
+        OR: [
+          { description: { contains: "Teste", mode: "insensitive" } },
+          { description: { contains: "cliente teste", mode: "insensitive" } },
+        ],
+      },
+    }).catch(() => {});
+
+    await prisma.appointment.deleteMany({
+      where: {
+        OR: [
+          { notes: { contains: "Teste", mode: "insensitive" } },
+          { clientId: { in: testClientIds } },
+        ],
+      },
+    }).catch(() => {});
+
+    await prisma.clientPackage.deleteMany({
+      where: {
+        clientId: { in: testClientIds },
+      },
+    }).catch(() => {});
+
+    await prisma.client.deleteMany({
+      where: {
+        id: { in: testClientIds },
+      },
+    }).catch(() => {});
+
     // Remover do banco lancamentos equivocados de checkout da Maiara
     await prisma.cashTransaction.deleteMany({
       where: {

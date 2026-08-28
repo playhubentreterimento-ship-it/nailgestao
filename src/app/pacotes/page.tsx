@@ -858,18 +858,24 @@ export default function PacotesPage() {
                       const nextWeek = selectedClientPackage.sessionsUsed + 1;
                       const currentItem = parsed.find((item: any) => item.week === nextWeek);
                       if (currentItem) {
+                        const isFirstSession = nextWeek === 1;
+                        const sessionBadgeText = isFirstSession
+                          ? `R$ ${(pkgObj?.price || 0).toFixed(2)} (Entrada do Combo)`
+                          : "R$ 0,00 (Já Quitado)";
                         return (
                           <div className="mt-1 bg-white p-2 rounded-xl text-emerald-800 font-extrabold dark:bg-slate-900 border border-emerald-200 flex justify-between items-center">
                             <span>💅 Sessão {nextWeek} de {selectedClientPackage.totalSessions}: {currentItem.serviceName}</span>
-                            <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[10px]">R$ 0,00 (Já Quitado)</span>
+                            <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[10px]">{sessionBadgeText}</span>
                           </div>
                         );
                       }
                     } catch (e) {}
                   }
+                  const isFirst = selectedClientPackage.sessionsUsed === 0;
+                  const pkgPrice = packages.find((p: any) => p.id === selectedClientPackage.packageId)?.price || 0;
                   return (
                     <p className="font-bold text-emerald-800">
-                      💅 Sessão {selectedClientPackage.sessionsUsed + 1} de {selectedClientPackage.totalSessions} (R$ 0,00 - Já Quitado no Pacote)
+                      💅 Sessão {selectedClientPackage.sessionsUsed + 1} de {selectedClientPackage.totalSessions} ({isFirst ? `R$ ${pkgPrice.toFixed(2)} (Entrada do Combo)` : "R$ 0,00 (Já Quitado)"})
                     </p>
                   );
                 })()}

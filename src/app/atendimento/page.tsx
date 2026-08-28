@@ -97,15 +97,19 @@ export default function AtendimentoPage() {
       }
 
       // 2. Lançar recebimento no caixa do dia
+      // Se for atendimento de pacote (já quitado na venda do combo), lançar checkout R$ 0,00 no caixa para não duplicar receita!
+      const isPkgSession = (activeApp.notes || "").includes("Pacote") || (activeApp.notes || "").includes("Combo") || (activeApp.notes || "").includes("Sessão");
+      const checkoutAmount = isPkgSession ? 0.0 : Math.max(0, activeApp.total - discount);
+
       await fetch("/api/cash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "TRANSACTION",
           category: "ATENDIMENTO",
-          amount: Math.max(0, activeApp.total - discount),
+          amount: checkoutAmount,
           paymentMethod,
-          description: `Checkout do atendimento: ${activeApp.clientName}`,
+          description: `Checkout do atendimento: ${activeApp.clientName}${isPkgSession ? " (Sessão de Pacote)" : ""}`,
         }),
       });
 
