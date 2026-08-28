@@ -220,49 +220,8 @@ export async function POST(req: Request) {
         console.error("Erro ao atualizar agendamentos do pacote:", appErr);
       }
 
-      if (finalAmount > 0) {
-        try {
-          const clientObj = await prisma.client.findUnique({ where: { id: clientId } });
-          const selectedDateStr = paymentDate || new Date().toISOString().split("T")[0];
-          const todayStr = new Date().toISOString().split("T")[0];
-
-          // Apenas lançar no caixa aberto se a data de pagamento for a data de hoje (ou se o caixa estiver aberto no dia)
-          if (selectedDateStr === todayStr) {
-            const openCash = await prisma.cashRegister.findFirst({
-              where: { salonId: "default-salon", status: "ABERTO" },
-            });
-
-            if (openCash) {
-              const mappedMethod =
-                paymentMethod === "CREDIT_CARD" ? "CARTAO_CREDITO" :
-                paymentMethod === "DEBIT_CARD" ? "CARTAO_DEBITO" :
-                paymentMethod === "CASH" ? "DINHEIRO" : "PIX";
-
-              await prisma.cashTransaction.create({
-                data: {
-                  cashRegisterId: openCash.id,
-                  salonId: "default-salon",
-                  type: "ENTRADA",
-                  category: "VENDA_PACOTE",
-                  amount: finalAmount,
-                  paymentMethod: mappedMethod,
-                  netAmount: finalAmount,
-                  description: `Venda do Pacote "${targetPackage.name}" para ${clientObj?.name || "Cliente"} (${targetPackage.totalSessions} sessões)`,
-                },
-              });
-
-              await prisma.cashRegister.update({
-                where: { id: openCash.id },
-                data: {
-                  expectedAmount: (openCash.expectedAmount || 0) + finalAmount,
-                },
-              }).catch(() => {});
-            }
-          }
-        } catch (cashErr) {
-          console.error("Erro ao lançar venda de pacote no caixa:", cashErr);
-        }
-      }
+      // O valor integral do pacote (ex: R$ 95,00) será registrado no Caixa via 1ª Sessão na Tela de Atendimento!
+      // Portanto, não criamos uma entrada duplicada de VENDA_PACOTE no caixa aqui.
 
       return NextResponse.json(clientPackage);
     }

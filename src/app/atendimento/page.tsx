@@ -105,28 +105,8 @@ export default function AtendimentoPage() {
         if (notesStr.includes("Sessão 2/") || notesStr.includes("Sessão 3/") || notesStr.includes("Sessão 4/") || notesStr.includes("(R$ 0,00)")) {
           checkoutAmount = 0.0;
         } else {
-          // Se for a 1ª Sessão do Pacote (ex: R$ 95,00), checar se a venda do pacote foi registrada hoje no caixa
-          try {
-            const cashRes = await fetch("/api/cash");
-            if (cashRes.ok) {
-              const cashData = await cashRes.json();
-              const activeTxs = cashData.activeRegister?.transactions || [];
-              const clientNameLower = (activeApp.clientName || "").toLowerCase();
-              
-              const hasPkgSaleToday = activeTxs.some((t: any) => 
-                (t.category === "VENDA_PACOTE" || t.description?.toLowerCase().includes("venda do pacote")) &&
-                t.description?.toLowerCase().includes(clientNameLower)
-              );
-
-              if (hasPkgSaleToday) {
-                // Se a venda do pacote já foi lançada no caixa hoje (pacote vendido hoje para sessão hoje), zerar para não duplicar
-                checkoutAmount = 0.0;
-              } else {
-                // Se o pacote foi vendido previamente para esta data futura (1ª Sessão hoje), lançar o valor integral (R$ 95,00) no caixa HOJE!
-                checkoutAmount = Math.max(0, (activeApp.total || 0) - discount);
-              }
-            }
-          } catch (e) {}
+          // 1ª Sessão do Pacote: registra o valor integral do pacote (ex: R$ 95,00) no Caixa!
+          checkoutAmount = Math.max(0, (activeApp.total || 0) - discount);
         }
       }
 

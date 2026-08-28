@@ -150,6 +150,56 @@ export async function GET() {
       },
     }).catch(() => {});
 
+    // Remover do banco lançamentos obsoletos de venda/checkout zerado da Leila Nevola
+    await prisma.cashTransaction.deleteMany({
+      where: {
+        description: { contains: "Leila Nevola", mode: "insensitive" },
+        category: "VENDA_PACOTE",
+      },
+    }).catch(() => {});
+
+    await prisma.cashTransaction.deleteMany({
+      where: {
+        description: { contains: "Leila Nevola", mode: "insensitive" },
+        amount: 0.0,
+      },
+    }).catch(() => {});
+
+    const salon = await prisma.salon.findFirst().catch(() => null);
+    const defaultOwnerName = salon?.ownerName || "Selma Gloor";
+
+    const rawActive = await prisma.cashRegister.findFirst({
+      where: { salonId: "default-salon", status: "ABERTO" },
+      include: {
+        transactions: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    // Garantir que o atendimento da Leila Nevola (R$ 95,00) esteja registrado no caixa aberto sob a categoria ATENDIMENTO
+    if (rawActive) {
+      const hasLeila95 = (rawActive.transactions || []).some(
+        (t: any) => t.description.toLowerCase().includes("leila") && t.amount === 95.0 && t.category === "ATENDIMENTO"
+      );
+
+      if (!hasLeila95) {
+        await prisma.cashTransaction.create({
+          data: {
+            cashRegisterId: rawActive.id,
+            salonId: "default-salon",
+            type: "ENTRADA",
+            category: "ATENDIMENTO",
+            amount: 95.0,
+            paymentMethod: "PIX",
+            netAmount: 95.0,
+            description: "Checkout do atendimento: Leila Nevola (1ª Sessão do Pacote)",
+            createdAt: new Date("2026-08-28T12:49:00Z"),
+          },
+        }).catch(() => {});
+      }
+    }
+
     // Remover do banco lancamentos equivocados de checkout da Maiara
     await prisma.cashTransaction.deleteMany({
       where: {
@@ -190,18 +240,6 @@ export async function GET() {
         }).catch(() => {});
       }
     }
-
-    const salon = await prisma.salon.findFirst().catch(() => null);
-    const defaultOwnerName = salon?.ownerName || "Selma Gloor";
-
-    const rawActive = await prisma.cashRegister.findFirst({
-      where: { salonId: "default-salon", status: "ABERTO" },
-      include: {
-        transactions: {
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
 
     let activeRegister = null;
     if (rawActive) {
