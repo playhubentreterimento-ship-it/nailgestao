@@ -203,18 +203,37 @@ export async function GET() {
       },
     });
 
-    const activeRegister = rawActive
-      ? {
-          ...rawActive,
-          openedByName:
-            rawActive.openedByUserId &&
-            rawActive.openedByUserId !== "usr-admin" &&
-            rawActive.openedByUserId !== "usr-admin-default"
-              ? rawActive.openedByUserId
-              : defaultOwnerName,
-          transactions: sanitizeTxList(rawActive.transactions),
-        }
-      : null;
+    let activeRegister = null;
+    if (rawActive) {
+      const sanitizedTxs = sanitizeTxList(rawActive.transactions);
+      const totalEntradas = sanitizedTxs
+        .filter((t: any) => t.type === "ENTRADA" || t.type === "SUPRIMENTO")
+        .reduce((acc: number, t: any) => acc + (t.netAmount || t.amount || 0), 0);
+
+      const totalSangrias = sanitizedTxs
+        .filter((t: any) => t.type === "SANGRIA" || t.category === "SANGRIA" || t.category === "DESPESA")
+        .reduce((acc: number, t: any) => acc + (t.amount || 0), 0);
+
+      const calculatedExpected = (rawActive.initialAmount || 0) + totalEntradas - totalSangrias;
+
+      // Atualizar no banco para persistir o saldo esperado correto
+      await prisma.cashRegister.update({
+        where: { id: rawActive.id },
+        data: { expectedAmount: calculatedExpected },
+      }).catch(() => {});
+
+      activeRegister = {
+        ...rawActive,
+        expectedAmount: calculatedExpected,
+        openedByName:
+          rawActive.openedByUserId &&
+          rawActive.openedByUserId !== "usr-admin" &&
+          rawActive.openedByUserId !== "usr-admin-default"
+            ? rawActive.openedByUserId
+            : defaultOwnerName,
+        transactions: sanitizedTxs,
+      };
+    }
 
     const previousRegisters = await prisma.cashRegister.findMany({
       where: { salonId: "default-salon", status: "FECHADO" },

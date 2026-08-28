@@ -250,6 +250,13 @@ export async function POST(req: Request) {
                   description: `Venda do Pacote "${targetPackage.name}" para ${clientObj?.name || "Cliente"} (${targetPackage.totalSessions} sessões)`,
                 },
               });
+
+              await prisma.cashRegister.update({
+                where: { id: openCash.id },
+                data: {
+                  expectedAmount: (openCash.expectedAmount || 0) + finalAmount,
+                },
+              }).catch(() => {});
             }
           }
         } catch (cashErr) {
