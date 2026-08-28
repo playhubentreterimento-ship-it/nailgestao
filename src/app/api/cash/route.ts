@@ -11,8 +11,8 @@ const sanitizeTxList = (txs: any[], isHistory: boolean = false, regDateStr?: str
       const desc = (tx.description || "").toLowerCase();
       const cat = (tx.category || "").toLowerCase();
 
-      // Excluir lancamentos de teste da cliente Teste
-      if (desc.includes("teste")) {
+      // Excluir lancamentos de teste da cliente Teste e Henrique
+      if (desc.includes("teste") || desc.includes("henrique")) {
         return false;
       }
 
@@ -112,19 +112,25 @@ const sanitizeTxList = (txs: any[], isHistory: boolean = false, regDateStr?: str
 
 export async function GET() {
   try {
-    // Buscar IDs de clientes de teste (ex: Teste)
+    // Buscar IDs de clientes de teste (ex: Teste, Henrique)
     const testClients = await prisma.client.findMany({
-      where: { name: { contains: "Teste", mode: "insensitive" } },
+      where: {
+        OR: [
+          { name: { contains: "Teste", mode: "insensitive" } },
+          { name: { contains: "Henrique", mode: "insensitive" } },
+        ],
+      },
       select: { id: true },
     }).catch(() => []);
     const testClientIds = testClients.map((c) => c.id);
 
-    // Remover do banco lançamentos de teste da cliente Teste
+    // Remover do banco lançamentos de teste das contas de teste (Teste, Henrique)
     await prisma.cashTransaction.deleteMany({
       where: {
         OR: [
           { description: { contains: "Teste", mode: "insensitive" } },
           { description: { contains: "cliente teste", mode: "insensitive" } },
+          { description: { contains: "henrique", mode: "insensitive" } },
         ],
       },
     }).catch(() => {});
@@ -133,6 +139,7 @@ export async function GET() {
       where: {
         OR: [
           { notes: { contains: "Teste", mode: "insensitive" } },
+          { notes: { contains: "henrique", mode: "insensitive" } },
           { clientId: { in: testClientIds } },
         ],
       },
