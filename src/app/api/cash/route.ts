@@ -184,27 +184,14 @@ export async function GET() {
       },
     });
 
-    // Garantir que o atendimento da Leila Nevola (R$ 95,00) esteja registrado no caixa aberto sob a categoria ATENDIMENTO
+    // Remover transação fantasma da Leila Nevola do caixa ativo de hoje (31/08/2026)
     if (rawActive) {
-      const hasLeila95 = (rawActive.transactions || []).some(
-        (t: any) => t.description.toLowerCase().includes("leila") && t.amount === 95.0 && t.category === "ATENDIMENTO"
-      );
-
-      if (!hasLeila95) {
-        await prisma.cashTransaction.create({
-          data: {
-            cashRegisterId: rawActive.id,
-            salonId: "default-salon",
-            type: "ENTRADA",
-            category: "ATENDIMENTO",
-            amount: 95.0,
-            paymentMethod: "PIX",
-            netAmount: 95.0,
-            description: "Checkout do atendimento: Leila Nevola (1ª Sessão do Pacote)",
-            createdAt: new Date("2026-08-28T12:49:00Z"),
-          },
-        }).catch(() => {});
-      }
+      await prisma.cashTransaction.deleteMany({
+        where: {
+          cashRegisterId: rawActive.id,
+          description: { contains: "Leila Nevola", mode: "insensitive" },
+        },
+      }).catch(() => {});
     }
 
     // Remover do banco lancamentos equivocados de checkout da Maiara
