@@ -47,20 +47,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: ok });
     }
 
-    // Disparar lembretes para TODOS os agendamentos de amanhã (24h antes)
+    // Disparar lembretes para TODOS os agendamentos de amanhã (ou data selecionada)
     if (action === "SEND_TOMORROW_REMINDERS") {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const year = tomorrow.getFullYear();
-      const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
-      const day = String(tomorrow.getDate()).padStart(2, "0");
-      const tomorrowStr = `${year}-${month}-${day}`;
+      let targetDate = body.date;
+      if (!targetDate) {
+        // Calcular amanhã no fuso horário de Brasília / São Paulo
+        const now = new Date();
+        const brasilTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+        brasilTime.setDate(brasilTime.getDate() + 1);
+        const y = brasilTime.getFullYear();
+        const m = String(brasilTime.getMonth() + 1).padStart(2, "0");
+        const d = String(brasilTime.getDate()).padStart(2, "0");
+        targetDate = `${y}-${m}-${d}`;
+      }
 
+      // Buscar TODOS os agendamentos ativos nesta data
       const tomorrowApps = await prisma.appointment.findMany({
         where: {
           salonId: "default-salon",
-          date: tomorrowStr,
-          status: { in: ["AGENDADO", "AGUARDANDO_CONFIRMACAO"] },
+          date: targetDate,
+          status: { notIn: ["CANCELADO", "CONCLUIDO"] },
         },
       });
 
@@ -72,11 +78,14 @@ export async function POST(req: Request) {
         }
       }
 
+      const formattedDate = targetDate.split("-").reverse().join("/");
+
       return NextResponse.json({
         success: true,
         count: items.length,
         total: tomorrowApps.length,
-        date: tomorrowStr,
+        date: formattedDate,
+        targetDate: targetDate,
         items,
       });
     }

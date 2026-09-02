@@ -20,18 +20,34 @@ export default function WhatsAppHubPage() {
     loadWhatsApp();
   }, []);
 
+  const getTomorrowString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const [reminderTargetDate, setReminderTargetDate] = useState<string>(getTomorrowString());
+
   const handleDispatchReminders = async () => {
-    if (confirm("Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para amanhã?")) {
+    const formattedDateStr = reminderTargetDate.split("-").reverse().join("/");
+    if (confirm(`Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para a data ${formattedDateStr}?`)) {
       const res = await fetch("/api/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "SEND_TOMORROW_REMINDERS" }),
+        body: JSON.stringify({
+          action: "SEND_TOMORROW_REMINDERS",
+          date: reminderTargetDate,
+        }),
       });
       const resData = await res.json();
       if (resData.items && resData.items.length > 0) {
         setReminderResults(resData.items);
+        alert(`✨ ${resData.count} lembrete(s) enviado(s) com sucesso para o dia ${resData.date || formattedDateStr}!`);
       } else {
-        alert(`✨ ${resData.count || 0} lembrete(s) processado(s) para o dia ${resData.date}.`);
+        alert(`ℹ️ Nenhum agendamento ativo localizado para o dia ${resData.date || formattedDateStr}.`);
       }
       loadWhatsApp();
     }
@@ -71,13 +87,23 @@ export default function WhatsAppHubPage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">🗓️ Data:</span>
+            <input
+              type="date"
+              value={reminderTargetDate}
+              onChange={(e) => setReminderTargetDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-900 outline-none dark:text-white"
+            />
+          </div>
+
           <button
             onClick={handleDispatchReminders}
             className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md hover:opacity-95"
           >
             <Send className="h-4 w-4" />
-            <span>📲 Disparar Lembretes de Amanhã (24h)</span>
+            <span>📲 Disparar Lembretes ({reminderTargetDate.split("-").reverse().join("/")})</span>
           </button>
 
           <span className="flex items-center space-x-1.5 rounded-full bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
