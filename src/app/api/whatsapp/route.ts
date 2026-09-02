@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { whatsAppService } from "@/lib/whatsapp/provider";
+import { whatsAppService, formatPhoneWithDDI } from "@/lib/whatsapp/provider";
 
 export async function GET() {
   try {
@@ -61,21 +61,42 @@ export async function POST(req: Request) {
         targetDate = `${y}-${m}-${d}`;
       }
 
-      // Buscar TODOS os agendamentos ativos nesta data
+      // Buscar TODOS os agendamentos ativos nesta data sem restringir por salonId
       const tomorrowApps = await prisma.appointment.findMany({
         where: {
-          salonId: "default-salon",
           date: targetDate,
           status: { notIn: ["CANCELADO", "CONCLUIDO"] },
         },
-      });
+        include: {
+          services: true,
+        },
+      }).catch(() => []);
+
+      const clients = await prisma.client.findMany().catch(() => []);
+      const professionals = await prisma.professional.findMany().catch(() => []);
+      const salon = await prisma.salon.findFirst().catch(() => null);
 
       const items: any[] = [];
       for (const app of tomorrowApps) {
-        const res = await whatsAppService.sendAppointmentReminder(app.id, 24);
-        if (res.success) {
-          items.push(res);
-        }
+        const clientObj = clients.find((c) => c.id === app.clientId);
+        const profObj = professionals.find((p) => p.id === app.professionalId);
+        const clientName = clientObj?.name || "Cliente";
+        const rawPhone = clientObj?.whatsapp || clientObj?.phone || "";
+        const formattedPhone = formatPhoneWithDDI(rawPhone) || "5567999635783";
+
+        const res = await whatsAppService.sendAppointmentReminder(app.id, 24).catch(() => null);
+
+        const serviceNames = app.services?.map((s) => s.serviceName).join(", ") || "Atendimento";
+        const dateFormattedBR = targetDate.split("-").reverse().join("/");
+        const fallbackMsg = `Olá, ${clientName}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Selma Gloor"}.\n\n📅 Data: ${dateFormattedBR}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${profObj?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
+
+        items.push({
+          id: app.id,
+          clientName: res?.clientName || clientName,
+          phone: res?.phone || formattedPhone,
+          whatsappUrl: res?.whatsappUrl || `https://wa.me/${formattedPhone}?text=${encodeURIComponent(fallbackMsg)}`,
+          startTime: app.startTime,
+        });
       }
 
       const formattedDate = targetDate.split("-").reverse().join("/");
