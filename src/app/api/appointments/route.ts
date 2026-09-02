@@ -249,6 +249,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Dados incompletos para criação de agendamento." }, { status: 400 });
     }
 
+    // Trava de Feriado / Salão Fechado (blockedDates)
+    try {
+      const salon = await prisma.salon.findFirst().catch(() => null);
+      if (salon?.blockedDates) {
+        let blockedList: any[] = [];
+        try {
+          blockedList = typeof salon.blockedDates === "string" ? JSON.parse(salon.blockedDates) : salon.blockedDates;
+        } catch (e) {}
+
+        const isBlocked = blockedList.some((item: any) => {
+          if (typeof item === "string") return item === date;
+          return item?.date === date;
+        });
+
+        if (isBlocked) {
+          const blockedObj = blockedList.find((item: any) => (typeof item === "string" ? item === date : item?.date === date));
+          const reason = typeof blockedObj === "object" && blockedObj?.reason ? blockedObj.reason : "Feriado / Salão Fechado";
+          return NextResponse.json(
+            { error: `🛑 O Salão estará FECHADO no dia ${date} (${reason}). Não é possível realizar agendamentos nesta data.` },
+            { status: 400 }
+          );
+        }
+      }
+    } catch (e) {}
+
     let services = await prisma.service.findMany({
       where: { id: { in: serviceIds } },
     });

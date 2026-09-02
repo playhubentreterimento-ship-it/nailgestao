@@ -76,9 +76,31 @@ export default function AgendarPublicPage() {
     );
   };
 
+  const getBlockedDateInfo = (dateStr: string) => {
+    if (!salon?.blockedDates) return null;
+    let blockedList: any[] = [];
+    try {
+      blockedList = typeof salon.blockedDates === "string" ? JSON.parse(salon.blockedDates) : salon.blockedDates;
+    } catch (e) {}
+
+    const found = blockedList.find((item: any) => {
+      if (typeof item === "string") return item === dateStr;
+      return item?.date === dateStr;
+    });
+
+    if (!found) return null;
+    return typeof found === "string" ? { date: found, reason: "Salão Fechado / Feriado" } : { date: found.date, reason: found.reason || "Salão Fechado / Feriado" };
+  };
+
   // Verificar se o slot (e sua duração) está 100% livre sem sobreposição
   const isSlotAvailable = (slot: string) => {
     if (!selectedProf) return true;
+
+    // 0. Feriado ou Dia Bloqueado pela Administração
+    if (getBlockedDateInfo(selectedDate)) {
+      return false;
+    }
+
     const duration = selectedService?.durationMinutes || 60;
     const slotStart = timeToMins(slot);
     const slotEnd = slotStart + duration;
@@ -337,6 +359,21 @@ export default function AgendarPublicPage() {
                 className="w-full rounded-2xl border border-slate-200 p-3 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
+
+            {getBlockedDateInfo(selectedDate) && (
+              <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/60 space-y-1.5 shadow-sm">
+                <div className="flex items-center space-x-2 font-serif text-sm font-extrabold text-rose-900 dark:text-rose-200">
+                  <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+                  <span>🚫 SALÃO FECHADO / INDISPONÍVEL NESTE DIA</span>
+                </div>
+                <p className="text-xs text-rose-800 dark:text-rose-300 font-semibold">
+                  O salão não realizará atendimentos em <strong>{selectedDate.split("-").reverse().join("/")}</strong> ({getBlockedDateInfo(selectedDate)?.reason}).
+                </p>
+                <p className="text-[11px] text-rose-700 dark:text-rose-400 font-medium">
+                  💡 Por favor, selecione outra data livre no campo acima para agendar seu atendimento.
+                </p>
+              </div>
+            )}
 
             <div>
               <div className="flex justify-between items-center mb-2">

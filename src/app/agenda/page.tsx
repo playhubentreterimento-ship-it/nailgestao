@@ -188,6 +188,9 @@ export default function AgendaPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
+  // Feriados & Datas Bloqueadas para Agendamento Online
+  const [blockedDates, setBlockedDates] = useState<any[]>([]);
+
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
   const [modalClientSearch, setModalClientSearch] = useState("");
@@ -335,6 +338,87 @@ export default function AgendaPage() {
       setClientPackages(res.clientPackages || []);
       setPackages(res.packages || []);
     }).catch(() => {});
+    fetch("/api/settings").then((r) => r.json()).then((res) => {
+      let list: any[] = [];
+      if (res?.blockedDates) {
+        try {
+          list = typeof res.blockedDates === "string" ? JSON.parse(res.blockedDates) : res.blockedDates;
+        } catch (e) {}
+      }
+      setBlockedDates(Array.isArray(list) ? list : []);
+    }).catch(() => {});
+  };
+
+  const isCurrentDateBlocked = () => {
+    return blockedDates.some((item: any) => {
+      if (typeof item === "string") return item === selectedDate;
+      return item?.date === selectedDate;
+    });
+  };
+
+  const getCurrentDateBlockedReason = () => {
+    const found = blockedDates.find((item: any) => {
+      if (typeof item === "string") return item === selectedDate;
+      return item?.date === selectedDate;
+    });
+    if (!found) return "";
+    return typeof found === "string" ? "Feriado / Salão Fechado" : (found.reason || "Feriado / Salão Fechado");
+  };
+
+  const handleToggleDateBlock = async () => {
+    const isBlocked = isCurrentDateBlocked();
+    const dateFormatted = selectedDate.split("-").reverse().join("/");
+
+    if (isBlocked) {
+      if (confirm(`🔓 Desbloquear agendamentos online dos clientes para o dia ${dateFormatted}?\n\nOs clientes poderão agendar horários normalmente nesta data.`)) {
+        const updatedList = blockedDates.filter((item: any) => {
+          if (typeof item === "string") return item !== selectedDate;
+          return item?.date !== selectedDate;
+        });
+
+        const res = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blockedDates: JSON.stringify(updatedList) }),
+        });
+
+        if (res.ok) {
+          setBlockedDates(updatedList);
+          alert(`✨ Dia ${dateFormatted} DESBLOQUEADO com sucesso!\n\nA agenda online está liberada para agendamentos de clientes nesta data.`);
+          refreshAllData();
+        } else {
+          alert("Erro ao desbloquear data.");
+        }
+      }
+    } else {
+      const reasonInput = prompt(
+        `🔒 Bloquear agendamentos online dos clientes no dia ${dateFormatted}?\n\nExemplo: "Feriado de 7 de Setembro", "Salão Fechado para Treinamento", "Manutenção".\n\nDigite o motivo do fechamento:`,
+        "Feriado / Salão Fechado"
+      );
+
+      if (reasonInput !== null) {
+        const reasonStr = reasonInput.trim() || "Feriado / Salão Fechado";
+        const newItem = { date: selectedDate, reason: reasonStr };
+        const updatedList = [...blockedDates.filter((item: any) => {
+          if (typeof item === "string") return item !== selectedDate;
+          return item?.date !== selectedDate;
+        }), newItem];
+
+        const res = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blockedDates: JSON.stringify(updatedList) }),
+        });
+
+        if (res.ok) {
+          setBlockedDates(updatedList);
+          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"\nClientes que acessarem a agenda online verão a aviso de Salão Fechado nesta data.`);
+          refreshAllData();
+        } else {
+          alert("Erro ao bloquear data.");
+        }
+      }
+    }
   };
 
   const refreshAllData = () => {
@@ -649,6 +733,25 @@ export default function AgendaPage() {
           );
         })()}
 
+        {/* Botão de Bloquear Dia / Feriado / Fechamento */}
+        {(() => {
+          const isBlocked = isCurrentDateBlocked();
+          return (
+            <button
+              onClick={handleToggleDateBlock}
+              className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition shadow-sm ${
+                isBlocked
+                  ? "bg-rose-600 text-white hover:bg-rose-700 border-2 border-rose-300 shadow-rose-200"
+                  : "bg-slate-800 text-rose-200 border-2 border-rose-400 hover:bg-slate-700"
+              }`}
+              title="Bloquear ou desativar agendamentos online nesta data (Ex: Feriado de 7 de Setembro / Salão Fechado)."
+            >
+              <Lock className="h-3.5 w-3.5 text-amber-300" />
+              <span>{isBlocked ? `🔓 Desbloquear Dia (${selectedDate.split("-").reverse().join("/")})` : `🔒 Bloquear Dia / Feriado (${selectedDate.split("-").reverse().join("/")})`}</span>
+            </button>
+          );
+        })()}
+
         <button
           onClick={() => handleOpenModal()}
           className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
@@ -884,6 +987,18 @@ export default function AgendaPage() {
               {appointments.length} agendamentos na grade
             </span>
           </div>
+
+          {isCurrentDateBlocked() && (
+            <div className="mb-4 rounded-2xl border-2 border-rose-400 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/60 shadow-sm space-y-1">
+              <div className="flex items-center space-x-2 font-serif text-sm font-extrabold text-rose-900 dark:text-rose-200">
+                <Lock className="h-5 w-5 text-rose-600 shrink-0" />
+                <span>🚫 DIA BLOQUEADO PARA AGENDAMENTOS ONLINE ({getCurrentDateBlockedReason()})</span>
+              </div>
+              <p className="text-xs text-rose-800 dark:text-rose-300 font-semibold">
+                Esta data está desativada no link de agendamentos dos clientes. A mensagem exibida para os clientes será de Salão Fechado / Feriado.
+              </p>
+            </div>
+          )}
 
           {/* Linha do Tempo Visual */}
           <div className="space-y-3">

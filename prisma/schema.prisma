@@ -32,6 +32,7 @@ model Salon {
   defaultDepositAmount  Float    @default(50.0)
   creditFeePercent      Float    @default(2.99)
   debitFeePercent       Float    @default(1.49)
+  blockedDates          String?  @default("[]")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

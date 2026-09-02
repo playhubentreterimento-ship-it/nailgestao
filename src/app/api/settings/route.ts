@@ -63,6 +63,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
+      blockedDates: "[]",
     };
 
     return NextResponse.json({
@@ -72,6 +73,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
+      blockedDates: salon?.blockedDates || "[]",
       activeWhatsApp: activeWhatsApp || "5567999635783",
       adminEmail: adminUser?.email || "sfgloorwms078@gmail.com",
     });
@@ -90,6 +92,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
+      blockedDates: "[]",
       adminEmail: "sfgloorwms078@gmail.com",
     });
   }
@@ -118,6 +121,7 @@ export async function PUT(req: Request) {
       ...(body.creditFeePercent !== undefined ? { creditFeePercent: Number(body.creditFeePercent) } : {}),
       ...(body.debitFeePercent !== undefined ? { debitFeePercent: Number(body.debitFeePercent) } : {}),
       ...(body.defaultDepositAmount !== undefined ? { defaultDepositAmount: Number(body.defaultDepositAmount) } : {}),
+      ...(body.blockedDates !== undefined ? { blockedDates: typeof body.blockedDates === "string" ? body.blockedDates : JSON.stringify(body.blockedDates) } : {}),
     };
 
     if (body.ownerName !== undefined) {
