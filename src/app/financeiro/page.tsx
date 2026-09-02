@@ -275,7 +275,9 @@ export default function FinanceiroPage() {
                 <tr key={exp.id}>
                   <td className="px-4 py-3 font-semibold">{exp.dueDate}</td>
                   <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{exp.name}</td>
-                  <td className="px-4 py-3">{exp.category}</td>
+                  <td className="px-4 py-3 font-semibold text-rose-600 dark:text-rose-400">
+                    {exp.category === "AGUA" ? "Água" : exp.category === "MERCADO" ? "Mercado" : exp.category === "ALUGUEL" ? "Aluguel" : exp.category === "ENERGIA" ? "Energia" : exp.category === "PRODUTOS" ? "Produtos" : exp.category === "INTERNET" ? "Internet" : exp.category}
+                  </td>
                   <td className="px-4 py-3 font-bold">R$ {exp.amount?.toFixed(2)}</td>
                   <td className="px-4 py-3">{exp.isRecurring ? "Sim (Mensal)" : "Não"}</td>
                   <td className="px-4 py-3">
@@ -325,8 +327,9 @@ export default function FinanceiroPage() {
                   <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} className="mt-1 w-full rounded-xl border p-2.5 dark:bg-slate-800">
                     <option value="ALUGUEL">Aluguel</option>
                     <option value="ENERGIA">Energia</option>
+                    <option value="AGUA">Água</option>
+                    <option value="MERCADO">Mercado</option>
                     <option value="PRODUTOS">Produtos</option>
-                    <option value="MARKETING">Marketing</option>
                     <option value="INTERNET">Internet</option>
                   </select>
                 </div>
