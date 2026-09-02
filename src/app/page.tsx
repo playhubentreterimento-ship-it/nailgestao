@@ -193,7 +193,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="mt-2 font-serif text-2xl font-bold text-slate-900 dark:text-white">
-              R$ {month?.totalRevenue?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {(month?.totalRevenue ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
             <p className="mt-1 text-[11px] font-medium text-emerald-600">+18% em relação ao mês anterior</p>
           </div>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="mt-2 font-serif text-2xl font-bold text-slate-900 dark:text-white">
-              R$ {month?.estimatedProfit?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {(month?.estimatedProfit ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
             <p className="mt-1 text-[11px] font-medium text-slate-500">Margem líquida de ~58%</p>
           </div>
@@ -218,8 +218,8 @@ export default function DashboardPage() {
                 <Sparkles className="h-5 w-5" />
               </div>
             </div>
-            <p className="mt-2 font-serif text-2xl font-bold text-slate-900 dark:text-white">{month?.totalAttendances}</p>
-            <p className="mt-1 text-[11px] font-medium text-slate-500">Ticket Médio: R$ {month?.averageTicket?.toFixed(2)}</p>
+            <p className="mt-2 font-serif text-2xl font-bold text-slate-900 dark:text-white">{month?.totalAttendances ?? 0}</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-500">Ticket Médio: R$ {(month?.averageTicket ?? 0).toFixed(2)}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -230,7 +230,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="mt-2 font-serif text-2xl font-bold text-slate-900 dark:text-white">
-              {month?.newClients} / {month?.recurringClients}
+              {month?.newClients ?? 0} / {month?.recurringClients ?? 0}
             </p>
             <p className="mt-1 text-[11px] font-medium text-purple-600">Taxa de retorno: 81%</p>
           </div>
