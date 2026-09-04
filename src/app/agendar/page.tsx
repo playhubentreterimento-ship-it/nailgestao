@@ -76,6 +76,20 @@ export default function AgendarPublicPage() {
     );
   };
 
+  const normalizeDateStr = (d: string) => {
+    if (!d) return "";
+    const s = String(d).trim();
+    if (s.includes("/")) {
+      const parts = s.split("/");
+      if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    if (s.includes("-")) {
+      const parts = s.split("-");
+      if (parts.length === 3) return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+    }
+    return s;
+  };
+
   const getBlockedDateInfo = (dateStr: string) => {
     if (!salon?.blockedDates) return null;
     let blockedList: any[] = [];
@@ -83,9 +97,13 @@ export default function AgendarPublicPage() {
       blockedList = typeof salon.blockedDates === "string" ? JSON.parse(salon.blockedDates) : salon.blockedDates;
     } catch (e) {}
 
+    if (!Array.isArray(blockedList)) return null;
+
+    const targetNorm = normalizeDateStr(dateStr);
+
     const found = blockedList.find((item: any) => {
-      if (typeof item === "string") return item === dateStr;
-      return item?.date === dateStr;
+      const itemRaw = typeof item === "string" ? item : item?.date;
+      return normalizeDateStr(itemRaw) === targetNorm;
     });
 
     if (!found) return null;
@@ -384,6 +402,17 @@ export default function AgendarPublicPage() {
               </div>
 
               {(() => {
+                const blockedInfo = getBlockedDateInfo(selectedDate);
+                if (blockedInfo) {
+                  return (
+                    <div className="rounded-2xl bg-rose-50 p-5 text-center text-xs font-bold text-rose-900 border border-rose-200 dark:bg-rose-950/60 dark:border-rose-800 dark:text-rose-200 shadow-sm space-y-1">
+                      <div className="text-base">🚫 SALÃO FECHADO</div>
+                      <div>O salão não realizará atendimentos em {selectedDate.split("-").reverse().join("/")} ({blockedInfo.reason}).</div>
+                      <div className="text-[11px] text-rose-700 dark:text-rose-400 font-medium">Por favor, escolha uma data disponível no calendário acima.</div>
+                    </div>
+                  );
+                }
+
                 const dayOfWeek = getDayOfWeek(selectedDate);
 
                 if (dayOfWeek === 0) {

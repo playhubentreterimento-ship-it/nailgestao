@@ -32,6 +32,20 @@ export async function GET() {
       where: { role: "ADMINISTRADOR" },
     }).catch(() => null);
 
+    // Buscar blockedDates da tabela AutomationSetting (100% persistente no Postgres)
+    let dbBlockedDates = memoryBlockedDates || "[]";
+    try {
+      const autoSetting = await prisma.automationSetting.findUnique({
+        where: { key: "BLOCKED_DATES" },
+      }).catch(() => null);
+      if (autoSetting?.params) {
+        dbBlockedDates = autoSetting.params;
+        memoryBlockedDates = dbBlockedDates;
+      } else if (salon?.blockedDates && salon.blockedDates !== "[]") {
+        dbBlockedDates = salon.blockedDates;
+      }
+    } catch (e) {}
+
     let realPhone = "";
 
     // 1. Tentar WhatsApp do salão se não for número de teste
@@ -65,7 +79,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
-      blockedDates: memoryBlockedDates,
+      blockedDates: dbBlockedDates,
     };
 
     return NextResponse.json({
@@ -75,7 +89,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
-      blockedDates: salon?.blockedDates || memoryBlockedDates || "[]",
+      blockedDates: dbBlockedDates,
       activeWhatsApp: activeWhatsApp || "5567999635783",
       adminEmail: adminUser?.email || "sfgloorwms078@gmail.com",
     });
@@ -111,6 +125,19 @@ export async function PUT(req: Request) {
     if (body.blockedDates !== undefined) {
       const bStr = typeof body.blockedDates === "string" ? body.blockedDates : JSON.stringify(body.blockedDates);
       memoryBlockedDates = bStr;
+
+      // Persistir de forma garantida na tabela AutomationSetting do PostgreSQL
+      try {
+        await prisma.automationSetting.upsert({
+          where: { key: "BLOCKED_DATES" },
+          update: { params: bStr },
+          create: {
+            salonId: "default-salon",
+            key: "BLOCKED_DATES",
+            params: bStr,
+          },
+        }).catch(() => null);
+      } catch (e) {}
     }
 
     const updateData: any = {
