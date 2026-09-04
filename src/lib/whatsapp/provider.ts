@@ -87,9 +87,9 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
     });
     if (!app) return { success: false };
 
-    const client = await prisma.client.findUnique({ where: { id: app.clientId } });
-    const prof = await prisma.professional.findUnique({ where: { id: app.professionalId } });
-    const salon = await prisma.salon.findUnique({ where: { id: app.salonId } });
+    const client = await prisma.client.findUnique({ where: { id: app.clientId } }).catch(() => null);
+    const prof = await prisma.professional.findUnique({ where: { id: app.professionalId } }).catch(() => null);
+    const salon = await prisma.salon.findFirst({ select: { name: true } }).catch(() => null);
 
     if (!client || client.optOutWhatsApp) return { success: false };
 
@@ -105,7 +105,7 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
       }
     }
 
-    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Luxe"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
+    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Selma Gloor"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
 
     const sendRes = await this.sendMessage({
       to: formattedPhone,
@@ -120,7 +120,7 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
     await prisma.appointment.update({
       where: { id: appointmentId },
       data: { confirmationSentAt: new Date() },
-    });
+    }).catch(() => {});
 
     return {
       success: true,

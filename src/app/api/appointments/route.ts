@@ -251,7 +251,7 @@ export async function POST(req: Request) {
 
     // Trava de Feriado / Salão Fechado (blockedDates)
     try {
-      const salon = await prisma.salon.findFirst().catch(() => null);
+      const salon = await prisma.salon.findFirst({ select: { blockedDates: true } }).catch(() => null);
       if (salon?.blockedDates) {
         let blockedList: any[] = [];
         try {
@@ -473,7 +473,11 @@ export async function POST(req: Request) {
     });
 
     // Disparar lembrete/confirmação automática via WhatsApp
-    await whatsAppService.sendConfirmationRequest(appointment.id);
+    try {
+      await whatsAppService.sendConfirmationRequest(appointment.id);
+    } catch (waErr) {
+      console.warn("Aviso ao enviar confirmação de agendamento via WhatsApp:", waErr);
+    }
 
     // Disparar notificação OS Web Push VAPID para os celulares cadastrados (Funciona 24h mesmo com celular bloqueado)
     try {
