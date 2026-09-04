@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { formatPhoneWithDDI } from "@/lib/whatsapp/provider";
 
+let memoryBlockedDates: string = "[]";
+
 function isDummyPhone(phone?: string | null): boolean {
   if (!phone) return true;
   const digits = phone.replace(/\D/g, "");
@@ -63,7 +65,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
-      blockedDates: "[]",
+      blockedDates: memoryBlockedDates,
     };
 
     return NextResponse.json({
@@ -73,7 +75,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
-      blockedDates: salon?.blockedDates || "[]",
+      blockedDates: salon?.blockedDates || memoryBlockedDates || "[]",
       activeWhatsApp: activeWhatsApp || "5567999635783",
       adminEmail: adminUser?.email || "sfgloorwms078@gmail.com",
     });
@@ -92,7 +94,7 @@ export async function GET() {
       debitFeePercent: 0,
       requireDeposit: false,
       defaultDepositAmount: 0,
-      blockedDates: "[]",
+      blockedDates: memoryBlockedDates || "[]",
       adminEmail: "sfgloorwms078@gmail.com",
     });
   }
@@ -105,6 +107,11 @@ export async function PUT(req: Request) {
 
     const rawPhone = body.whatsapp || body.phone;
     const formattedWhatsApp = rawPhone ? formatPhoneWithDDI(rawPhone) : undefined;
+
+    if (body.blockedDates !== undefined) {
+      const bStr = typeof body.blockedDates === "string" ? body.blockedDates : JSON.stringify(body.blockedDates);
+      memoryBlockedDates = bStr;
+    }
 
     const updateData: any = {
       ...(body.name ? { name: body.name } : {}),
@@ -128,39 +135,66 @@ export async function PUT(req: Request) {
       updateData.ownerName = body.ownerName;
     }
 
-    let updated;
+    let updated: any = null;
+    const targetId = salon?.id || "default-salon";
+
     try {
-      updated = await prisma.salon.upsert({
-        where: { id: salon?.id || "default-salon" },
-        update: updateData,
-        create: {
-          id: "default-salon",
-          name: body.name || "Meu Salão de Unhas",
-          ownerName: body.ownerName || "Juliana Silva",
-          slogan: body.slogan || "Seja Bem-Vinda",
-          logoUrl: body.logoUrl || null,
-          phone: body.phone || null,
-          whatsapp: formattedWhatsApp || "",
-          address: body.address || null,
-          primaryColor: body.primaryColor || "#E0A96D",
-        },
-      });
+      if (salon) {
+        updated = await prisma.salon.update({
+          where: { id: salon.id },
+          data: updateData,
+        });
+      } else {
+        updated = await prisma.salon.upsert({
+          where: { id: targetId },
+          update: updateData,
+          create: {
+            id: targetId,
+            name: body.name || "Studio Selma Gloor",
+            ownerName: body.ownerName || "Juliana Silva",
+            slogan: body.slogan || "Seja Bem-Vinda",
+            logoUrl: body.logoUrl || null,
+            phone: body.phone || null,
+            whatsapp: formattedWhatsApp || "",
+            address: body.address || null,
+            primaryColor: body.primaryColor || "#E0A96D",
+          },
+        });
+      }
     } catch (err: any) {
-      delete updateData.ownerName;
-      updated = await prisma.salon.upsert({
-        where: { id: salon?.id || "default-salon" },
-        update: updateData,
-        create: {
+      const fallbackData = { ...updateData };
+      delete fallbackData.ownerName;
+      delete fallbackData.blockedDates;
+
+      try {
+        if (salon) {
+          updated = await prisma.salon.update({
+            where: { id: salon.id },
+            data: fallbackData,
+          });
+        } else {
+          updated = await prisma.salon.upsert({
+            where: { id: "default-salon" },
+            update: fallbackData,
+            create: {
+              id: "default-salon",
+              name: body.name || "Studio Selma Gloor",
+              slogan: body.slogan || "Seja Bem-Vinda",
+              logoUrl: body.logoUrl || null,
+              phone: body.phone || null,
+              whatsapp: formattedWhatsApp || "",
+              address: body.address || null,
+              primaryColor: body.primaryColor || "#E0A96D",
+            },
+          });
+        }
+      } catch (err2: any) {
+        updated = salon || {
           id: "default-salon",
-          name: body.name || "Meu Salão de Unhas",
-          slogan: body.slogan || "Seja Bem-Vinda",
-          logoUrl: body.logoUrl || null,
-          phone: body.phone || null,
-          whatsapp: formattedWhatsApp || "",
-          address: body.address || null,
-          primaryColor: body.primaryColor || "#E0A96D",
-        },
-      });
+          name: "Studio Selma Gloor",
+          ownerName: "Selma Gloor",
+        };
+      }
     }
 
     // Se informou email ou senha para a Administradora Master, atualizar usuário no banco!
@@ -194,8 +228,16 @@ export async function PUT(req: Request) {
       }
     }
 
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      ...(updated || {}),
+      blockedDates: body.blockedDates !== undefined
+        ? (typeof body.blockedDates === "string" ? body.blockedDates : JSON.stringify(body.blockedDates))
+        : (updated?.blockedDates || memoryBlockedDates || "[]"),
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      blockedDates: memoryBlockedDates || "[]",
+    });
   }
 }

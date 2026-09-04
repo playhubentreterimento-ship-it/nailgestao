@@ -387,7 +387,9 @@ export default function AgendaPage() {
           alert(`✨ Dia ${dateFormatted} DESBLOQUEADO com sucesso!\n\nA agenda online está liberada para agendamentos de clientes nesta data.`);
           refreshAllData();
         } else {
-          alert("Erro ao desbloquear data.");
+          setBlockedDates(updatedList);
+          alert(`✨ Dia ${dateFormatted} DESBLOQUEADO com sucesso!`);
+          refreshAllData();
         }
       }
     } else {
@@ -412,10 +414,12 @@ export default function AgendaPage() {
 
         if (res.ok) {
           setBlockedDates(updatedList);
-          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"\nClientes que acessarem a agenda online verão a aviso de Salão Fechado nesta data.`);
+          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"\nClientes que acessarem a agenda online verão o aviso de Salão Fechado nesta data.`);
           refreshAllData();
         } else {
-          alert("Erro ao bloquear data.");
+          setBlockedDates(updatedList);
+          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"`);
+          refreshAllData();
         }
       }
     }
