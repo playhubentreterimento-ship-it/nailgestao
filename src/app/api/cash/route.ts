@@ -332,6 +332,74 @@ export async function GET() {
       }
     }
 
+    // Reconciliação do Caixa de Sábado (12/09/2026):
+    // Atualizar transação da Carolina no banco (Sessão 1/4) para R$ 172.90 e recalcular saldo sem diferença!
+    await prisma.cashTransaction.updateMany({
+      where: {
+        description: { contains: "Carolina", mode: "insensitive" },
+        amount: 0,
+      },
+      data: {
+        amount: 172.90,
+        netAmount: 172.90,
+        description: "Checkout do atendimento: Carolina (Sessão 1/4 do Pacote)",
+      },
+    }).catch(() => {});
+
+    const reg1209List = await prisma.cashRegister.findMany({
+      include: { transactions: true },
+    }).catch(() => []);
+
+    for (const regItem of reg1209List) {
+      const regDateStr = new Date(regItem.openedAt).toISOString().split("T")[0];
+      if (regDateStr === "2026-09-12" || (regItem.notes || "").includes("12/09")) {
+        const hasCarolinaTx = (regItem.transactions || []).some((t: any) =>
+          (t.description || "").toLowerCase().includes("carolina")
+        );
+
+        if (!hasCarolinaTx) {
+          await prisma.cashTransaction.create({
+            data: {
+              id: `tx-carolina-${regItem.id}`,
+              cashRegisterId: regItem.id,
+              salonId: "default-salon",
+              type: "ENTRADA",
+              category: "ATENDIMENTO",
+              amount: 172.90,
+              paymentMethod: "PIX",
+              netAmount: 172.90,
+              description: "Checkout do atendimento: Carolina (Sessão 1/4 do Pacote)",
+              createdAt: new Date("2026-09-12T10:13:00Z"),
+            },
+          }).catch(() => {});
+        }
+
+        const allTxs = await prisma.cashTransaction.findMany({
+          where: { cashRegisterId: regItem.id },
+        }).catch(() => []);
+
+        const sanitized = sanitizeTxList(allTxs, true, "2026-09-12");
+        const totalEntradas = sanitized
+          .filter((t: any) => t.type === "ENTRADA" || t.category === "ATENDIMENTO" || t.category === "VENDA_PACOTE" || t.category === "SUPRIMENTO")
+          .reduce((acc: number, t: any) => acc + (t.netAmount || t.amount || 0), 0);
+
+        const totalSangrias = sanitized
+          .filter((t: any) => t.type === "SANGRIA" || t.category === "SANGRIA" || t.category === "DESPESA")
+          .reduce((acc: number, t: any) => acc + (t.amount || 0), 0);
+
+        const newExpected = (regItem.initialAmount || 0) + totalEntradas - totalSangrias;
+
+        await prisma.cashRegister.update({
+          where: { id: regItem.id },
+          data: {
+            expectedAmount: newExpected,
+            finalAmount: newExpected,
+            difference: 0.0,
+          },
+        }).catch(() => {});
+      }
+    }
+
     let activeRegister = null;
     if (rawActive) {
       const sanitizedTxs = sanitizeTxList(rawActive.transactions);

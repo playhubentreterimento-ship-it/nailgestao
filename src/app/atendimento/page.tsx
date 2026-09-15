@@ -97,17 +97,23 @@ export default function AtendimentoPage() {
       }
 
       // 2. Lançar recebimento no caixa do dia
-      let checkoutAmount = Math.max(0, (activeApp.total || 0) - discount);
-      const isPkgSession = (activeApp.notes || "").includes("Pacote") || (activeApp.notes || "").includes("Combo") || (activeApp.notes || "").includes("Sessão");
+      const servicesTotal = activeApp.services && Array.isArray(activeApp.services) && activeApp.services.length > 0
+        ? activeApp.services.reduce((acc: number, s: any) => acc + Number(s.price || 0), 0)
+        : 0;
 
-      if (isPkgSession) {
-        const notesStr = activeApp.notes || "";
-        if (notesStr.includes("Sessão 2/") || notesStr.includes("Sessão 3/") || notesStr.includes("Sessão 4/") || notesStr.includes("(R$ 0,00)")) {
-          checkoutAmount = 0.0;
-        } else {
-          // 1ª Sessão do Pacote: registra o valor integral do pacote (ex: R$ 95,00) no Caixa!
-          checkoutAmount = Math.max(0, (activeApp.total || 0) - discount);
-        }
+      const fullPrice = activeApp.total && Number(activeApp.total) > 0 ? Number(activeApp.total) : servicesTotal;
+
+      let checkoutAmount = Math.max(0, fullPrice - discount);
+      const notesStr = activeApp.notes || "";
+      const isPkgSession = notesStr.includes("Pacote") || notesStr.includes("Combo") || notesStr.includes("Sessão");
+      const isLaterSession = notesStr.includes("Sessão 2/") ||
+                             notesStr.includes("Sessão 3/") ||
+                             notesStr.includes("Sessão 4/") ||
+                             notesStr.includes("Sessão 5/") ||
+                             notesStr.includes("(R$ 0,00)");
+
+      if (isLaterSession) {
+        checkoutAmount = 0.0;
       }
 
       await fetch("/api/cash", {
