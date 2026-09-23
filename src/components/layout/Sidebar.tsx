@@ -21,6 +21,7 @@ import {
   FileText,
   Lightbulb,
   ShieldCheck,
+  Crown,
   Settings,
 } from "lucide-react";
 import { applyPrimaryColor } from "@/lib/theme";
@@ -52,15 +53,13 @@ export function Sidebar({ userRole }: SidebarProps) {
     return () => window.removeEventListener("salon-settings-updated", handleSettingsUpdate);
   }, []);
 
-  const isReception = userRole === "RECEPÇÃO" || userRole === "RECEPCAO";
-  const isProfessional = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
-  const isCollaborator = isReception || isProfessional;
+  const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
 
   const adminMenuGroups = [
     {
       title: "PRINCIPAL",
       items: [
-        { href: "/", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/agenda", label: "Agenda Visual", icon: Calendar },
         { href: "/clientes", label: "Clientes & CRM", icon: Users },
         { href: "/atendimento", label: "Tela de Atendimento", icon: PlayCircle },
@@ -97,36 +96,24 @@ export function Sidebar({ userRole }: SidebarProps) {
         { href: "/relatorios", label: "Relatórios Executivos", icon: FileText },
         { href: "/insights", label: "Insights de IA", icon: Lightbulb },
         { href: "/auditoria", label: "Logs de Auditoria", icon: ShieldCheck },
+        { href: "/assinatura", label: "Minha Assinatura", icon: Crown },
+        { href: "/planos", label: "Planos & Preços", icon: Sparkles },
         { href: "/configuracoes", label: "Configurações", icon: Settings },
       ],
     },
   ];
 
-  const receptionMenuGroups = [
+  const collaboratorMenuGroups = [
     {
-      title: "PAINEL DA RECEPÇÃO",
-      items: [
-        { href: "/agenda", label: "Agenda Visual", icon: Calendar },
-      ],
-    },
-  ];
-
-  const professionalMenuGroups = [
-    {
-      title: "PAINEL DA PROFISSIONAL",
+      title: "PAINEL DA COLABORADORA",
       items: [
         { href: "/agenda", label: "Agenda Visual", icon: Calendar },
         { href: "/caixa", label: "Caixa do Dia", icon: Receipt },
-        { href: "/atendimento", label: "Tela de Atendimento", icon: PlayCircle },
       ],
     },
   ];
 
-  const menuGroups = isReception
-    ? receptionMenuGroups
-    : isProfessional
-    ? professionalMenuGroups
-    : adminMenuGroups;
+  const menuGroups = isCollaborator ? collaboratorMenuGroups : adminMenuGroups;
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-rose-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-md dark:border-rose-900/50 dark:bg-[#20121C] md:flex">

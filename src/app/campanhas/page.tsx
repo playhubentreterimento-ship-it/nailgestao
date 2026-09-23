@@ -10,10 +10,14 @@ export default function CampanhasPage() {
   const [sentCount, setSentCount] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/clients").then((r) => r.json()).then(setClients);
+    fetch("/api/clients")
+      .then((r) => r.json())
+      .then((data) => setClients(Array.isArray(data) ? data : []))
+      .catch(() => setClients([]));
   }, []);
 
-  const filteredClients = clients.filter((c) => {
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const filteredClients = safeClients.filter((c) => {
     if (c.optOutWhatsApp) return false; // LGPD compliance: Respeita Opt-Out
     if (segment === "ALL") return true;
     if (segment === "VIP") return c.tag === "VIP";

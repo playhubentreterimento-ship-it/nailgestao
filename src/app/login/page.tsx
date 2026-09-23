@@ -38,7 +38,7 @@ export default function LoginPage() {
       if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
         router.push("/agenda");
       } else {
-        router.push("/");
+        router.push("/dashboard");
       }
     } else {
       const err = await res.json();
@@ -58,7 +58,7 @@ export default function LoginPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 via-rose-400 to-amber-600 text-3xl shadow-xl">
             💅
           </div>
-          <h1 className="mt-3 font-serif text-2xl font-bold text-white">NAILGESTÃO Pro</h1>
+          <h1 className="mt-3 font-serif text-2xl font-bold text-white">NAILGESTÃO PRO 1.1</h1>
           <p className="text-xs text-rose-300">Sistema Profissional de Gestão & Agendamentos</p>
         </div>
 

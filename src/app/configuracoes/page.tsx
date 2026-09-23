@@ -8,7 +8,7 @@ export default function ConfiguracoesPage() {
   const [salon, setSalon] = useState<any>(null);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [name, setName] = useState("");
-  const [ownerName, setOwnerName] = useState("Juliana Silva");
+  const [ownerName, setOwnerName] = useState("");
   const [slogan, setSlogan] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [phone, setPhone] = useState("");
@@ -16,14 +16,9 @@ export default function ConfiguracoesPage() {
   const [primaryColor, setPrimaryColor] = useState("#E0A96D");
   const [creditFee, setCreditFee] = useState(2.99);
   const [debitFee, setDebitFee] = useState(1.49);
-  const [adminEmail, setAdminEmail] = useState("juliana@studioluxe.com.br");
+  const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [saved, setSaved] = useState(false);
-
-  // Feriados & Fechamentos de Salão (Bloqueio Online)
-  const [blockedDates, setBlockedDates] = useState<any[]>([]);
-  const [newBlockDate, setNewBlockDate] = useState("");
-  const [newBlockReason, setNewBlockReason] = useState("Feriado / Salão Fechado");
 
   // Form de Nova Atendente / Profissional
   const [showProfModal, setShowProfModal] = useState(false);
@@ -54,61 +49,11 @@ export default function ConfiguracoesPage() {
         if (data.adminEmail) {
           setAdminEmail(data.adminEmail);
         }
-
-        let list: any[] = [];
-        if (data.blockedDates) {
-          try {
-            list = typeof data.blockedDates === "string" ? JSON.parse(data.blockedDates) : data.blockedDates;
-          } catch (e) {}
-        }
-        setBlockedDates(Array.isArray(list) ? list : []);
       });
 
     fetch("/api/professionals")
       .then((r) => r.json())
       .then(setProfessionals);
-  };
-
-  const handleAddBlockDate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBlockDate) {
-      alert("Por favor, selecione a data do feriado ou fechamento.");
-      return;
-    }
-
-    const newItem = { date: newBlockDate, reason: newBlockReason.trim() || "Feriado / Salão Fechado" };
-    const updated = [...blockedDates.filter((item: any) => (typeof item === "string" ? item !== newBlockDate : item?.date !== newBlockDate)), newItem];
-
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blockedDates: JSON.stringify(updated) }),
-    });
-
-    if (res.ok) {
-      setBlockedDates(updated);
-      setNewBlockDate("");
-      setNewBlockReason("Feriado / Salão Fechado");
-      alert("✨ Data bloqueada com sucesso para agendamentos online!");
-    } else {
-      alert("Erro ao bloquear data.");
-    }
-  };
-
-  const handleRemoveBlockDate = async (dateStr: string) => {
-    const formatted = dateStr.split("-").reverse().join("/");
-    if (confirm(`Deseja DESBLOQUEAR a data ${formatted} para agendamentos online?`)) {
-      const updated = blockedDates.filter((item: any) => (typeof item === "string" ? item !== dateStr : item?.date !== dateStr));
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockedDates: JSON.stringify(updated) }),
-      });
-      if (res.ok) {
-        setBlockedDates(updated);
-        alert("✨ Data desbloqueada com sucesso!");
-      }
-    }
   };
 
   useEffect(() => {
@@ -227,39 +172,20 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleZeroCommission = async (p: any) => {
-    if (confirm(`Deseja definir a comissão de "${p.name}" para 0% (Proprietária / Sem repasse)?`)) {
-      const res = await fetch("/api/professionals", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: p.id, commissionRatePercent: 0 }),
-      });
-      if (res.ok) {
-        alert(`✨ Comissão de ${p.name} zerada para 0%!`);
-        loadData();
-      }
-    }
-  };
-
   const handleResetDemo = async (action: "RESEED" | "CLEAR_ALL") => {
     const confirmMsg =
       action === "CLEAR_ALL"
-        ? "⚠️ Tem certeza que deseja ZERAR todos os dados, agendamentos, histórico financeiro e extratos de comissão para iniciar em Produção?"
+        ? "⚠️ Tem certeza que deseja apagar TODOS os dados fictícios para iniciar em Produção?"
         : "Restaurar os dados de demonstração iniciais?";
 
     if (confirm(confirmMsg)) {
-      try {
-        await fetch("/api/finance?action=reset_all", { method: "DELETE" });
-        await fetch("/api/seed", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: action === "CLEAR_ALL" ? "RESET_METRICS" : action }),
-        });
-        alert("✨ Métricas, atendimentos e comissões zerados com sucesso! Recarregando página...");
-        window.location.reload();
-      } catch (e: any) {
-        alert("Erro ao zerar dados: " + (e.message || "Tente novamente."));
-      }
+      await fetch("/api/seed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      alert("Ação concluída com sucesso! Recarregando página...");
+      window.location.reload();
     }
   };
 
@@ -282,9 +208,9 @@ export default function ConfiguracoesPage() {
 
       {/* GERENCIAMENTO DE ATENDENTES E LOGINS */}
       <div className="rounded-3xl border border-rose-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center justify-between">
           <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-            <Users className="h-5 w-5 text-rose-500 shrink-0" />
+            <Users className="h-5 w-5 text-rose-500" />
             <span>Atendentes / Equipe & Logins de Acesso</span>
           </h3>
           <button
@@ -296,7 +222,7 @@ export default function ConfiguracoesPage() {
               setProfPassword("");
               setShowProfModal(true);
             }}
-            className="flex items-center justify-center space-x-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-600 w-full sm:w-auto"
+            className="flex items-center space-x-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-600"
           >
             <Plus className="h-4 w-4" />
             <span>Adicionar Nova Atendente</span>
@@ -305,14 +231,14 @@ export default function ConfiguracoesPage() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {professionals.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="w-full sm:flex-1 min-w-0">
+            <div key={p.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/60 flex items-center justify-between">
+              <div>
                 <div className="flex items-center space-x-2">
-                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: p.color || "#E0A96D" }}></span>
-                  <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm truncate">{p.name}</h4>
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: p.color || "#E0A96D" }}></span>
+                  <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm">{p.name}</h4>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">📞 {p.phone}</p>
-                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 break-all">
+                <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
                   ✉️ Login: {p.userEmail || "Sem email cadastrado"}
                 </p>
                 <span className="inline-block mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -320,15 +246,7 @@ export default function ConfiguracoesPage() {
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60 justify-start sm:justify-end">
-                <button
-                  onClick={() => handleZeroCommission(p)}
-                  className="flex items-center space-x-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
-                  title="Definir comissão para 0% (Proprietária / Sem repasse)"
-                >
-                  <span>💰 Zerar (0%)</span>
-                </button>
-
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => handleEditProfClick(p)}
                   className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
@@ -348,84 +266,6 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* PAINEL DE FERIADOS & FECHAMENTO DO SALÃO */}
-      <div className="rounded-3xl border border-rose-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-        <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-          <ShieldAlert className="h-5 w-5 text-rose-500 shrink-0" />
-          <span>Feriados & Datas Bloqueadas para Agendamento Online</span>
-        </h3>
-        <p className="text-xs text-slate-500 font-medium">
-          Escolha os dias em que o salão estará fechado (ex: Feriado de 7 de Setembro, Folga, Treinamento). A agenda online desativará os agendamentos e exibirá a mensagem de Salão Fechado para os clientes.
-        </p>
-
-        {/* Formulário de Adição Rápida */}
-        <form onSubmit={handleAddBlockDate} className="flex flex-wrap items-end gap-3 rounded-2xl bg-rose-50/60 p-4 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900">
-          <div className="flex-1 min-w-[160px]">
-            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Data do Feriado / Fechamento *</label>
-            <input
-              type="date"
-              value={newBlockDate}
-              onChange={(e) => setNewBlockDate(e.target.value)}
-              className="w-full rounded-xl border border-rose-200 bg-white p-2.5 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-              required
-            />
-          </div>
-
-          <div className="flex-2 min-w-[220px]">
-            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Motivo do Fechamento (Exibido aos Clientes)</label>
-            <input
-              type="text"
-              value={newBlockReason}
-              onChange={(e) => setNewBlockReason(e.target.value)}
-              placeholder="Ex: Feriado da Independência, Treinamento..."
-              className="w-full rounded-xl border border-rose-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="flex items-center space-x-1.5 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-700"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Bloquear Data</span>
-          </button>
-        </form>
-
-        {/* Lista de Datas Bloqueadas */}
-        <div className="space-y-2">
-          {blockedDates.length === 0 ? (
-            <p className="text-xs italic text-slate-400">Nenhum feriado ou dia de fechamento cadastrado até o momento.</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {blockedDates.map((item: any) => {
-                const dateStr = typeof item === "string" ? item : item.date;
-                const reason = typeof item === "string" ? "Feriado / Salão Fechado" : (item.reason || "Feriado / Salão Fechado");
-                const formattedDate = dateStr.split("-").reverse().join("/");
-
-                return (
-                  <div
-                    key={dateStr}
-                    className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50/40 p-3 dark:border-rose-900 dark:bg-rose-950/40"
-                  >
-                    <div>
-                      <p className="font-extrabold text-slate-900 dark:text-white text-xs">🗓️ {formattedDate}</p>
-                      <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">🔒 {reason}</p>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveBlockDate(dateStr)}
-                      className="rounded-xl border border-rose-200 bg-white p-1.5 text-rose-600 hover:bg-rose-100 dark:bg-slate-900 dark:text-rose-400"
-                      title="Desbloquear data"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
 
@@ -480,7 +320,7 @@ export default function ConfiguracoesPage() {
             <span>Dados Principais do Salão</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block font-bold">Nome da Administradora / Proprietária *</label>
               <input
@@ -504,18 +344,18 @@ export default function ConfiguracoesPage() {
           </div>
 
           <div>
-            <label className="block font-bold mb-1">Foto / Logotipo do Salão</label>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row items-center gap-4">
+            <label className="block font-bold">Foto / Logotipo do Salão</label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-2">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo Preview" className="h-20 w-20 shrink-0 rounded-2xl object-cover border-2 border-rose-300 shadow-md" />
+                <img src={logoUrl} alt="Logo Preview" className="h-16 w-16 rounded-2xl object-cover border border-rose-200 shadow-sm" />
               ) : (
-                <div className="h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br from-rose-100 to-amber-100 dark:from-slate-800 dark:to-slate-800/80 flex items-center justify-center font-bold text-rose-700 dark:text-amber-200 text-xs shadow-inner border border-rose-200">💅 Foto Logo</div>
+                <div className="h-16 w-16 rounded-2xl bg-rose-100 dark:bg-slate-800 flex items-center justify-center font-bold text-rose-600 text-xs shadow-inner">💅 Logo</div>
               )}
 
-              <div className="flex-1 space-y-2.5 w-full">
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95 transition">
-                    <span>📁 Escolher Foto da Galeria / Computador</span>
+              <div className="flex-1 space-y-2 w-full">
+                <div className="flex items-center space-x-2">
+                  <label className="cursor-pointer inline-flex items-center space-x-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-600 transition">
+                    <span>📁 Escolher da Galeria / Computador</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -527,7 +367,7 @@ export default function ConfiguracoesPage() {
                     <button
                       type="button"
                       onClick={() => setLogoUrl("")}
-                      className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300"
                     >
                       Remover Foto
                     </button>
@@ -538,17 +378,15 @@ export default function ConfiguracoesPage() {
                   type="text"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="Ou cole o link direto da imagem (URL)..."
-                  className="w-full rounded-xl border border-slate-200 p-3 font-medium text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-rose-400"
+                  placeholder="Ou cole o link da imagem (URL)..."
+                  className="w-full rounded-xl border p-2.5 font-medium text-xs dark:bg-slate-800"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-              Escolha uma foto da galeria do celular/computador (até 5MB) ou cole o link direto de uma imagem. Ela será exibida no seu perfil e no site de agendamento online dos clientes!
-            </p>
+            <p className="text-[10px] text-slate-400 mt-1.5">Escolha uma foto da galeria do seu celular/computador (até 5MB) ou cole o link de uma imagem da internet.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block font-bold">Telefone / WhatsApp Comercial</label>
               <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
@@ -565,15 +403,6 @@ export default function ConfiguracoesPage() {
           <div>
             <label className="block font-bold">Endereço Completo</label>
             <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800" />
-          </div>
-
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/40 space-y-1 text-xs">
-            <div className="flex items-center space-x-2 font-bold text-amber-900 dark:text-amber-300">
-              <span>🍽️ Horário de Almoço da Agenda (11:30 às 13:00)</span>
-            </div>
-            <p className="text-slate-600 dark:text-amber-100 text-[11px] leading-relaxed">
-              O intervalo das <strong>11:30 às 13:00</strong> permanece bloqueado por padrão no site de Agendamento Online dos clientes. Na agenda interna do salão, a equipe pode realizar encaixes e agendamentos manuais livremente!
-            </p>
           </div>
         </div>
 
@@ -687,8 +516,8 @@ export default function ConfiguracoesPage() {
                       onChange={(e) => setProfRole(e.target.value)}
                       className="mt-1 w-full rounded-xl border p-2.5 font-bold dark:bg-slate-800"
                     >
-                      <option value="RECEPÇÃO">RECEPÇÃO (Apenas Visualização da Agenda)</option>
-                      <option value="PROFISSIONAL">PROFISSIONAL (Agenda, Caixa e Tela de Atendimento)</option>
+                      <option value="PROFISSIONAL">PROFISSIONAL (Visualiza sua agenda)</option>
+                      <option value="RECEPÇÃO">RECEPÇÃO (Agenda e Caixa)</option>
                       <option value="GERENTE">GERENTE (Gestão total exceto financeiro avançado)</option>
                       <option value="ADMINISTRADOR">ADMINISTRADOR (Acesso total)</option>
                     </select>

@@ -383,7 +383,11 @@ export async function seedDatabase() {
   }
 
   // 8. Agendamentos
-  const todayStr = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${yyyy}-${mm}-${dd}`;
 
   const app1 = await prisma.appointment.create({
     data: {
@@ -748,15 +752,5 @@ export async function clearDatabase() {
   await prisma.user.deleteMany();
   await prisma.salon.deleteMany();
 
-  // Criar um salão padrão limpo e sem dados fictícios
-  await prisma.salon.create({
-    data: {
-      id: "default-salon",
-      name: "Meu Salão de Unhas",
-      slogan: "Cadastre a descrição e serviços nas configurações",
-      primaryColor: "#E0A96D",
-    },
-  });
-
-  console.log("✨ Banco de dados zerado e salão pronto para uso!");
+  console.log("✨ Banco de dados limpo com sucesso!");
 }

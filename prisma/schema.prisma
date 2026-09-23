@@ -1,6 +1,6 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
@@ -32,7 +32,9 @@ model Salon {
   defaultDepositAmount  Float    @default(50.0)
   creditFeePercent      Float    @default(2.99)
   debitFeePercent       Float    @default(1.49)
-  blockedDates          String?  @default("[]")
+  planName              String   @default("PRO")
+  subscriptionStatus    String   @default("ATIVO")
+  trialEndsAt           DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -130,18 +132,14 @@ model Service {
 }
 
 model Package {
-  id             String   @id @default(uuid())
-  salonId        String   @default("default-salon")
-  name           String
-  price          Float
-  totalSessions  Int
-  validityDays   Int      @default(90)
-  description    String?
-  weeklyServices String?
-  discountType   String?  @default("FIXED")
-  discountValue  Float?   @default(0.0)
-  originalPrice  Float?   @default(0.0)
-  active         Boolean  @default(true)
+  id            String   @id @default(uuid())
+  salonId       String   @default("default-salon")
+  name          String
+  price         Float
+  totalSessions Int
+  validityDays  Int      @default(90)
+  description   String?
+  active        Boolean  @default(true)
 }
 
 model ClientPackage {

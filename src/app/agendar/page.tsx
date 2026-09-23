@@ -76,49 +76,9 @@ export default function AgendarPublicPage() {
     );
   };
 
-  const normalizeDateStr = (d: string) => {
-    if (!d) return "";
-    const s = String(d).trim();
-    if (s.includes("/")) {
-      const parts = s.split("/");
-      if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-    }
-    if (s.includes("-")) {
-      const parts = s.split("-");
-      if (parts.length === 3) return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
-    }
-    return s;
-  };
-
-  const getBlockedDateInfo = (dateStr: string) => {
-    if (!salon?.blockedDates) return null;
-    let blockedList: any[] = [];
-    try {
-      blockedList = typeof salon.blockedDates === "string" ? JSON.parse(salon.blockedDates) : salon.blockedDates;
-    } catch (e) {}
-
-    if (!Array.isArray(blockedList)) return null;
-
-    const targetNorm = normalizeDateStr(dateStr);
-
-    const found = blockedList.find((item: any) => {
-      const itemRaw = typeof item === "string" ? item : item?.date;
-      return normalizeDateStr(itemRaw) === targetNorm;
-    });
-
-    if (!found) return null;
-    return typeof found === "string" ? { date: found, reason: "Salão Fechado / Feriado" } : { date: found.date, reason: found.reason || "Salão Fechado / Feriado" };
-  };
-
   // Verificar se o slot (e sua duração) está 100% livre sem sobreposição
   const isSlotAvailable = (slot: string) => {
     if (!selectedProf) return true;
-
-    // 0. Feriado ou Dia Bloqueado pela Administração
-    if (getBlockedDateInfo(selectedDate)) {
-      return false;
-    }
-
     const duration = selectedService?.durationMinutes || 60;
     const slotStart = timeToMins(slot);
     const slotEnd = slotStart + duration;
@@ -144,19 +104,13 @@ export default function AgendarPublicPage() {
       if (slotStart <= currentMins) return false;
     }
 
-    // 4. Horário de Almoço (11:30 = 690 mins, 13:00 = 780 mins)
-    // Bloqueado por padrão na agenda virtual (11:30 às 13:00)
+    // 4. Horário de Almoço (11:00 = 660 mins, 13:00 = 780 mins)
+    // Bloqueado por padrão em TODOS OS DIAS, exceto se houver liberação manual do salão
     const isLunchUnlocked = isLunchUnlockedOnDate();
-    const isStartingInLunch = slotStart >= 690 && slotStart < 780;
-
     if (!isLunchUnlocked) {
-      if (slotStart < 780 && slotEnd > 690) {
+      if (slotStart < 780 && slotEnd > 660) {
         return false;
       }
-    } else if (isStartingInLunch) {
-      // Quando o almoço for liberado, PERMITIR QUALQUER PROCEDIMENTO (qualquer duração),
-      // ignorando estouro de horário com a tarde
-      return true;
     }
 
     // 5. Verificar choque com agendamentos ativos da profissional
@@ -250,7 +204,7 @@ export default function AgendarPublicPage() {
         date: selectedDate,
         startTime: selectedTime,
         serviceIds: [selectedService.id],
-        depositPaid: 0,
+        depositPaid: 50,
       }),
     });
 
@@ -277,24 +231,25 @@ export default function AgendarPublicPage() {
     "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
     "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
     "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-    "18:00", "18:30", "19:00"
+    "18:00"
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-[url('/booking-bg.jpg')] bg-cover bg-center bg-no-repeat bg-fixed px-4 py-8 sm:py-12 flex flex-col justify-start items-center">
-      {/* Overlay escuro com toque de luxo e desfoque suave para legibilidade perfeita */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none z-0" />
-
-      <div className="relative z-10 mx-auto w-full max-w-xl">
+    <div className="min-h-screen bg-gradient-to-b from-rose-50 via-white to-amber-50/50 px-4 py-8 dark:from-slate-950 dark:to-slate-900">
+      <div className="mx-auto max-w-xl">
         {/* Header do Salão */}
         <div className="text-center mb-6">
-          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-[#b00054] p-1.5 shadow-2xl shadow-black/60 border-2 border-amber-400/90 overflow-hidden">
-            <img src="/salon-logo-official.png" alt="Selma Gloor Nails Studio" className="h-full w-full object-cover rounded-2xl" />
+          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-slate-900 p-1.5 shadow-xl shadow-rose-200/60 border-2 border-amber-300/80 dark:border-slate-800 overflow-hidden">
+            <img src="/luxe-logo.jpg" alt="Studio Luxe Nail Designer" className="h-full w-full object-cover rounded-2xl" />
           </div>
-          <h1 className="mt-3 font-serif text-2xl sm:text-3xl font-extrabold text-white drop-shadow-lg">
-            {salon?.name || "Selma Gloor Nails Studio"}
+          <h1 className="mt-3 font-serif text-2xl font-bold text-slate-900 dark:text-white">
+            {salon?.name && !salon.name.includes("Selma") && !salon.name.includes("Gloor")
+              ? salon.name
+              : "Studio Luxe Nail Designer"}
           </h1>
-          <p className="text-xs sm:text-sm text-amber-300 font-bold drop-shadow-md mt-0.5">Agendamento Online 24h &bull; Rápido & Sem Cadastro</p>
+          <p className="text-xs text-rose-600 font-semibold">
+            {salon?.slogan || "Agendamento Online 24h • Rápido & Sem Cadastro"}
+          </p>
         </div>
 
         {/* Passo 1: Escolha de Serviço */}
@@ -378,21 +333,6 @@ export default function AgendarPublicPage() {
               />
             </div>
 
-            {getBlockedDateInfo(selectedDate) && (
-              <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/60 space-y-1.5 shadow-sm">
-                <div className="flex items-center space-x-2 font-serif text-sm font-extrabold text-rose-900 dark:text-rose-200">
-                  <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
-                  <span>🚫 SALÃO FECHADO / INDISPONÍVEL NESTE DIA</span>
-                </div>
-                <p className="text-xs text-rose-800 dark:text-rose-300 font-semibold">
-                  O salão não realizará atendimentos em <strong>{selectedDate.split("-").reverse().join("/")}</strong> ({getBlockedDateInfo(selectedDate)?.reason}).
-                </p>
-                <p className="text-[11px] text-rose-700 dark:text-rose-400 font-medium">
-                  💡 Por favor, selecione outra data livre no campo acima para agendar seu atendimento.
-                </p>
-              </div>
-            )}
-
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -402,17 +342,6 @@ export default function AgendarPublicPage() {
               </div>
 
               {(() => {
-                const blockedInfo = getBlockedDateInfo(selectedDate);
-                if (blockedInfo) {
-                  return (
-                    <div className="rounded-2xl bg-rose-50 p-5 text-center text-xs font-bold text-rose-900 border border-rose-200 dark:bg-rose-950/60 dark:border-rose-800 dark:text-rose-200 shadow-sm space-y-1">
-                      <div className="text-base">🚫 SALÃO FECHADO</div>
-                      <div>O salão não realizará atendimentos em {selectedDate.split("-").reverse().join("/")} ({blockedInfo.reason}).</div>
-                      <div className="text-[11px] text-rose-700 dark:text-rose-400 font-medium">Por favor, escolha uma data disponível no calendário acima.</div>
-                    </div>
-                  );
-                }
-
                 const dayOfWeek = getDayOfWeek(selectedDate);
 
                 if (dayOfWeek === 0) {
@@ -459,7 +388,7 @@ export default function AgendarPublicPage() {
                       const available = isSlotAvailable(slot);
                       const isSelected = selectedTime === slot;
                       const slotStart = timeToMins(slot);
-                      const isLunchSlot = slotStart >= 690 && slotStart < 780 && !isLunchUnlockedOnDate();
+                      const isLunchSlot = slotStart >= 660 && slotStart < 780 && !isLunchUnlockedOnDate();
 
                       return (
                         <button

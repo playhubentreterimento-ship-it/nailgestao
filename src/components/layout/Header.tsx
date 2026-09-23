@@ -13,7 +13,6 @@ import {
   Search,
   CheckCircle,
   AlertTriangle,
-  X,
 } from "lucide-react";
 
 import { LogOut } from "lucide-react";
@@ -31,15 +30,6 @@ export function Header({ userRole }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [pushStatus, setPushStatus] = useState<string>("default");
-  const [headerSearch, setHeaderSearch] = useState<string>("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get("search") || params.get("q");
-      if (q) setHeaderSearch(q);
-    }
-  }, []);
 
   const knownAppIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef<boolean>(true);
@@ -95,119 +85,14 @@ export function Header({ userRole }: HeaderProps) {
       })
       .catch(() => {});
 
-    // Carregar notificações salvas e expirar as de mais de 24h / dias anteriores
-    try {
-      const saved = localStorage.getItem("nailgestao_daily_notifications_v1");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const cleaned = filterTodayNotifications(parsed);
-        setNotifications(cleaned);
-        localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(cleaned));
-      }
-    } catch (e) {}
+    setNotifications([
+      { id: "1", title: "⚠️ Estoque Baixo", message: "Gel Pink Hard está com 3 unidades.", type: "WARNING", time: "Há 10 min" },
+      { id: "2", title: "🔔 Novo Agendamento", message: "Maria Fernanda agendou Fibra de Vidro.", type: "SUCCESS", time: "Há 25 min" },
+      { id: "3", title: "🎂 Aniversariante Hoje", message: "Fernanda Lima completa ano hoje!", type: "INFO", time: "Hoje" },
+    ]);
   }, []);
 
-  const filterTodayNotifications = (list: any[]): any[] => {
-    if (!Array.isArray(list)) return [];
-    const now = Date.now();
-    const todayStr = new Date().toISOString().split("T")[0];
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-
-    const filtered = list.filter((item) => {
-      if (!item || !item.timestamp) return false;
-      // 1. Purgar se o item tiver mais de 24 horas
-      if (now - item.timestamp > TWENTY_FOUR_HOURS) return false;
-      // 2. Purgar se for de uma data anterior
-      if (item.dateStr && item.dateStr !== todayStr) return false;
-      return true;
-    });
-
-    // Limitar a no máximo 25 notificações ativas do dia para não acumular centenas
-    return filtered.slice(0, 25);
-  };
-
-  const syncRealDailyEvents = async () => {
-    try {
-      const todayStr = new Date().toISOString().split("T")[0];
-      const todayMonthDay = todayStr.substring(5);
-      const newItems: any[] = [];
-
-      // 1. Alertas de Estoque Baixo Real
-      const invRes = await fetch("/api/inventory").catch(() => null);
-      if (invRes && invRes.ok) {
-        const invData = await invRes.json();
-        if (Array.isArray(invData.products)) {
-          const lowProducts = invData.products.filter(
-            (p: any) => Number(p.quantity) <= Number(p.minQuantity || 5)
-          );
-          lowProducts.forEach((p: any) => {
-            newItems.push({
-              id: `stock-${p.id}-${todayStr}`,
-              title: "⚠️ Estoque Baixo",
-              message: `${p.name} está com apenas ${p.quantity} unidades no estoque.`,
-              type: "WARNING",
-              timestamp: Date.now(),
-              dateStr: todayStr,
-              time: "Hoje",
-            });
-          });
-        }
-      }
-
-      // 2. Alertas de Aniversariantes do Dia Real
-      const cliRes = await fetch("/api/clients").catch(() => null);
-      if (cliRes && cliRes.ok) {
-        const cliData = await cliRes.json();
-        if (Array.isArray(cliData)) {
-          const todayBdays = cliData.filter((c: any) => {
-            if (!c.birthDate) return false;
-            return c.birthDate.endsWith(todayMonthDay) || c.birthDate.includes(todayMonthDay);
-          });
-          todayBdays.forEach((c: any) => {
-            newItems.push({
-              id: `bday-${c.id}-${todayStr}`,
-              title: "🎂 Aniversariante Hoje",
-              message: `${c.name} completa ano hoje! Que tal enviar um parabéns? 🎉`,
-              type: "INFO",
-              timestamp: Date.now(),
-              dateStr: todayStr,
-              time: "Hoje",
-            });
-          });
-        }
-      }
-
-      setNotifications((prev) => {
-        const filteredPrev = filterTodayNotifications(prev);
-        const existingIds = new Set(filteredPrev.map((n) => n.id));
-        const itemsToAdd = newItems.filter((item) => !existingIds.has(item.id));
-        const updated = [...itemsToAdd, ...filteredPrev];
-        try {
-          localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
-      });
-    } catch (e) {}
-  };
-
-  // Sincronizar eventos reais e expirar notificações antigas periodicamente
-  useEffect(() => {
-    syncRealDailyEvents();
-
-    const purgeInterval = setInterval(() => {
-      setNotifications((prev) => {
-        const clean = filterTodayNotifications(prev);
-        try {
-          localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(clean));
-        } catch (e) {}
-        return clean;
-      });
-    }, 30000); // Checar expiração a cada 30 segundos
-
-    return () => clearInterval(purgeInterval);
-  }, []);
-
-  // Monitoramento em Tempo Real a cada 6s para Pop-up no Celular e Novos Agendamentos do Dia
+  // Monitoramento em Tempo Real a cada 6s para Pop-up no Celular
   useEffect(() => {
     const checkNewAppointments = async () => {
       try {
@@ -216,12 +101,11 @@ export function Header({ userRole }: HeaderProps) {
         const apps = await res.json();
         if (!Array.isArray(apps)) return;
 
-        const todayStr = new Date().toISOString().split("T")[0];
         const currentIds = new Set<string>(apps.map((a: any) => a.id));
 
         if (!isInitialLoadRef.current) {
           const newApps = apps.filter(
-            (a: any) => !knownAppIdsRef.current.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO" && (a.date >= todayStr)
+            (a: any) => !knownAppIdsRef.current.has(a.id) && a.status !== "CANCELADO" && a.status !== "BLOQUEADO"
           );
 
           if (newApps.length > 0) {
@@ -238,24 +122,20 @@ export function Header({ userRole }: HeaderProps) {
               // Disparar o Pop-up Nativo no Celular (Android / iOS)
               sendLocalPushNotification(title, message, "/agenda");
 
-              setNotifications((prev) => {
-                const filteredPrev = filterTodayNotifications(prev);
-                const newNotification = {
+              setNotifications((prev) => [
+                {
                   id: "app-" + newApp.id,
                   title: "🔔 Novo Agendamento",
                   message: `${clientName} agendou ${serviceName} (${newApp.startTime}h)`,
                   type: "SUCCESS",
-                  timestamp: Date.now(),
-                  dateStr: todayStr,
                   time: "Agora",
-                };
-                const updated = filterTodayNotifications([newNotification, ...filteredPrev.filter((n) => n.id !== newNotification.id)]);
-                try {
-                  localStorage.setItem("nailgestao_daily_notifications_v1", JSON.stringify(updated));
-                } catch (e) {}
-                return updated;
-              });
+                },
+                ...prev,
+              ]);
             });
+
+            // Notificar a tela de Agenda para atualizar os cartões do calendário instantaneamente
+            window.dispatchEvent(new CustomEvent("appointments-updated"));
           }
         } else {
           isInitialLoadRef.current = false;
@@ -272,13 +152,6 @@ export function Header({ userRole }: HeaderProps) {
 
     return () => clearInterval(interval);
   }, []);
-
-  const handleClearNotifications = () => {
-    setNotifications([]);
-    try {
-      localStorage.setItem("nailgestao_daily_notifications_v1", "[]");
-    } catch (e) {}
-  };
 
   const handleEnablePush = async () => {
     const perm = await requestNotificationPermission();
@@ -302,8 +175,13 @@ export function Header({ userRole }: HeaderProps) {
 
   const isCollaborator = userRole === "PROFISSIONAL" || userRole === "COLABORADORA" || userRole === "ATENDENTE";
 
-  const displayName = currentUser?.name || salon?.ownerName || "Juliana Silva";
+  const displayName = currentUser?.name || salon?.ownerName || "Administradora";
   const displayRole = isCollaborator ? "Colaboradora" : "Administradora";
+  const rawSalonName = salon?.name || "";
+  const salonDisplayName = (rawSalonName && !rawSalonName.includes("Selma") && !rawSalonName.includes("Gloor") && rawSalonName !== "Studio Luxe Nail Designer")
+    ? rawSalonName
+    : "Meu Salão de Unhas";
+
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -320,13 +198,13 @@ export function Header({ userRole }: HeaderProps) {
       {/* Branding / Salão */}
       <div className="flex items-center space-x-3">
         <img
-          src={salon?.logoUrl && salon.logoUrl !== "/logo.png" ? salon.logoUrl : "/salon-logo-official.png"}
-          alt={salon?.name || "Selma Gloor Nails Studio"}
-          className="h-11 w-11 shrink-0 rounded-2xl object-cover border-2 border-amber-300 shadow-md"
+          src={salon?.logoUrl && !salon.logoUrl.includes("logo.png") ? salon.logoUrl : "/luxe-logo.jpg"}
+          alt={salonDisplayName}
+          className="h-10 w-10 rounded-xl object-cover bg-slate-900 border-2 border-amber-300/80 shadow-md"
         />
         <div>
           <h1 className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">
-            {salon?.name || "Selma Gloor Nails Studio"}
+            {salonDisplayName}
           </h1>
           <p className="hidden text-xs text-amber-200/90 sm:block font-medium">
             {salon?.slogan || "Especialista em Unhas & Nails Art"}
@@ -338,38 +216,14 @@ export function Header({ userRole }: HeaderProps) {
       <div className="flex items-center space-x-2 sm:space-x-4">
         {/* Barra de Busca Rápida */}
         {!isCollaborator && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (headerSearch.trim()) {
-                window.location.href = `/agenda?search=${encodeURIComponent(headerSearch.trim())}`;
-              }
-            }}
-            className="relative hidden md:block"
-          >
+          <div className="relative hidden md:block">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              value={headerSearch}
-              onChange={(e) => setHeaderSearch(e.target.value)}
-              placeholder="Buscar cliente ou agendamento..."
-              className="h-9 w-64 rounded-full bg-slate-100 pl-9 pr-8 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
+              placeholder="Buscar cliente, serviço..."
+              className="h-9 w-60 rounded-full bg-slate-100 pl-9 pr-4 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
             />
-            {headerSearch && (
-              <button
-                type="button"
-                onClick={() => {
-                  setHeaderSearch("");
-                  if (window.location.pathname === "/agenda") {
-                    window.location.href = "/agenda";
-                  }
-                }}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </form>
+          </div>
         )}
 
         {/* Botão Agendamento Rápido (Desktop) */}
@@ -416,21 +270,10 @@ export function Header({ userRole }: HeaderProps) {
           {showNotifications && (
             <div className="fixed inset-x-3 top-16 z-50 mt-2 max-h-[85vh] overflow-y-auto rounded-3xl border-2 border-rose-200/90 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between border-b border-rose-100 pb-2 dark:border-slate-800">
-                <div>
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
-                    Notificações do Salão
-                  </h3>
-                  <span className="text-[9px] font-bold text-slate-400">Validade 24h &bull; Expira a cada dia 🌅</span>
-                </div>
-                {notifications.length > 0 && (
-                  <button
-                    onClick={handleClearNotifications}
-                    className="text-[10px] font-extrabold text-[#6B1615] hover:underline dark:text-rose-300"
-                    title="Limpar todas as notificações de hoje"
-                  >
-                    Limpar 🗑️
-                  </button>
-                )}
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                  Notificações do Salão
+                </h3>
+                <span className="text-[10px] text-rose-600 font-extrabold">{notifications.length} novas</span>
               </div>
 
               {/* Banner Ativação de Pop-up Push no Celular */}
@@ -451,38 +294,29 @@ export function Header({ userRole }: HeaderProps) {
                 </div>
               </div>
 
-              {notifications.length > 0 ? (
-                <div className="space-y-2">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => {
-                        sendLocalPushNotification(n.title, n.message, "/agenda");
-                      }}
-                      className="flex items-start space-x-2.5 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 cursor-pointer hover:bg-rose-50 dark:hover:bg-slate-700/80 transition"
-                      title="Clique para disparar pop-up de teste no celular"
-                    >
-                      {n.type === "WARNING" ? (
-                        <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                      )}
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{n.title}</p>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-300">{n.message}</p>
-                        <span className="text-[9px] font-semibold text-slate-400">{n.time} &bull; Toque para ver no celular 📲</span>
-                      </div>
+              <div className="space-y-2">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      sendLocalPushNotification(n.title, n.message, "/agenda");
+                    }}
+                    className="flex items-start space-x-2.5 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 cursor-pointer hover:bg-rose-50 dark:hover:bg-slate-700/80 transition"
+                    title="Clique para disparar pop-up de teste no celular"
+                  >
+                    {n.type === "WARNING" ? (
+                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{n.title}</p>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300">{n.message}</p>
+                      <span className="text-[9px] font-semibold text-slate-400">{n.time} &bull; Toque para ver no celular 📲</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-rose-200 bg-rose-50/50 p-4 text-center dark:border-slate-800 dark:bg-slate-800/40 space-y-1">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100">✨ Nenhuma notificação pendente hoje!</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                    As notificações expiram automaticamente após 24h para você iniciar todos os dias com a tela limpa e organizada.
-                  </p>
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -490,16 +324,12 @@ export function Header({ userRole }: HeaderProps) {
         {/* Avatar do Usuário Logado + Logout */}
         <div className="flex items-center space-x-3 border-l border-white/20 pl-3 dark:border-slate-700">
           <div className="flex items-center space-x-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 font-bold text-white shadow-md text-xs border-2 border-white/40 overflow-hidden">
-              {salon?.logoUrl || currentUser?.avatarUrl ? (
-                <img src={salon?.logoUrl || currentUser?.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-              ) : (
-                initials
-              )}
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 font-bold text-white shadow-sm text-xs border border-white/30">
+              {initials}
             </div>
-            <div className="hidden sm:block text-left">
-              <p className="text-xs font-extrabold text-white leading-tight">{displayName}</p>
-              <p className="text-[10px] text-amber-200 font-bold leading-tight">{displayRole}</p>
+            <div className="hidden text-left xl:block">
+              <p className="text-xs font-bold text-white leading-tight">{displayName}</p>
+              <p className="text-[10px] text-amber-200 font-medium leading-tight">{displayRole}</p>
             </div>
           </div>
 

@@ -29,47 +29,6 @@ export default function ClientesPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Form de Edição de Valor de Atendimento da Cliente (Administradora)
-  const [editingApp, setEditingApp] = useState<any>(null);
-  const [editAppTotal, setEditAppTotal] = useState<string>("0.00");
-  const [editAppNotes, setEditAppNotes] = useState<string>("");
-  const [isSavingApp, setIsSavingApp] = useState<boolean>(false);
-
-  const handleSaveAppValue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingApp || isSavingApp) return;
-
-    setIsSavingApp(true);
-    try {
-      const finalNotes = editAppNotes && !editAppNotes.includes("EDITADO_MANUAL")
-        ? `${editAppNotes} (EDITADO_MANUAL)`
-        : editAppNotes || "EDITADO_MANUAL";
-
-      const res = await fetch("/api/appointments", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingApp.id,
-          total: Number(editAppTotal),
-          subtotal: Number(editAppTotal),
-          notes: finalNotes,
-        }),
-      });
-
-      if (res.ok) {
-        alert("✨ Valor e observação do atendimento atualizados com sucesso!");
-        setEditingApp(null);
-        loadClients();
-      } else {
-        alert("Erro ao atualizar valor do atendimento.");
-      }
-    } catch (err) {
-      alert("Erro ao salvar alteração de valor.");
-    } finally {
-      setIsSavingApp(false);
-    }
-  };
-
   // Form de cadastro (Novo)
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -105,13 +64,14 @@ export default function ClientesPage() {
     fetch("/api/clients", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        setClients(data);
+        const arr = Array.isArray(data) ? data : [];
+        setClients(arr);
         if (selectedClient) {
-          const updated = data.find((c: any) => c.id === selectedClient.id);
+          const updated = arr.find((c: any) => c.id === selectedClient.id);
           if (updated) setSelectedClient(updated);
         }
       })
-      .catch(() => {});
+      .catch(() => setClients([]));
   };
 
   useEffect(() => {
@@ -172,31 +132,6 @@ export default function ClientesPage() {
     setEditExtensionType(client.extensionType || "Fibra de Vidro");
     setEditNailDecoration(client.nailDecoration || "Francesa Reversa");
     setShowEditModal(true);
-  };
-
-  const handleDeleteClient = async (client: any) => {
-    if (!client) return;
-    if (
-      confirm(
-        `⚠️ Tem certeza que deseja EXCLUIR permanentemente o cadastro da cliente "${client.name}"?\n\nEsta ação removerá a cliente, ficha técnica e todo o histórico do sistema.`
-      )
-    ) {
-      try {
-        const res = await fetch(`/api/clients?id=${client.id}`, { method: "DELETE" });
-        if (res.ok) {
-          if (selectedClient?.id === client.id) {
-            setSelectedClient(null);
-          }
-          alert(`🗑️ Cliente "${client.name}" excluída com sucesso.`);
-          loadClients();
-        } else {
-          const err = await res.json();
-          alert("Erro ao excluir cliente: " + (err.error || "Erro no servidor"));
-        }
-      } catch (e) {
-        alert("Erro ao excluir cliente.");
-      }
-    }
   };
 
   const handleUpdateClient = async (e: React.FormEvent) => {
@@ -281,14 +216,10 @@ export default function ClientesPage() {
     }
   };
 
-  const filteredClients = clients.filter((c) => {
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const filteredClients = safeClients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
-    const hasPkg = c.packages && c.packages.length > 0;
-    const matchTag = filterTag === "all"
-      ? true
-      : filterTag === "PACOTE"
-      ? hasPkg
-      : c.tag === filterTag;
+    const matchTag = filterTag === "all" || c.tag === filterTag;
     return matchSearch && matchTag;
   });
 
@@ -314,88 +245,6 @@ export default function ClientesPage() {
         </button>
       </div>
 
-      {/* Card Resumo do Total de Clientes Cadastradas */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 text-xs">
-        <div className="rounded-2xl border border-rose-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center space-x-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 font-bold text-lg dark:bg-rose-950 dark:text-rose-300">
-            👥
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Cadastradas</span>
-            <p className="font-serif text-lg font-bold text-slate-900 dark:text-white">
-              {clients.length} <span className="text-xs font-semibold text-slate-500">clientes</span>
-            </p>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setFilterTag(filterTag === "PACOTE" ? "all" : "PACOTE")}
-          className={`cursor-pointer rounded-2xl border p-3.5 shadow-sm transition flex items-center space-x-3 ${
-            filterTag === "PACOTE"
-              ? "border-amber-400 bg-amber-100 dark:border-amber-700 dark:bg-amber-950"
-              : "border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 dark:border-slate-800 dark:bg-slate-900/60"
-          }`}
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900 font-bold text-lg dark:bg-amber-950 dark:text-amber-200">
-            📦
-          </div>
-          <div>
-            <span className="text-[10px] font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wide">Com Pacote</span>
-            <p className="font-serif text-lg font-bold text-amber-950 dark:text-amber-100">
-              {clients.filter((c) => c.packages && c.packages.length > 0).length}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 font-bold text-lg dark:bg-amber-950 dark:text-amber-300">
-            🌟
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Clientes VIP</span>
-            <p className="font-serif text-lg font-bold text-amber-950 dark:text-amber-200">
-              {clients.filter((c) => c.tag === "VIP").length}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-800 font-bold text-lg dark:bg-purple-950 dark:text-purple-300">
-            🔁
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wide">Frequentes</span>
-            <p className="font-serif text-lg font-bold text-purple-950 dark:text-purple-200">
-              {clients.filter((c) => c.tag === "FREQUENTE").length}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-800 font-bold text-lg dark:bg-blue-950 dark:text-blue-300">
-            🆕
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Novas</span>
-            <p className="font-serif text-lg font-bold text-blue-950 dark:text-blue-200">
-              {clients.filter((c) => c.tag === "NOVO").length}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 flex items-center space-x-3 col-span-2 sm:col-span-1">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-200 text-slate-700 font-bold text-lg dark:bg-slate-800 dark:text-slate-300">
-            💤
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Inativas</span>
-            <p className="font-serif text-lg font-bold text-slate-800 dark:text-slate-200">
-              {clients.filter((c) => c.tag === "INATIVO").length}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Filtros e Busca */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
@@ -410,26 +259,19 @@ export default function ClientesPage() {
         </div>
 
         <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-          {["all", "PACOTE", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => {
-            const count = t === "all"
-              ? clients.length
-              : t === "PACOTE"
-              ? clients.filter((c) => c.packages && c.packages.length > 0).length
-              : clients.filter((c) => c.tag === t).length;
-            return (
-              <button
-                key={t}
-                onClick={() => setFilterTag(t)}
-                className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
-                  filterTag === t
-                    ? "bg-rose-500 text-white shadow-sm"
-                    : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
-                }`}
-              >
-                {t === "all" ? `Todos os Perfis (${count})` : t === "PACOTE" ? `📦 Com Pacote (${count})` : `${t} (${count})`}
-              </button>
-            );
-          })}
+          {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterTag(t)}
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
+                filterTag === t
+                  ? "bg-rose-500 text-white shadow-sm"
+                  : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
+              }`}
+            >
+              {t === "all" ? "Todos os Perfis" : t}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -475,50 +317,24 @@ export default function ClientesPage() {
                   <div>Cor: <span className="font-semibold text-slate-900 dark:text-white">{client.nailColor || "Nude"}</span></div>
                   <div>Tamanho: <span className="font-semibold text-slate-900 dark:text-white">{client.nailSize || "Médio"}</span></div>
                 </div>
-
-                {/* Exibição em Destaque do Pacote Ativo */}
-                {client.packages && client.packages.length > 0 ? (
-                  <div className="mt-2.5 rounded-xl bg-amber-100/90 border border-amber-300 p-2 text-[11px] font-extrabold text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center justify-between">
-                    <span>📦 Pacote Ativo:</span>
-                    <span className="font-extrabold text-amber-950 dark:text-amber-100">
-                      {client.packages[0].packageName} ({client.packages[0].sessionsUsed || 1}/{client.packages[0].totalSessions || 4} sessões)
-                    </span>
-                  </div>
-                ) : (
-                  <div className="mt-2 text-[10px] font-semibold text-slate-500 italic">
-                    Nenhum pacote ativo no momento.
-                  </div>
-                )}
                 {client.notes && (
                   <p className="mt-2 border-t border-rose-200/60 pt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 italic truncate">
                     📝 {client.notes}
                   </p>
                 )}
-                {/* Métricas do Cliente */}
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                    <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
-                    <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                    <span className="block text-[10px] text-slate-400">VISITAS</span>
-                    <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                    <span className="block text-[10px] text-slate-400">DESMARCOU</span>
-                    <span className={`font-serif font-bold ${client.cancellationsThisMonth > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-slate-900 dark:text-white'}`}>
-                      {client.cancellationsThisMonth || 0}x no mês
-                    </span>
-                  </div>
-                </div>
+              </div>
 
-                {client.cancellationsThisMonth > 0 && (
-                  <div className="mt-2.5 rounded-xl bg-rose-100 border border-rose-200 px-3 py-1.5 text-[11px] font-extrabold text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-200 flex items-center justify-between">
-                    <span>⚠️ {client.cancellationsThisMonth} Desmarcação(ões) este mês</span>
-                    <span className="text-[10px] underline">Ver relatório</span>
-                  </div>
-                )}
-                <div className="mt-3 text-center text-xs">
+              {/* Métricas do Cliente */}
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                  <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
+                  <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
+                  <span className="block text-[10px] text-slate-400">VISITAS</span>
+                  <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
                   <span className="block text-[10px] text-slate-400">TICKET MÉDIO</span>
                   <span className="font-serif font-bold text-slate-900 dark:text-white">
                     R$ {client.attendanceCount > 0 ? ((client.totalSpent || 0) / client.attendanceCount).toFixed(0) : "0"}
@@ -528,40 +344,30 @@ export default function ClientesPage() {
             </div>
 
             {/* Ações do Card */}
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 gap-1">
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
               <a
                 href={`https://wa.me/${(client.whatsapp || client.phone || "").replace(/\D/g, "")}`}
                 target="_blank"
-                className="flex items-center space-x-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
+                className="flex items-center space-x-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
               >
-                <MessageSquare className="h-3.5 w-3.5" />
+                <MessageSquare className="h-4 w-4" />
                 <span>WhatsApp</span>
               </a>
 
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1.5">
                 <button
                   onClick={() => handleStartEdit(client)}
-                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                  title="Editar dados da cliente"
+                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <Edit className="h-3.5 w-3.5 text-amber-600" />
                   <span>Editar</span>
                 </button>
 
                 <button
-                  onClick={() => handleDeleteClient(client)}
-                  className="flex items-center space-x-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
-                  title="Excluir cadastro da cliente"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span>Excluir</span>
-                </button>
-
-                <button
                   onClick={() => setSelectedClient(client)}
-                  className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                  className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
                 >
-                  Ficha &rarr;
+                  Ver Ficha &rarr;
                 </button>
               </div>
             </div>
@@ -595,16 +401,7 @@ export default function ClientesPage() {
                   className="flex items-center space-x-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-600"
                 >
                   <Edit className="h-4 w-4" />
-                  <span>Editar Dados</span>
-                </button>
-
-                <button
-                  onClick={() => handleDeleteClient(selectedClient)}
-                  className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
-                  title="Excluir cadastro da cliente"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Excluir</span>
+                  <span>Editar Dados & Anotações</span>
                 </button>
 
                 <button
@@ -651,67 +448,19 @@ export default function ClientesPage() {
                       );
                     })}
                   </div>
-                 ) : (
+                ) : (
                   <p className="mt-2 text-[11px] text-slate-500 italic">
                     Esta cliente não possui nenhum pacote ativo no momento. Acesse a área de Pacotes para vincular.
                   </p>
                 )}
               </div>
 
-              {/* Relatório de Desmarcações & Cancelamentos da Cliente */}
-              <div className="rounded-2xl border-2 border-rose-200 bg-rose-50/50 p-4 dark:border-rose-900 dark:bg-rose-950/30">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
-                    <span>⚠️ Relatório de Desmarcações</span>
-                    <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-extrabold text-rose-900 dark:bg-rose-900 dark:text-rose-100">
-                      {selectedClient.cancellationsThisMonth || 0} este mês / {selectedClient.cancellationsTotal || 0} total
-                    </span>
-                  </h4>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  {selectedClient.canceledAppointments && selectedClient.canceledAppointments.length > 0 ? (
-                    selectedClient.canceledAppointments.map((app: any) => {
-                      const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
-                      return (
-                        <div key={app.id} className="rounded-xl border border-rose-200 bg-white p-3 shadow-sm text-xs dark:bg-slate-900 dark:border-slate-800 space-y-1">
-                          <div className="flex items-center justify-between font-extrabold text-rose-700 dark:text-rose-400">
-                            <span>🗓️ {dateDDMMYYYY} às {app.startTime}h</span>
-                            <span className="rounded-md bg-rose-600 text-white px-2 py-0.5 text-[10px] font-extrabold uppercase">❌ DESMARCADO</span>
-                          </div>
-                          <p className="font-semibold text-slate-800 dark:text-slate-200">
-                            💅 Procedimento: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
-                          </p>
-                          {app.cancelReason ? (
-                            <p className="text-[11px] font-bold text-rose-800 dark:text-rose-300 italic bg-rose-100 p-1.5 rounded-lg">
-                              💬 Motivo: {app.cancelReason}
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold italic">
-                      ✨ Excelente! Esta cliente não possui histórico de horários desmarcados.
-                    </p>
-                  )}
-                </div>
-              </div>
-
               {/* Ficha Técnica de Unhas Expandida */}
-              <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300">
-                    💅 Histórico Técnico de Unhas
-                  </h4>
-                  {selectedClient.packages && selectedClient.packages.length > 0 && (
-                    <span className="rounded-full bg-amber-200 border border-amber-300 px-3 py-1 text-xs font-extrabold text-amber-950 dark:bg-amber-900 dark:text-amber-100 shadow-2xs">
-                      📦 PACOTE ATIVO: {selectedClient.packages[0].packageName} ({selectedClient.packages[0].sessionsUsed || 1}/{selectedClient.packages[0].totalSessions || 4} sessões)
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-gradient-to-r from-rose-50 to-amber-50 p-4 dark:from-slate-800 dark:to-slate-800/80">
+                <h4 className="font-serif text-sm font-bold text-rose-800 dark:text-rose-300">
+                  💅 Histórico Técnico de Unhas
+                </h4>
+                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
                     <span className="block text-[10px] text-slate-500">FORMATO DA UNHA</span>
                     <span className="font-bold text-slate-800 dark:text-white">{selectedClient.nailForm || "Amendoado"}</span>
@@ -805,183 +554,31 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              {/* Histórico & Agendamentos Marcados da Cliente */}
+              {/* Histórico de Atendimentos */}
               <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
-                    <span>📅 Agendamentos & Horários Marcados (Ordem Cronológica)</span>
-                  </h4>
-                  <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                    {selectedClient.appointments?.length || 0} horários
-                  </span>
-                </div>
-
+                <h4 className="font-serif text-sm font-bold text-slate-900 dark:text-white">
+                  📅 Histórico Completo de Atendimentos
+                </h4>
                 <div className="mt-2 space-y-2">
                   {selectedClient.appointments && selectedClient.appointments.length > 0 ? (
-                    [...selectedClient.appointments]
-                      .sort((a: any, b: any) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")))
-                      .map((app: any) => {
-                        const dateDDMMYYYY = app.date ? app.date.split("-").reverse().join("/") : "";
-                        return (
-                          <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200/60 dark:bg-slate-800 dark:border-slate-700">
-                            <div>
-                              <p className="font-extrabold text-slate-900 dark:text-white text-xs">
-                                🗓️ {dateDDMMYYYY} às {app.startTime}h
-                              </p>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                                💅 Serviços: {app.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <div className="text-right">
-                                <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                                <span className={`block text-[10px] font-extrabold ${app.status === 'CANCELADO' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                  {app.status === 'CANCELADO' ? '❌ DESMARCADO' : app.status}
-                                </span>
-                              </div>
-                              {app.status !== 'CANCELADO' && (
-                                <div className="flex items-center space-x-1.5">
-                                  <button
-                                    onClick={() => {
-                                      setEditingApp(app);
-                                      setEditAppTotal(String((app.total || 0).toFixed(2)));
-                                      setEditAppNotes(app.notes || "");
-                                    }}
-                                    className="rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-extrabold text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-900 shadow-2xs"
-                                    title="Editar valor e observação deste atendimento (Administradora)"
-                                  >
-                                    ✏️ Editar Valor
-                                  </button>
-
-                                  <button
-                                    onClick={async () => {
-                                      const reason = prompt(`Desmarcar agendamento de ${selectedClient.name} do dia ${dateDDMMYYYY} às ${app.startTime}? Motivo (opcional):`, "Cliente desmarcou horário");
-                                      if (reason !== null) {
-                                        const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, { method: "DELETE" });
-                                        if (res.ok) {
-                                          alert("✨ Horário desmarcado e liberado na agenda!");
-                                          loadClients();
-                                        }
-                                      }
-                                    }}
-                                    className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
-                                    title="Desmarcar horário e liberar na agenda"
-                                  >
-                                    🚫 Desmarcar
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
+                    selectedClient.appointments.map((app: any) => (
+                      <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                        <div>
+                          <p className="font-bold text-slate-800 dark:text-white">{app.date} às {app.startTime}</p>
+                          <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                          <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <p className="text-slate-400 text-xs italic">Nenhum atendimento registrado para esta cliente.</p>
+                    <p className="text-slate-400">Nenhum atendimento registrado anteriormente.</p>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDIÇÃO DE VALOR DO ATENDIMENTO (ADMINISTRADORA) */}
-      {editingApp && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
-              <h3 className="font-serif text-base font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
-                <span>✏️ Editar Valor do Atendimento</span>
-              </h3>
-              <button
-                onClick={() => setEditingApp(null)}
-                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="text-xs space-y-1 bg-rose-50/50 p-3 rounded-2xl border border-rose-100 dark:bg-slate-800 dark:border-slate-700">
-              <p className="font-extrabold text-rose-900 dark:text-rose-200">
-                👤 Cliente: {selectedClient?.name}
-              </p>
-              <p className="font-semibold text-slate-700 dark:text-slate-300">
-                🗓️ Data: {editingApp.date ? editingApp.date.split("-").reverse().join("/") : ""} às {editingApp.startTime}h
-              </p>
-              <p className="font-semibold text-slate-700 dark:text-slate-300">
-                💅 Procedimento: {editingApp.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento"}
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveAppValue} className="space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
-                  💰 Valor Total (R$)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={editAppTotal}
-                  onChange={(e) => setEditAppTotal(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  required
-                />
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setEditAppTotal("0.00")}
-                    className="rounded-xl bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-                  >
-                    ⚡ Zerar (R$ 0,00)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditAppTotal("182.00")}
-                    className="rounded-xl bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200"
-                  >
-                    📦 R$ 182,00 (Combo MAIARA)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditAppTotal("172.90")}
-                    className="rounded-xl bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200"
-                  >
-                    📦 R$ 172,90 (Combo Trad)
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
-                  📝 Observação / Descrição do Pacote (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={editAppNotes}
-                  onChange={(e) => setEditAppNotes(e.target.value)}
-                  placeholder="ex: 📦 Pacote Ativo: Combo MAIARA | Sessão 1/4"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-medium text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
-
-              <div className="flex items-center justify-end space-x-2 border-t pt-3 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingApp(null)}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingApp}
-                  className="rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 px-5 py-2 text-xs font-bold text-white shadow-md hover:from-amber-600 hover:to-rose-600 disabled:opacity-50"
-                >
-                  {isSavingApp ? "Salvando..." : "💾 Salvar Alteração"}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

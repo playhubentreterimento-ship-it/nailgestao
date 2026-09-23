@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { seedDatabase, clearDatabase } from "@/lib/seed-data";
 
+import { isDemoVisitor } from "@/lib/demo-check";
+
 export async function POST(req: Request) {
   try {
+    if (await isDemoVisitor()) {
+      return NextResponse.json(
+        { error: "🔒 Modo Demonstração (Somente Leitura): Entre com seu login de Administradora para zerar ou restaurar dados." },
+        { status: 403 }
+      );
+    }
+
     const { action } = await req.json();
 
     if (action === "RESEED") {
@@ -13,18 +22,6 @@ export async function POST(req: Request) {
     if (action === "CLEAR_ALL") {
       await clearDatabase();
       return NextResponse.json({ success: true, message: "Todos os dados foram removidos. O sistema está pronto para produção!" });
-    }
-
-    if (action === "RESET_METRICS") {
-      const { prisma } = await import("@/lib/prisma");
-      await prisma.cashTransaction.deleteMany({}).catch(() => {});
-      await prisma.expense.deleteMany({}).catch(() => {});
-      await prisma.commission.deleteMany({}).catch(() => {});
-      await prisma.appointmentService.deleteMany({}).catch(() => {});
-      await prisma.appointment.deleteMany({}).catch(() => {});
-      await prisma.clientPackage.deleteMany({}).catch(() => {});
-
-      return NextResponse.json({ success: true, message: "Métricas financeiras, agendamentos e comissões zerados com sucesso!" });
     }
 
     return NextResponse.json({ error: "Ação não reconhecida." }, { status: 400 });

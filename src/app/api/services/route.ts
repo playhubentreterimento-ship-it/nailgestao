@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+import { seedDatabase } from "@/lib/seed-data";
+
 export async function GET() {
   try {
-    const categories = await prisma.serviceCategory.findMany({
+    let categories = await prisma.serviceCategory.findMany({
+      where: { salonId: "default-salon" },
       include: { services: true },
       orderBy: { order: "asc" },
     }).catch(() => []);
 
+    if (!categories || categories.length === 0) {
+      await seedDatabase().catch(() => null);
+      categories = await prisma.serviceCategory.findMany({
+        where: { salonId: "default-salon" },
+        include: { services: true },
+        orderBy: { order: "asc" },
+      }).catch(() => []);
+    }
+
     const services = await prisma.service.findMany({
+      where: { salonId: "default-salon" },
       orderBy: { name: "asc" },
     }).catch(() => []);
 

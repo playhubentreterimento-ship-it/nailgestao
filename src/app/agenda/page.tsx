@@ -30,6 +30,36 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Converte qualquer formato de data (YYYY-MM-DD, DD/MM/YYYY, ISO) para o padrão seguro YYYY-MM-DD
+function toISODateString(input: string): string {
+  if (!input) return getTodayString();
+  const trimmed = String(input).trim();
+  if (trimmed.includes("T")) return trimmed.split("T")[0];
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/");
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, "0");
+      const m = parts[1].padStart(2, "0");
+      const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+  if (trimmed.includes("-")) {
+    const parts = trimmed.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      } else {
+        const d = parts[0].padStart(2, "0");
+        const m = parts[1].padStart(2, "0");
+        const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+  return trimmed;
+}
+
 const timeToMins = (t: string) => {
   if (!t || !t.includes(":")) return 0;
   const [h, m] = t.split(":").map(Number);
@@ -37,9 +67,10 @@ const timeToMins = (t: string) => {
 };
 
 // Auxiliar para obter o intervalo da semana (Segunda a Domingo)
-function getWeekDays(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const curr = new Date(y, m - 1, d);
+function getWeekDays(dateInput: string) {
+  const iso = toISODateString(dateInput);
+  const [y, m, d] = iso.split("-").map(Number);
+  const curr = new Date(y, (m || 1) - 1, d || 1);
   const dayOfWeek = curr.getDay(); // 0 = Domingo, 1 = Segunda...
   const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   
@@ -59,10 +90,13 @@ function getWeekDays(dateStr: string) {
 }
 
 // Auxiliar para obter a grade de dias do mês
-function getMonthCalendar(dateStr: string) {
-  const [y, m] = dateStr.split("-").map(Number);
-  const firstDay = new Date(y, m - 1, 1);
-  const lastDay = new Date(y, m, 0);
+function getMonthCalendar(dateInput: string) {
+  const iso = toISODateString(dateInput);
+  const [y, m] = iso.split("-").map(Number);
+  const safeY = y || new Date().getFullYear();
+  const safeM = m || new Date().getMonth() + 1;
+  const firstDay = new Date(safeY, safeM - 1, 1);
+  const lastDay = new Date(safeY, safeM, 0);
   
   const daysInMonth = lastDay.getDate();
   const startDayOfWeek = firstDay.getDay(); // 0 = Dom, 1 = Seg...
@@ -70,71 +104,12 @@ function getMonthCalendar(dateStr: string) {
 
   const days: string[] = [];
   for (let i = 1; i <= daysInMonth; i++) {
-    const mm = String(m).padStart(2, "0");
+    const mm = String(safeM).padStart(2, "0");
     const dd = String(i).padStart(2, "0");
-    days.push(`${y}-${mm}-${dd}`);
+    days.push(`${safeY}-${mm}-${dd}`);
   }
 
-  return { year: y, month: m, daysInMonth, mondayOffset, days };
-}
-
-function getAppPackageBadgeText(app: any, clientPackages: any[] = []) {
-  const notes = app.notes || "";
-  const clientName = (app.clientName || "").toLowerCase();
-
-  // Caso específico da Fernanda Peças ou Aline de Matos
-  if (clientName.includes("fernanda") && (clientName.includes("peças") || clientName.includes("pecas"))) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
-    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
-  }
-
-  if (clientName.includes("aline") && clientName.includes("matos")) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
-    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
-  }
-
-  if (clientName.includes("maiara")) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/) || notes.match(/\(Sessão \d\/\d\)/);
-    return `Combo com esmaltação em Gel${sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : ""}`;
-  }
-
-  // Se as notas contêm explicitamente "Pacote Ativo: <Nome>", extrair
-  if (notes.includes("Pacote Ativo:")) {
-    const after = notes.split("Pacote Ativo:")[1];
-    const cleanName = after.split("|")[0].trim();
-    const sessionMatch = notes.match(/\(Sessão \d\/\d\)/) || notes.match(/Sessão \d\/\d/);
-    const sessionStr = sessionMatch ? ` (${sessionMatch[0].replace(/[()]/g, "")})` : "";
-    return `${cleanName}${sessionStr}`;
-  }
-
-  if (notes.includes("Combo Tradicional")) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/);
-    return `Combo Tradicional${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
-  }
-
-  if (notes.includes("esmaltação em Gel") || notes.includes("esmaltacao")) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/);
-    return `Combo com esmaltação em Gel${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
-  }
-
-  if (notes.includes("banho de gel com adicional")) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/);
-    return `Combo Banho de Gel c/ Adicional${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
-  }
-
-  // Buscar o pacote da cliente em clientPackages
-  const clientPkg = (clientPackages || []).find((cp: any) => cp.clientId === app.clientId);
-  if (clientPkg && clientPkg.packageName) {
-    const sessionMatch = notes.match(/Sessão \d\/\d/);
-    return `${clientPkg.packageName}${sessionMatch ? ` (${sessionMatch[0]})` : ""}`;
-  }
-
-  const sessionMatch = notes.match(/Sessão \d\/\d/);
-  if (sessionMatch) {
-    return `Atendimento de Pacote (${sessionMatch[0]})`;
-  }
-
-  return "Atendimento de Pacote";
+  return { year: safeY, month: safeM, daysInMonth, mondayOffset, days };
 }
 
 export default function AgendaPage() {
@@ -144,64 +119,19 @@ export default function AgendaPage() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-  const [clientPackages, setClientPackages] = useState<any[]>([]);
-  const [packages, setPackages] = useState<any[]>([]);
   const [filterProf, setFilterProf] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userProfId, setUserProfId] = useState<string | null>(null);
-
-  // Buscar sessão do usuário logado e vincular profissional
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/auth/session").then((r) => r.json()).catch(() => null),
-      fetch("/api/professionals").then((r) => r.json()).catch(() => []),
-    ]).then(([sessRes, profsData]) => {
-      const u = sessRes?.user;
-      setCurrentUser(u);
-      const profList = Array.isArray(profsData) ? profsData : [];
-      setProfessionals(profList);
-
-      if (u) {
-        // Se for PROFISSIONAL (Colaboradora), filtrar estritamente a agenda dela
-        if (u.role === "PROFISSIONAL" || u.role !== "ADMINISTRADOR") {
-          const matched = profList.find(
-            (p: any) =>
-              p.userId === u.id ||
-              (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase()) ||
-              p.name.toLowerCase().includes(u.name.toLowerCase()) ||
-              u.name.toLowerCase().includes(p.name.toLowerCase())
-          );
-          if (matched) {
-            setUserProfId(matched.id);
-            setFilterProf(matched.id);
-            setFormProf(matched.id);
-          }
-        }
-      }
-    });
-  }, []);
-
-  // Busca por Cliente / Lupa
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-
-  // Feriados & Datas Bloqueadas para Agendamento Online
-  const [blockedDates, setBlockedDates] = useState<any[]>([]);
 
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
-  const [modalClientSearch, setModalClientSearch] = useState("");
   const [formProf, setFormProf] = useState("");
   const [formDate, setFormDate] = useState(getTodayString());
   const [formTime, setFormTime] = useState("10:00");
   const [formSelectedServices, setFormSelectedServices] = useState<string[]>([]);
   const [formDiscount, setFormDiscount] = useState<number>(0);
-  const [formDeposit, setFormDeposit] = useState<number>(0);
+  const [formDeposit, setFormDeposit] = useState<number>(50);
   const [formNotes, setFormNotes] = useState("");
-  const [formClientPackageId, setFormClientPackageId] = useState<string>("");
 
   // Form de Edição de Agendamento
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -213,50 +143,6 @@ export default function AgendaPage() {
   const [editDiscount, setEditDiscount] = useState<number>(0);
   const [editDeposit, setEditDeposit] = useState<number>(0);
   const [editNotes, setEditNotes] = useState("");
-
-  // Cadastro Rápido de Cliente Nova no Agendamento
-  const [showQuickClientModal, setShowQuickClientModal] = useState(false);
-  const [quickClientName, setQuickClientName] = useState("");
-  const [quickClientPhone, setQuickClientPhone] = useState("");
-  const [isSavingQuickClient, setIsSavingQuickClient] = useState(false);
-
-  const handleQuickSaveClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickClientName.trim() || !quickClientPhone.trim()) {
-      alert("Por favor, informe o Nome e o WhatsApp da nova cliente.");
-      return;
-    }
-    setIsSavingQuickClient(true);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: quickClientName.trim(),
-          phone: quickClientPhone.trim(),
-          whatsapp: quickClientPhone.trim(),
-          tag: "NOVA",
-        }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        const updatedClientsRes = await fetch("/api/clients").then((r) => r.json());
-        const updatedList = Array.isArray(updatedClientsRes) ? updatedClientsRes : [];
-        setClients(updatedList);
-        handleSelectClient(created.id);
-        setQuickClientName("");
-        setQuickClientPhone("");
-        setShowQuickClientModal(false);
-      } else {
-        const err = await res.json();
-        alert("Erro ao cadastrar cliente: " + (err.error || "Tente novamente"));
-      }
-    } catch (e) {
-      alert("Erro ao cadastrar cliente.");
-    } finally {
-      setIsSavingQuickClient(false);
-    }
-  };
 
   const handleOpenEditModal = (app: any) => {
     setEditingApp(app);
@@ -330,231 +216,56 @@ export default function AgendaPage() {
       .catch(() => setLoading(false));
   };
 
-  const refreshAuxiliaryData = () => {
-    fetch("/api/professionals").then((r) => r.json()).then(setProfessionals).catch(() => {});
-    fetch("/api/services").then((r) => r.json()).then((res) => setServices(res.services || [])).catch(() => {});
-    fetch("/api/clients").then((r) => r.json()).then(setClients).catch(() => {});
-    fetch("/api/packages").then((r) => r.json()).then((res) => {
-      setClientPackages(res.clientPackages || []);
-      setPackages(res.packages || []);
-    }).catch(() => {});
-    fetch("/api/settings").then((r) => r.json()).then((res) => {
-      let list: any[] = [];
-      if (res?.blockedDates) {
-        try {
-          list = typeof res.blockedDates === "string" ? JSON.parse(res.blockedDates) : res.blockedDates;
-        } catch (e) {}
-      }
-      setBlockedDates(Array.isArray(list) ? list : []);
-    }).catch(() => {});
-  };
-
-  const isCurrentDateBlocked = () => {
-    return blockedDates.some((item: any) => {
-      if (typeof item === "string") return item === selectedDate;
-      return item?.date === selectedDate;
-    });
-  };
-
-  const getCurrentDateBlockedReason = () => {
-    const found = blockedDates.find((item: any) => {
-      if (typeof item === "string") return item === selectedDate;
-      return item?.date === selectedDate;
-    });
-    if (!found) return "";
-    return typeof found === "string" ? "Feriado / Salão Fechado" : (found.reason || "Feriado / Salão Fechado");
-  };
-
-  const handleToggleDateBlock = async () => {
-    const isBlocked = isCurrentDateBlocked();
-    const dateFormatted = selectedDate.split("-").reverse().join("/");
-
-    if (isBlocked) {
-      if (confirm(`🔓 Desbloquear agendamentos online dos clientes para o dia ${dateFormatted}?\n\nOs clientes poderão agendar horários normalmente nesta data.`)) {
-        const updatedList = blockedDates.filter((item: any) => {
-          if (typeof item === "string") return item !== selectedDate;
-          return item?.date !== selectedDate;
-        });
-
-        const res = await fetch("/api/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blockedDates: JSON.stringify(updatedList) }),
-        });
-
-        if (res.ok) {
-          setBlockedDates(updatedList);
-          alert(`✨ Dia ${dateFormatted} DESBLOQUEADO com sucesso!\n\nA agenda online está liberada para agendamentos de clientes nesta data.`);
-          refreshAllData();
-        } else {
-          setBlockedDates(updatedList);
-          alert(`✨ Dia ${dateFormatted} DESBLOQUEADO com sucesso!`);
-          refreshAllData();
-        }
-      }
-    } else {
-      const reasonInput = prompt(
-        `🔒 Bloquear agendamentos online dos clientes no dia ${dateFormatted}?\n\nExemplo: "Feriado de 7 de Setembro", "Salão Fechado para Treinamento", "Manutenção".\n\nDigite o motivo do fechamento:`,
-        "Feriado / Salão Fechado"
-      );
-
-      if (reasonInput !== null) {
-        const reasonStr = reasonInput.trim() || "Feriado / Salão Fechado";
-        const newItem = { date: selectedDate, reason: reasonStr };
-        const updatedList = [...blockedDates.filter((item: any) => {
-          if (typeof item === "string") return item !== selectedDate;
-          return item?.date !== selectedDate;
-        }), newItem];
-
-        const res = await fetch("/api/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ blockedDates: JSON.stringify(updatedList) }),
-        });
-
-        if (res.ok) {
-          setBlockedDates(updatedList);
-          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"\nClientes que acessarem a agenda online verão o aviso de Salão Fechado nesta data.`);
-          refreshAllData();
-        } else {
-          setBlockedDates(updatedList);
-          alert(`🔒 Dia ${dateFormatted} BLOQUEADO com sucesso!\n\nMotivo: "${reasonStr}"`);
-          refreshAllData();
-        }
-      }
-    }
-  };
-
   const refreshAllData = () => {
     loadAgenda();
-    refreshAuxiliaryData();
+    fetch("/api/professionals", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((res) => setProfessionals(Array.isArray(res) ? res : []))
+      .catch(() => setProfessionals([]));
+    fetch("/api/services", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((res) => {
+        if (Array.isArray(res)) setServices(res);
+        else if (res && Array.isArray(res.services)) setServices(res.services);
+        else if (res && Array.isArray(res.categories)) {
+          const allServices = res.categories.flatMap((cat: any) => cat.services || []);
+          setServices(allServices);
+        } else setServices([]);
+      })
+      .catch(() => setServices([]));
+    fetch("/api/clients", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((res) => setClients(Array.isArray(res) ? res : []))
+      .catch(() => setClients([]));
   };
 
-  // Carregar listas auxiliares 1x ao montar a página
   useEffect(() => {
-    refreshAuxiliaryData();
-  }, []);
+    refreshAllData();
 
-  // Recarregar apenas os agendamentos ao mudar de data/view/profissional (Super Rápido!)
-  useEffect(() => {
-    loadAgenda();
-  }, [selectedDate, filterProf, viewMode]);
+    const handleRefresh = () => refreshAllData();
+    window.addEventListener("focus", handleRefresh);
+    window.addEventListener("appointments-updated", handleRefresh);
 
-  // Atualização automática em segundo plano (Sincronização em tempo real a cada 10 segundos)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadAgenda();
-    }, 10000);
-    window.addEventListener("focus", loadAgenda);
+    // Sincronização em tempo real ultra-rápida (polling a cada 3 segundos)
+    const interval = setInterval(loadAgenda, 3000);
+
     return () => {
+      window.removeEventListener("focus", handleRefresh);
+      window.removeEventListener("appointments-updated", handleRefresh);
       clearInterval(interval);
-      window.removeEventListener("focus", loadAgenda);
     };
   }, [selectedDate, filterProf, viewMode]);
-
-  // Ler parametro search da URL se vier do topo do site
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get("search") || params.get("q");
-      if (q) setSearchQuery(q);
-    }
-  }, []);
-
-  // Efeito para pesquisar agendamentos de clientes em todas as datas quando searchQuery tem 2+ caracteres
-  useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      fetch(`/api/appointments?search=${encodeURIComponent(searchQuery.trim())}&date=all`, { cache: "no-store" })
-        .then((r) => r.json())
-        .then((res) => {
-          setSearchResults(Array.isArray(res) ? res : []);
-          setIsSearching(false);
-        })
-        .catch(() => setIsSearching(false));
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const handleOpenModal = (presetDate?: string, presetTime?: string) => {
     refreshAllData();
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
-    setFormClientPackageId("");
-    setFormDeposit(0);
-    setFormDiscount(0);
-    if (userProfId && currentUser && currentUser.role !== "ADMINISTRADOR") {
-      setFormProf(userProfId);
-    }
     setShowModal(true);
-  };
-
-  const handleSelectClient = (clientId: string) => {
-    setFormClient(clientId);
-    if (!clientId) {
-      setFormClientPackageId("");
-      return;
-    }
-
-    const activeCp = clientPackages.find((cp: any) => cp.clientId === clientId && cp.active);
-    if (activeCp) {
-      setFormClientPackageId(activeCp.id);
-      setFormDeposit(0);
-      setFormDiscount(0);
-
-      // Auto-selecionar o procedimento cadastrado para a semana do pacote
-      const pkgObj = packages.find((p: any) => p.id === activeCp.packageId);
-      if (pkgObj?.weeklyServices) {
-        try {
-          const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
-          const nextWeek = activeCp.sessionsUsed + 1;
-          const currentItem = parsed.find((item: any) => item.week === nextWeek);
-          if (currentItem?.serviceId) {
-            setFormSelectedServices([currentItem.serviceId]);
-          } else if (services.length > 0) {
-            setFormSelectedServices([services[0].id]);
-          }
-        } catch (e) {
-          if (services.length > 0) setFormSelectedServices([services[0].id]);
-        }
-      } else if (services.length > 0) {
-        setFormSelectedServices([services[0].id]);
-      }
-    } else {
-      setFormClientPackageId("");
-    }
   };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    let targetServices = [...formSelectedServices];
-    if (targetServices.length === 0 && formClientPackageId) {
-      const activeCp = clientPackages.find((cp: any) => cp.id === formClientPackageId);
-      const pkgObj = packages.find((p: any) => p.id === activeCp?.packageId);
-      if (pkgObj?.weeklyServices) {
-        try {
-          const parsed = typeof pkgObj.weeklyServices === "string" ? JSON.parse(pkgObj.weeklyServices) : pkgObj.weeklyServices;
-          const nextWeek = (activeCp?.sessionsUsed || 0) + 1;
-          const currentItem = parsed.find((item: any) => item.week === nextWeek);
-          if (currentItem?.serviceId) {
-            targetServices = [currentItem.serviceId];
-          }
-        } catch (e) {}
-      }
-      if (targetServices.length === 0 && services.length > 0) {
-        targetServices = [services[0].id];
-      }
-    }
-
-    if (!formClient || !formProf || targetServices.length === 0) {
+    if (!formClient || !formProf || formSelectedServices.length === 0) {
       alert("Por favor, selecione a cliente, a profissional e ao menos 1 serviço.");
       return;
     }
@@ -567,11 +278,10 @@ export default function AgendaPage() {
         professionalId: formProf,
         date: formDate,
         startTime: formTime,
-        serviceIds: targetServices,
+        serviceIds: formSelectedServices,
         discount: Number(formDiscount),
         depositPaid: Number(formDeposit),
         notes: formNotes,
-        clientPackageId: formClientPackageId || undefined,
       }),
     });
 
@@ -587,7 +297,6 @@ export default function AgendaPage() {
       setFormNotes("");
       setFormDiscount(0);
       setFormDeposit(0);
-      setFormClientPackageId("");
       refreshAllData();
     } else {
       const err = await res.json();
@@ -604,21 +313,18 @@ export default function AgendaPage() {
   };
 
   const handleCancelAppointment = async (app: any) => {
-    const reason = prompt(
-      `⚠️ Desmarcar agendamento da cliente "${app.clientName}" no dia ${app.date} às ${app.startTime}h?\n\nDigite o motivo da desmarcação (opcional):`,
-      "Cliente desmarcou horário"
-    );
-
-    if (reason !== null) {
-      const res = await fetch(`/api/appointments?id=${app.id}&reason=${encodeURIComponent(reason)}`, {
-        method: "DELETE",
-      });
+    if (
+      confirm(
+        `⚠️ Tem certeza que deseja CANCELAR e EXCLUIR o agendamento da cliente "${app.clientName}" do dia ${app.date} às ${app.startTime}?\n\nEste horário será liberado imediatamente para novas clientes agendarem!`
+      )
+    ) {
+      const res = await fetch(`/api/appointments?id=${app.id}`, { method: "DELETE" });
       if (res.ok) {
-        alert("✨ Horário liberado na agenda! Cancelamento contabilizado com sucesso no cadastro da cliente.");
-        refreshAllData();
+        alert("✨ Agendamento cancelado e excluído com sucesso! Horário liberado na agenda.");
+        loadAgenda();
       } else {
         const err = await res.json();
-        alert("Erro ao desmarcar: " + err.error);
+        alert("Erro ao excluir agendamento: " + err.error);
       }
     }
   };
@@ -629,29 +335,30 @@ export default function AgendaPage() {
     );
 
     if (unlockedEntry) {
-      if (confirm(`Bloquear novamente o horário de almoço na agenda virtual (11:30 às 13:00) no dia ${selectedDate}?`)) {
+      if (confirm(`Bloquear novamente o horário de almoço (11:00 às 13:00) no dia ${selectedDate}?`)) {
         await fetch(`/api/appointments?id=${unlockedEntry.id}`, { method: "DELETE" });
-        alert("🍱 Horário de almoço (11:30h-13h) bloqueado na agenda virtual do cliente!");
+        alert("🍱 Horário de almoço (11h-13h) bloqueado com sucesso na agenda!");
         loadAgenda();
       }
     } else {
-      if (confirm(`Liberar manualmente o horário de almoço (11:30 às 13:00) para agendamentos online de clientes no dia ${selectedDate}?`)) {
+      if (confirm(`Liberar manualmente o horário de almoço (11:00 às 13:00) para agendamentos no dia ${selectedDate}?`)) {
         const res = await fetch("/api/appointments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: "UNLOCK_LUNCH",
+            clientId: "system-lunch",
             professionalId: filterProf !== "all" ? filterProf : (professionals[0]?.id || "prof-default"),
             date: selectedDate,
-            startTime: "11:30",
+            startTime: "11:00",
             endTime: "13:00",
             status: "ALMOCO_LIBERADO",
             notes: "LIBERADO_ALMOCO",
+            serviceIds: [],
           }),
         });
 
         if (res.ok) {
-          alert("🔓 Horário de Almoço (11:30h às 13h) LIBERADO na agenda virtual do cliente para o dia " + selectedDate + "!");
+          alert("🔓 Horário de Almoço (11h às 13h) LIBERADO com sucesso para o dia " + selectedDate + "!");
           loadAgenda();
         } else {
           alert("Erro ao liberar horário de almoço.");
@@ -730,28 +437,9 @@ export default function AgendaPage() {
                   ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
                   : "bg-slate-900 text-amber-300 border-2 border-amber-400 hover:bg-slate-800"
               }`}
-              title="O horário de almoço (11:30-13h) fica bloqueado na agenda online dos clientes. Clique para liberar ou bloquear manualmente nesta data."
+              title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
             >
-              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11:30-13h)" : "🔓 Liberar Almoço Online (11:30-13h)"}</span>
-            </button>
-          );
-        })()}
-
-        {/* Botão de Bloquear Dia / Feriado / Fechamento */}
-        {(() => {
-          const isBlocked = isCurrentDateBlocked();
-          return (
-            <button
-              onClick={handleToggleDateBlock}
-              className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition shadow-sm ${
-                isBlocked
-                  ? "bg-rose-600 text-white hover:bg-rose-700 border-2 border-rose-300 shadow-rose-200"
-                  : "bg-slate-800 text-rose-200 border-2 border-rose-400 hover:bg-slate-700"
-              }`}
-              title="Bloquear ou desativar agendamentos online nesta data (Ex: Feriado de 7 de Setembro / Salão Fechado)."
-            >
-              <Lock className="h-3.5 w-3.5 text-amber-300" />
-              <span>{isBlocked ? `🔓 Desbloquear Dia (${selectedDate.split("-").reverse().join("/")})` : `🔒 Bloquear Dia / Feriado (${selectedDate.split("-").reverse().join("/")})`}</span>
+              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
             </button>
           );
         })()}
@@ -766,25 +454,6 @@ export default function AgendaPage() {
       </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Lupa de Pesquisa por Cliente */}
-          <div className="relative flex-1 min-w-[220px] max-w-sm">
-            <input
-              type="text"
-              placeholder="🔍 Pesquisar cliente (ver datas/meses)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border-2 border-amber-300 bg-amber-50/50 pl-3 pr-8 py-2 text-xs font-bold text-slate-900 shadow-sm outline-none focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-300 dark:border-amber-700 dark:bg-slate-900 dark:text-white"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
           {/* Seletor de data */}
           <input
             type="date"
@@ -796,31 +465,15 @@ export default function AgendaPage() {
           {/* Filtro por Profissional */}
           <select
             value={filterProf}
-            onChange={(e) => {
-              if (!currentUser || currentUser.role === "ADMINISTRADOR") {
-                setFilterProf(e.target.value);
-              }
-            }}
-            disabled={currentUser && currentUser.role !== "ADMINISTRADOR"}
-            className={`rounded-xl border px-3 py-2 text-xs font-semibold shadow-sm outline-none focus:ring-2 dark:bg-slate-900 ${
-              currentUser && currentUser.role !== "ADMINISTRADOR"
-                ? "border-amber-300 bg-amber-50/80 text-amber-950 font-extrabold cursor-not-allowed dark:border-amber-800 dark:text-amber-200"
-                : "border-rose-200 bg-white text-slate-800 focus:ring-rose-400 dark:border-slate-800 dark:text-white"
-            }`}
+            onChange={(e) => setFilterProf(e.target.value)}
+            className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
           >
-            {(!currentUser || currentUser.role === "ADMINISTRADOR") && (
-              <option value="all">Todas as Profissionais</option>
-            )}
-            {professionals
-              .filter((p) => {
-                if (!currentUser || currentUser.role === "ADMINISTRADOR") return true;
-                return p.id === userProfId || p.email === currentUser.email || p.userId === currentUser.id;
-              })
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {currentUser && currentUser.role !== "ADMINISTRADOR" ? "(Sua Agenda Exclusiva)" : ""}
-                </option>
-              ))}
+            <option value="all">Todas as Profissionais</option>
+            {professionals.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
 
           {/* Visualizações (Dia, Semana, Mês) */}
@@ -850,135 +503,27 @@ export default function AgendaPage() {
               Mês
             </button>
           </div>
+
+          {/* Botão de Bloqueio/Liberação de Almoço */}
+          {(() => {
+            const isLunchUnlocked = appointments.some(
+              (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
+            );
+            return (
+              <button
+                onClick={handleToggleLunchBlock}
+                className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+                  isLunchUnlocked
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+                    : "bg-slate-800 text-amber-300 border border-amber-400 hover:bg-slate-700"
+                }`}
+                title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
+              >
+                <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
+              </button>
+            );
+          })()}
         </div>
-
-      {/* ==================== PAINEL DE CONSULTA POR CLIENTE (LUPA) ==================== */}
-      {searchQuery.trim().length >= 2 && (
-        <div className="rounded-3xl border-2 border-amber-400 bg-white p-6 shadow-xl dark:border-amber-600 dark:bg-slate-900 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 border-amber-200 dark:border-slate-800 gap-2">
-            <div>
-              <h3 className="font-serif text-lg font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
-                <span>🔍 Agendamentos Encontrados para Cliente:</span>
-                <span className="text-rose-600 dark:text-rose-400">"{searchQuery}"</span>
-              </h3>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
-                {isSearching
-                  ? "Buscando datas marcadas..."
-                  : `${searchResults.length} agendamento(s) localizado(s) nos meses e semanas.`}
-              </p>
-            </div>
-
-            <button
-              onClick={() => setSearchQuery("")}
-              className="self-start sm:self-auto rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-            >
-              ✖️ Limpar Busca
-            </button>
-          </div>
-
-          {searchResults.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {searchResults.map((app: any) => {
-                const formattedDate = app.date ? app.date.split("-").reverse().join("/") : "";
-                const weekDayName = app.date
-                  ? new Date(app.date + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long" })
-                  : "";
-                const isPackage = app.paymentStatus === "PACOTE" || app.notes?.includes("Pacote");
-                const isCanceled = app.status === "CANCELADO";
-
-                return (
-                  <div
-                    key={app.id}
-                    className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm space-y-3 ${
-                      isCanceled
-                        ? "border-rose-300 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/40"
-                        : "border-amber-200 bg-amber-50/40 dark:border-slate-800 dark:bg-slate-800/80"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between border-b border-amber-200/60 pb-2 dark:border-slate-700">
-                        <span className="font-extrabold text-xs text-amber-950 dark:text-amber-200">
-                          👤 {app.clientName}
-                        </span>
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase ${
-                            isCanceled
-                              ? "bg-rose-600 text-white"
-                              : isPackage
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                              : "bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-100"
-                          }`}
-                        >
-                          {isCanceled ? "❌ DESMARCADO" : isPackage ? "🎁 PACOTE" : app.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-2 space-y-1 text-xs">
-                        <p className="font-extrabold text-slate-900 dark:text-white flex items-center space-x-1">
-                          <span>🗓️ {formattedDate} ({weekDayName})</span>
-                        </p>
-                        <p className="font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1">
-                          <span>⏰ Horário: {app.startTime}</span>
-                        </p>
-                        <p className="font-semibold text-slate-700 dark:text-slate-300">
-                          💅 Procedimento: <strong>{app.serviceNames?.join(", ") || "Atendimento"}</strong>
-                        </p>
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          👤 Atendida por: {app.professionalName}
-                        </p>
-                        {app.cancelReason && (
-                          <p className="text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 p-1.5 rounded-lg mt-1">
-                            ⚠️ Motivo da Desmarcação: {app.cancelReason}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between border-t border-amber-200/60 pt-2.5 dark:border-slate-700 text-xs font-bold gap-1">
-                      {!isCanceled && (
-                        <>
-                          <button
-                            onClick={() => handleOpenEditModal(app)}
-                            className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-2.5 py-1.5 text-xs text-white shadow-sm hover:opacity-95 flex items-center space-x-1"
-                          >
-                            <span>✏️ Remarcar</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleCancelAppointment(app)}
-                            className="rounded-xl border border-rose-300 bg-rose-100 px-2.5 py-1.5 text-[11px] text-rose-800 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-900"
-                            title="Desmarcar horário, liberar na agenda e contabilizar no relatório da cliente"
-                          >
-                            <span>🚫 Desmarcar</span>
-                          </button>
-                        </>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setSelectedDate(app.date);
-                          setViewMode("day");
-                          setSearchQuery("");
-                        }}
-                        className="rounded-xl border border-amber-300 bg-white px-2.5 py-1.5 text-[11px] text-amber-900 hover:bg-amber-50 dark:bg-slate-900 dark:text-amber-200 dark:border-slate-700"
-                        title="Ver na grade do dia"
-                      >
-                        <span>📅 Ir para o Dia</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            !isSearching && (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-xs font-bold text-slate-500 dark:bg-slate-900 dark:border-slate-800">
-                Nenhum agendamento encontrado para a cliente "{searchQuery}".
-              </div>
-            )
-          )}
-        </div>
-      )}
 
       {/* ==================== 1. VISUALIZAÇÃO DIA ==================== */}
       {viewMode === "day" && (
@@ -992,27 +537,10 @@ export default function AgendaPage() {
             </span>
           </div>
 
-          {isCurrentDateBlocked() && (
-            <div className="mb-4 rounded-2xl border-2 border-rose-400 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950/60 shadow-sm space-y-1">
-              <div className="flex items-center space-x-2 font-serif text-sm font-extrabold text-rose-900 dark:text-rose-200">
-                <Lock className="h-5 w-5 text-rose-600 shrink-0" />
-                <span>🚫 DIA BLOQUEADO PARA AGENDAMENTOS ONLINE ({getCurrentDateBlockedReason()})</span>
-              </div>
-              <p className="text-xs text-rose-800 dark:text-rose-300 font-semibold">
-                Esta data está desativada no link de agendamentos dos clientes. A mensagem exibida para os clientes será de Salão Fechado / Feriado.
-              </p>
-            </div>
-          )}
-
           {/* Linha do Tempo Visual */}
           <div className="space-y-3">
             {timeSlots.map((slot) => {
               const slotMins = timeToMins(slot);
-
-              const isLunchUnlocked = appointments.some(
-                (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
-              );
-              const isLunchSlot = slotMins >= 690 && slotMins < 780 && !isLunchUnlocked;
 
               const startingApps = appointments.filter(
                 (a) => a.startTime === slot && a.status !== "CANCELADO"
@@ -1033,8 +561,6 @@ export default function AgendaPage() {
                   className={`flex items-start rounded-2xl border p-3 transition ${
                     isBusy
                       ? "border-rose-200 bg-rose-50/30 dark:border-slate-800 dark:bg-slate-800/40"
-                      : isLunchSlot
-                      ? "border-amber-300/80 bg-amber-50/30 dark:border-amber-900/60 dark:bg-amber-950/20"
                       : "border-slate-100 bg-slate-50/40 hover:bg-rose-50/40 dark:border-slate-800/60 dark:bg-slate-900/60"
                   }`}
                 >
@@ -1062,22 +588,6 @@ export default function AgendaPage() {
                               <p className={`text-xs font-bold ${app.status === 'BLOQUEADO' ? 'text-rose-200' : 'text-slate-800 dark:text-slate-200'}`}>
                                 💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                               </p>
-
-                              {/* Observação / Badge de Pacote Ativo e Número da Sessão */}
-                              {((app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão"))) ||
-                                (app.clientName && (
-                                  app.clientName.toLowerCase().includes("fernanda") ||
-                                  app.clientName.toLowerCase().includes("maiara") ||
-                                  (app.clientName.toLowerCase().includes("aline") && app.date >= "2026-09-17")
-                                ))) && (
-                                <div className="mt-1.5 rounded-lg bg-amber-100/90 border border-amber-300 px-2 py-1 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 flex items-center space-x-1 shadow-2xs">
-                                  <span>📦 PACOTE ATIVO:</span>
-                                  <span className="truncate">
-                                    {getAppPackageBadgeText(app, clientPackages)}
-                                  </span>
-                                </div>
-                              )}
-
                               <p className={`mt-1 text-[11px] font-semibold ${app.status === 'BLOQUEADO' ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'}`}>
                                 👩 {app.professionalName} ({app.startTime} até {app.endTime})
                               </p>
@@ -1098,9 +608,9 @@ export default function AgendaPage() {
                                 <button
                                   onClick={() => handleCancelAppointment(app)}
                                   className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
-                                  title="Desmarcar horário, liberar na agenda e contabilizar no relatório da cliente"
+                                  title="Cancelar e liberar este horário"
                                 >
-                                  🚫 Desmarcar
+                                  🗑️ Excluir
                                 </button>
                                 {app.status !== "CONCLUIDO" && (
                                   <button
@@ -1152,24 +662,6 @@ export default function AgendaPage() {
                             </div>
                           </div>
                         ))}
-                      </div>
-                    ) : isLunchSlot ? (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs rounded-xl bg-amber-50/90 p-2.5 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/60 w-full gap-2 shadow-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-extrabold text-amber-900 dark:text-amber-300">
-                            🍱 Horário de Almoço (11:30 às 13:00)
-                          </span>
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full dark:bg-amber-900 dark:text-amber-200">
-                            Bloqueado na Agenda Online
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleOpenModal(selectedDate, slot)}
-                          className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-amber-700 shadow-sm transition"
-                          title="Permitir encaixe manual nesta vaga de almoço"
-                        >
-                          + Encaixar Manualmente
-                        </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
@@ -1285,7 +777,7 @@ export default function AgendaPage() {
                                           onClick={() => handleCancelAppointment(app)}
                                           className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline"
                                         >
-                                          🚫 Desmarcar
+                                          🗑️ Excluir
                                         </button>
                                       </div>
                                       {app.status !== "CONCLUIDO" && (
@@ -1321,35 +813,25 @@ export default function AgendaPage() {
                                   💅 {profOngoingApp.services?.map((s: any) => s.serviceName).join(", ")}
                                 </p>
                               </div>
-                            ) : slotMins >= 690 && slotMins < 780 && !appointments.some((a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")) ? (
-                              <button
-                                onClick={() => {
-                                  setFormProf(prof.id);
-                                  handleOpenModal(selectedDate, slot);
-                                }}
-                                className="w-full min-h-[44px] rounded-xl border border-amber-300 bg-amber-50/90 p-2 text-center text-[11px] font-bold text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200 transition flex items-center justify-center space-x-1 shadow-sm"
-                                title="Horário de almoço (Bloqueado na Agenda Online) - Clique para encaixe manual"
-                              >
-                                <span>🍱 Almoço (Encaixe)</span>
-                              </button>
                             ) : (
-                              <button
-                                onClick={() => {
-                                  setFormProf(prof.id);
-                                  handleOpenModal(selectedDate, slot);
-                                }}
-                                className="w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-2 text-center text-[11px] font-bold text-slate-600 hover:border-rose-400 hover:bg-rose-50/60 hover:text-rose-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800 transition flex items-center justify-center space-x-1"
-                              >
-                                <span>+ Agendar</span>
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
+                            <button
+                              onClick={() => {
+                                setFormProf(prof.id);
+                                handleOpenModal(selectedDate, slot);
+                              }}
+                              className="w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-2 text-center text-[11px] font-bold text-slate-600 hover:border-rose-400 hover:bg-rose-50/60 hover:text-rose-800 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:bg-slate-800 transition flex items-center justify-center space-x-1"
+                            >
+                              <Plus className="h-3.5 w-3.5 text-rose-500" />
+                              <span>+ Agendar</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
           </div>
         </div>
@@ -1446,12 +928,6 @@ export default function AgendaPage() {
                         <p className="text-[10px] text-slate-800 dark:text-slate-200 line-clamp-1" title={app.services?.map((s: any) => s.serviceName).join(", ")}>
                           💅 {app.services?.map((s: any) => s.serviceName).join(", ")}
                         </p>
-
-                        {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo")) && (
-                          <div className="rounded-md bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 text-[9px] font-extrabold truncate" title={app.notes}>
-                            📦 {app.notes.includes("263") || app.notes.includes("1/4") ? "Entrada Combo R$ 263,90" : "Sessão Coberta (R$ 0,00)"}
-                          </div>
-                        )}
                         <div className="flex items-center justify-between pt-1 border-t border-black/10 text-[9px] font-bold">
                           <span>👩 {app.professionalName}</span>
                           <div className="flex items-center space-x-1.5">
@@ -1734,145 +1210,20 @@ export default function AgendaPage() {
             <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               {/* Cliente */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="font-extrabold text-slate-900 dark:text-slate-100">Cliente *</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickClientModal(true)}
-                    className="flex items-center space-x-1 rounded-xl bg-rose-100 px-2.5 py-1 text-xs font-extrabold text-rose-800 shadow-2xs hover:bg-rose-200 transition-colors dark:bg-rose-900/60 dark:text-rose-200"
-                  >
-                    <span>✨ + Cadastrar Nova Cliente</span>
-                  </button>
-                </div>
-
-                {/* Form Inline / Popup de Cadastro Rápido de Cliente */}
-                {showQuickClientModal && (
-                  <div className="mb-3 rounded-2xl border-2 border-rose-300 bg-rose-50/80 p-3.5 shadow-sm space-y-2 dark:border-rose-800 dark:bg-slate-800">
-                    <div className="flex items-center justify-between">
-                      <span className="font-serif text-xs font-bold text-rose-900 dark:text-rose-300">
-                        👤 Cadastro Rápido de Nova Cliente
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickClientModal(false)}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Nome completo da cliente *"
-                        value={quickClientName}
-                        onChange={(e) => setQuickClientName(e.target.value)}
-                        className="rounded-xl border border-rose-200 bg-white p-2 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white text-xs"
-                      />
-                      <input
-                        type="text"
-                        placeholder="WhatsApp / Celular com DDD *"
-                        value={quickClientPhone}
-                        onChange={(e) => setQuickClientPhone(e.target.value)}
-                        className="rounded-xl border border-rose-200 bg-white p-2 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white text-xs"
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickClientModal(false)}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleQuickSaveClient}
-                        disabled={isSavingQuickClient}
-                        className="rounded-lg bg-emerald-600 px-3.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {isSavingQuickClient ? "Salvando..." : "Salvar & Selecionar ✓"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <input
-                    type="text"
-                    placeholder="🔍 Digite o nome ou celular da cliente..."
-                    value={modalClientSearch}
-                    onChange={(e) => {
-                      const q = e.target.value;
-                      setModalClientSearch(q);
-                      if (q.trim()) {
-                        const match = clients.find((c: any) => c.name.toLowerCase().includes(q.trim().toLowerCase()) || (c.phone && c.phone.includes(q.trim())));
-                        if (match) handleSelectClient(match.id);
-                      }
-                    }}
-                    className="w-full rounded-2xl border-2 border-rose-300 bg-rose-50/60 p-2.5 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs shadow-sm"
-                  />
-                  <select
-                    value={formClient}
-                    onChange={(e) => handleSelectClient(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    required
-                  >
-                    <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
-                    {clients
-                      .filter((c: any) => {
-                        if (!modalClientSearch.trim()) return true;
-                        const q = modalClientSearch.trim().toLowerCase();
-                        return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)) || (c.whatsapp && c.whatsapp.includes(q));
-                      })
-                      .map((c) => (
-                        <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
-                          {c.name} - {c.whatsapp} ({c.tag})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Badge de Pacote Ativo da Cliente */}
-                {(() => {
-                  if (!formClient) return null;
-                  const activeCp = clientPackages.find((cp: any) => cp.clientId === formClient && cp.active);
-                  if (!activeCp) return null;
-                  const pkgObj = packages.find((p: any) => p.id === activeCp.packageId);
-                  const isSelected = formClientPackageId === activeCp.id;
-
-                  return (
-                    <div className={`mt-2.5 rounded-2xl border p-3.5 text-xs transition ${isSelected ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800' : 'bg-amber-50 border-amber-200 dark:bg-slate-800 dark:border-slate-700'}`}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <p className="font-extrabold text-amber-950 dark:text-amber-200 text-xs">
-                            🎁 Cliente possui Pacote Ativo: <strong>{pkgObj?.name || "Pacote de Sessões"}</strong>
-                          </p>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold mt-0.5">
-                            {activeCp.sessionsUsed}/{activeCp.totalSessions} sessões usadas ({activeCp.totalSessions - activeCp.sessionsUsed} restantes)
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setFormClientPackageId("");
-                            } else {
-                              setFormClientPackageId(activeCp.id);
-                              setFormDeposit(0);
-                              setFormDiscount(0);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow transition shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
-                        >
-                          {isSelected ? '✓ Abater Sessão do Pacote' : '🎁 Usar Sessão do Pacote'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
+                <select
+                  value={formClient}
+                  onChange={(e) => setFormClient(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  required
+                >
+                  <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
+                      {c.name} - {c.whatsapp} ({c.tag})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Profissional & Data & Horário */}
@@ -1881,30 +1232,16 @@ export default function AgendaPage() {
                   <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Profissional *</label>
                   <select
                     value={formProf}
-                    onChange={(e) => {
-                      if (!currentUser || currentUser.role === "ADMINISTRADOR") {
-                        setFormProf(e.target.value);
-                      }
-                    }}
-                    disabled={currentUser && currentUser.role !== "ADMINISTRADOR"}
-                    className={`w-full rounded-2xl border p-3 font-bold outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white ${
-                      currentUser && currentUser.role !== "ADMINISTRADOR"
-                        ? "border-amber-300 bg-amber-50/90 text-amber-950 font-extrabold cursor-not-allowed dark:border-amber-800 dark:text-amber-200"
-                        : "border-slate-300 bg-white text-slate-900"
-                    }`}
+                    onChange={(e) => setFormProf(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     required
                   >
                     <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione...</option>
-                    {professionals
-                      .filter((p) => {
-                        if (!currentUser || currentUser.role === "ADMINISTRADOR") return true;
-                        return p.id === userProfId || p.email === currentUser.email || p.userId === currentUser.id;
-                      })
-                      .map((p) => (
-                        <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
-                          {p.name} {currentUser && currentUser.role !== "ADMINISTRADOR" ? "(Seu Login)" : ""}
-                        </option>
-                      ))}
+                    {professionals.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
+                        {p.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1978,64 +1315,43 @@ export default function AgendaPage() {
               </div>
 
               {/* Resumo Financeiro do Agendamento */}
-              {formClientPackageId ? (
-                <div className="rounded-2xl border border-emerald-300 bg-emerald-50/90 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-extrabold text-emerald-950 dark:text-emerald-200 text-xs flex items-center space-x-1">
-                        <span>🎁 Sessão de Pacote (Valor Quitado na Compra)</span>
-                      </p>
-                      <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold mt-0.5">
-                        O valor total deste combo foi contabilizado na data de venda do pacote.
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="block text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300">Cobrança nesta Data</span>
-                      <span className="font-serif text-lg font-extrabold text-emerald-700 dark:text-emerald-300">
-                        R$ 0,00
-                      </span>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
+                <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <div>Duração Total: <span className="font-extrabold text-rose-600 dark:text-rose-400">{calcDuration} min</span></div>
+                  <div>Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
+                    <input
+                      type="number"
+                      value={formDiscount}
+                      onChange={(e) => setFormDiscount(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
+                    <input
+                      type="number"
+                      value={formDeposit}
+                      onChange={(e) => setFormDeposit(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
+                    <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                      R$ {calcRemaining.toFixed(2)}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-slate-700 dark:bg-slate-800">
-                  <div className="grid grid-cols-2 gap-3 text-xs font-bold text-slate-900 dark:text-slate-100">
-                    <div>Duração Total: <span className="font-extrabold text-rose-600 dark:text-rose-400">{calcDuration} min</span></div>
-                    <div>Subtotal: <span className="font-extrabold text-slate-900 dark:text-white">R$ {calcSubtotal.toFixed(2)}</span></div>
-                  </div>
 
-                  <div className="mt-3 grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Desconto (R$)</label>
-                      <input
-                        type="number"
-                        value={formDiscount}
-                        onChange={(e) => setFormDiscount(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Sinal Cobrado (R$)</label>
-                      <input
-                        type="number"
-                        value={formDeposit}
-                        onChange={(e) => setFormDeposit(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 font-extrabold text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-950 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-extrabold text-slate-900 dark:text-slate-200">Restante no Salão</label>
-                      <div className="mt-1 p-2 font-serif text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                        R$ {calcRemaining.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
-                    Valor Total: R$ {calcTotal.toFixed(2)}
-                  </div>
+                <div className="mt-3 border-t border-rose-200 pt-2 text-right font-serif text-base font-extrabold text-slate-900 dark:border-slate-700 dark:text-white">
+                  Valor Total: R$ {calcTotal.toFixed(2)}
                 </div>
-              )}
+              </div>
 
               {/* Observações */}
               <div>
@@ -2240,34 +1556,20 @@ export default function AgendaPage() {
               </div>
 
               {/* Botões */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t dark:border-slate-800">
+              <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    handleCancelAppointment(editingApp);
-                  }}
-                  className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 font-extrabold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300 shadow-sm"
-                  title="Desmarcar horário e liberar na agenda"
+                  onClick={() => setShowEditModal(false)}
+                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
-                  🚫 Desmarcar Horário
+                  Cancelar
                 </button>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
-                  >
-                    💾 Salvar Alterações &rarr;
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
+                >
+                  💾 Salvar Alterações &rarr;
+                </button>
               </div>
             </form>
           </div>

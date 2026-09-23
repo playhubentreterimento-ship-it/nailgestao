@@ -1,9 +1,9 @@
 {
-  "name": "nailgestao",
+  "name": "nailgestao-pro11",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",

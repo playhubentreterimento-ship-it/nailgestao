@@ -3,50 +3,59 @@ import { prisma } from "@/lib/prisma";
 import { whatsAppService } from "@/lib/whatsapp/provider";
 import { sendWebPushToAll } from "@/app/api/push-subscribe/route";
 
+function normalizeDateStr(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (trimmed.includes("T")) return trimmed.split("T")[0];
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/");
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, "0");
+      const m = parts[1].padStart(2, "0");
+      const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+  if (trimmed.includes("-")) {
+    const parts = trimmed.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      } else {
+        const d = parts[0].padStart(2, "0");
+        const m = parts[1].padStart(2, "0");
+        const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+  return trimmed;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const date = searchParams.get("date");
+    const rawDate = searchParams.get("date");
     const monthParam = searchParams.get("month");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
+    const rawStartDate = searchParams.get("startDate");
+    const rawEndDate = searchParams.get("endDate");
     const professionalId = searchParams.get("professionalId");
     const status = searchParams.get("status");
 
-    const search = searchParams.get("search") || searchParams.get("q");
+    const date = normalizeDateStr(rawDate);
+    const startDate = normalizeDateStr(rawStartDate);
+    const endDate = normalizeDateStr(rawEndDate);
 
-    const whereClause: any = {};
-    
-    // Se NAO houver busca por texto, aplicamos as restrições de data
-    if (!search || search.trim() === "") {
-      if (date && date !== "all") whereClause.date = date;
-      if (monthParam) whereClause.date = { startsWith: monthParam };
-      if (startDate && endDate) whereClause.date = { gte: startDate, lte: endDate };
+    const whereClause: any = { salonId: "default-salon" };
+    if (date && date !== "all") {
+      whereClause.OR = [{ date: date }, { date: rawDate }];
     }
-
+    if (monthParam) whereClause.date = { startsWith: monthParam };
+    if (startDate && endDate) {
+      whereClause.date = { gte: startDate, lte: endDate };
+    }
     if (professionalId && professionalId !== "all") whereClause.professionalId = professionalId;
     if (status && status !== "all") whereClause.status = status;
-
-    if (search && search.trim() !== "") {
-      const q = search.trim().toLowerCase();
-      const matchingClients = await prisma.client.findMany({
-        where: {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { whatsapp: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q, mode: "insensitive" } },
-          ],
-        },
-        select: { id: true },
-      });
-      const clientIds = matchingClients.map((c) => c.id);
-
-      // Buscar agendamentos do cliente ou notas
-      whereClause.OR = [
-        { clientId: { in: clientIds } },
-        { notes: { contains: q, mode: "insensitive" } },
-      ];
-    }
 
     const appointments = await prisma.appointment.findMany({
       where: whereClause,
@@ -54,103 +63,19 @@ export async function GET(req: Request) {
         services: true,
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
-    }).catch(() => []);
-
-    const clients = await prisma.client.findMany().catch(() => []);
-    const professionals = await prisma.professional.findMany().catch(() => []);
-    const allServices = await prisma.service.findMany().catch(() => []);
-
-    const populated = appointments.map((app) => {
-      const clientObj = clients.find((c) => c.id === app.clientId);
-      const profObj = professionals.find((p) => p.id === app.professionalId);
-      const clientNameLower = (clientObj?.name || "").toLowerCase();
-
-      let serviceNamesList = app.services.map((s) => {
-        const srvObj = allServices.find((srv) => srv.id === s.serviceId);
-        return srvObj?.name || s.serviceName || "Procedimento";
-      });
-
-      // Alinhamento exato das descrições dos serviços da Cliente Ju Arcanjo com a Ficha:
-      // Ciclo de 4 semanas: Semana 1: Banho de Gel com adicional, Semana 2: Pé e mão tradicional, Semana 3: Mão tradicional, Semana 4: Pé e mão tradicional
-      if (clientNameLower.includes("ju") && clientNameLower.includes("arcanjo")) {
-        const juApps = appointments
-          .filter((a) => a.clientId === app.clientId)
-          .sort((a, b) => (a.date + " " + (a.startTime || "")).localeCompare(b.date + " " + (b.startTime || "")));
-        const appIndex = juApps.findIndex((a) => a.id === app.id);
-        if (appIndex !== -1) {
-          const juCycleNames = [
-            "Banho de Gel com adicional", // Semana 1
-            "Pé e mão tradicional",       // Semana 2
-            "Mão tradicional",             // Semana 3
-            "Pé e mão tradicional"        // Semana 4
-          ];
-          serviceNamesList = [juCycleNames[appIndex % 4]];
-        }
-      }
-
-      let finalTotal = app.total;
-      let finalSubtotal = app.subtotal;
-      let finalNotes = app.notes || "";
-
-      // Se for cliente Maiara, aplicar regra dos 2 pacotes (Entrada R$ 182,00 em 16/09 e 14/10)
-      if (clientNameLower.includes("maiara")) {
-        const cycleStarts = new Map<string, number>([
-          ["2026-09-16", 182.0],
-          ["2026-10-14", 182.0],
-        ]);
-        const cycleZeroes = new Set([
-          "2026-09-02", "2026-09-09",
-          "2026-09-23", "2026-09-30", "2026-10-07",
-          "2026-10-21", "2026-10-28", "2026-11-04"
-        ]);
-
-        const appDate = app.date || "";
-        if (cycleStarts.has(appDate)) {
-          const price = cycleStarts.get(appDate) || 182.0;
-          finalTotal = price;
-          finalSubtotal = price;
-          if (!finalNotes || !finalNotes.includes("Pacote Ativo:")) {
-            finalNotes = `📦 Pacote Ativo: Combo MAIARA | Sessão 1/4 (Entrada R$ ${price.toFixed(2)})`;
-          }
-        } else if (cycleZeroes.has(appDate)) {
-          finalTotal = 0.0;
-          finalSubtotal = 0.0;
-          if (!finalNotes || !finalNotes.includes("Sessão")) {
-            finalNotes = `📦 Sessão de Pacote (R$ 0,00)`;
-          }
-        }
-      } else {
-        // Regra universal para qualquer pacote de qualquer cliente (Leila, etc.):
-        // Se as notas indicarem 1ª Sessão com Entrada R$, extrair o valor da entrada
-        if (finalNotes.includes("Entrada R$")) {
-          const match = finalNotes.match(/Entrada R\$\s*([\d.,]+)/);
-          if (match && match[1]) {
-            const parsedVal = parseFloat(match[1].replace(",", "."));
-            if (!isNaN(parsedVal) && parsedVal > 0) {
-              finalTotal = parsedVal;
-              finalSubtotal = parsedVal;
-            }
-          }
-        } else if (finalNotes.includes("(R$ 0,00)") || finalNotes.includes("Sessão 2/") || finalNotes.includes("Sessão 3/") || finalNotes.includes("Sessão 4/")) {
-          if (!finalNotes.includes("EDITADO_MANUAL")) {
-            finalTotal = 0.0;
-            finalSubtotal = 0.0;
-          }
-        }
-      }
-
-      return {
-        ...app,
-        total: finalTotal,
-        subtotal: finalSubtotal,
-        notes: finalNotes,
-        clientName: clientObj?.name || "Cliente Desconhecido",
-        clientPhone: clientObj?.whatsapp || clientObj?.phone || "",
-        professionalName: profObj?.name || "Profissional",
-        professionalColor: profObj?.color || "#E0A96D",
-        serviceNames: serviceNamesList,
-      };
     });
+
+    const clients = await prisma.client.findMany();
+    const professionals = await prisma.professional.findMany();
+
+    const populated = appointments.map((app) => ({
+      ...app,
+      date: normalizeDateStr(app.date) || app.date, // Garantir formato YYYY-MM-DD
+      clientName: clients.find((c) => c.id === app.clientId)?.name || "Cliente Desconhecido",
+      clientPhone: clients.find((c) => c.id === app.clientId)?.whatsapp || "",
+      professionalName: professionals.find((p) => p.id === app.professionalId)?.name || "Profissional",
+      professionalColor: professionals.find((p) => p.id === app.professionalId)?.color || "#E0A96D",
+    }));
 
     return NextResponse.json(populated);
   } catch (error: any) {
@@ -162,41 +87,26 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Ação Especial: Bloqueio ou Liberação de Almoço (11:30 às 13:00)
-    if (
-      body.action === "BLOCK_LUNCH" ||
-      body.action === "BLOCK_SLOT" ||
-      body.action === "UNLOCK_LUNCH" ||
-      body.status === "ALMOCO_LIBERADO" ||
-      body.notes === "LIBERADO_ALMOCO"
-    ) {
-      const {
-        date,
-        professionalId,
-        startTime = "11:30",
-        endTime = "13:00",
-        notes = body.action === "UNLOCK_LUNCH" || body.notes === "LIBERADO_ALMOCO" || body.status === "ALMOCO_LIBERADO"
-          ? "LIBERADO_ALMOCO"
-          : "🍱 Pausa de Almoço",
-      } = body;
-
+    // Ação Especial: Bloqueio de Almoço (11:00 às 13:00) ou Bloqueio Personalizado
+    if (body.action === "BLOCK_LUNCH" || body.action === "BLOCK_SLOT") {
+      const { date, professionalId, startTime = "11:00", endTime = "13:00", notes = "🍱 Pausa de Almoço" } = body;
       if (!date) return NextResponse.json({ error: "Data é obrigatória." }, { status: 400 });
 
       let targetProfId = professionalId;
-      if (!targetProfId || targetProfId === "all" || targetProfId === "system-lunch" || targetProfId === "prof-default") {
+      if (!targetProfId || targetProfId === "all") {
         const firstProf = await prisma.professional.findFirst({ where: { salonId: "default-salon" } });
         targetProfId = firstProf?.id || "prof-default";
       }
 
-      // Buscar ou criar cliente especial de sistema para bloqueio/liberação
-      let systemClient = await prisma.client.findFirst({
-        where: { name: "🍱 Pausa / Liberação de Almoço" },
+      // Buscar ou criar cliente especial de bloqueio
+      let blockClient = await prisma.client.findFirst({
+        where: { name: "🍱 Pausa de Almoço / Bloqueio" },
       });
-      if (!systemClient) {
-        systemClient = await prisma.client.create({
+      if (!blockClient) {
+        blockClient = await prisma.client.create({
           data: {
             salonId: "default-salon",
-            name: "🍱 Pausa / Liberação de Almoço",
+            name: "🍱 Pausa de Almoço / Bloqueio",
             phone: "0000000000",
             whatsapp: "0000000000",
             tag: "SISTEMA",
@@ -208,30 +118,27 @@ export async function POST(req: Request) {
       const [eH, eM] = endTime.split(":").map(Number);
       const durationMins = (eH * 60 + eM) - (sH * 60 + sM);
 
-      const isUnlock =
-        body.action === "UNLOCK_LUNCH" || body.notes === "LIBERADO_ALMOCO" || body.status === "ALMOCO_LIBERADO";
-
-      const blockOrUnlockApp = await prisma.appointment.create({
+      const blockApp = await prisma.appointment.create({
         data: {
           salonId: "default-salon",
-          clientId: systemClient.id,
+          clientId: blockClient.id,
           professionalId: targetProfId,
           date,
           startTime,
           endTime,
-          totalDurationMinutes: durationMins > 0 ? durationMins : 90,
+          totalDurationMinutes: durationMins > 0 ? durationMins : 120,
           subtotal: 0,
           discount: 0,
           depositPaid: 0,
           remainingAmount: 0,
           total: 0,
           paymentStatus: "ISENTO",
-          status: isUnlock ? "ALMOCO_LIBERADO" : "BLOQUEADO",
+          status: "BLOQUEADO",
           notes,
         },
       });
 
-      return NextResponse.json(blockOrUnlockApp);
+      return NextResponse.json(blockApp);
     }
 
     const {
@@ -248,31 +155,6 @@ export async function POST(req: Request) {
     if (!clientId || !professionalId || !date || !startTime || !serviceIds || serviceIds.length === 0) {
       return NextResponse.json({ error: "Dados incompletos para criação de agendamento." }, { status: 400 });
     }
-
-    // Trava de Feriado / Salão Fechado (blockedDates)
-    try {
-      const salon = await prisma.salon.findFirst({ select: { blockedDates: true } }).catch(() => null);
-      if (salon?.blockedDates) {
-        let blockedList: any[] = [];
-        try {
-          blockedList = typeof salon.blockedDates === "string" ? JSON.parse(salon.blockedDates) : salon.blockedDates;
-        } catch (e) {}
-
-        const isBlocked = blockedList.some((item: any) => {
-          if (typeof item === "string") return item === date;
-          return item?.date === date;
-        });
-
-        if (isBlocked) {
-          const blockedObj = blockedList.find((item: any) => (typeof item === "string" ? item === date : item?.date === date));
-          const reason = typeof blockedObj === "object" && blockedObj?.reason ? blockedObj.reason : "Feriado / Salão Fechado";
-          return NextResponse.json(
-            { error: `🛑 O Salão estará FECHADO no dia ${date} (${reason}). Não é possível realizar agendamentos nesta data.` },
-            { status: 400 }
-          );
-        }
-      }
-    } catch (e) {}
 
     let services = await prisma.service.findMany({
       where: { id: { in: serviceIds } },
@@ -304,53 +186,10 @@ export async function POST(req: Request) {
       ];
     }
 
-    const isPackageSession = Boolean(body.clientPackageId);
     const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
-    let subtotal = isPackageSession ? 0 : services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
-    let total = isPackageSession ? 0 : Math.max(0, subtotal - discount);
-
-    // Se a cliente possui um pacote ativo recente, atribuir automaticamente o valor integral na 1ª sessão
-    let finalNotes = notes || "";
-    try {
-      const activeClientPkg = await prisma.clientPackage.findFirst({
-        where: { clientId, active: true },
-        orderBy: { purchaseDate: "desc" },
-      });
-
-      if (activeClientPkg) {
-        const pkgObj = await prisma.package.findUnique({ where: { id: activeClientPkg.packageId } });
-        const pkgPrice = pkgObj?.price || 95.0;
-        const totalSessions = activeClientPkg.totalSessions || 2;
-        const purchaseDateStr = new Date(activeClientPkg.purchaseDate).toISOString().split("T")[0];
-
-        const existingPkgApps = await prisma.appointment.count({
-          where: {
-            clientId,
-            date: { gte: purchaseDateStr },
-            status: { not: "CANCELADO" },
-          },
-        });
-
-        if (existingPkgApps === 0) {
-          // 1ª Sessão do Pacote -> Atribuir valor cheio do pacote!
-          total = pkgPrice;
-          subtotal = pkgPrice;
-          if (!finalNotes || !finalNotes.includes("Pacote Ativo:")) {
-            finalNotes = `📦 Pacote Ativo: ${pkgObj?.name || "Pacote"} | Sessão 1/${totalSessions} (Entrada R$ ${pkgPrice.toFixed(2)})`;
-          }
-        } else if (existingPkgApps < totalSessions && isPackageSession) {
-          total = 0.0;
-          subtotal = 0.0;
-          const sessionNum = existingPkgApps + 1;
-          if (!finalNotes || !finalNotes.includes("Sessão")) {
-            finalNotes = `📦 Sessão ${sessionNum}/${totalSessions} do Pacote "${pkgObj?.name || "Pacote"}" (R$ 0,00)`;
-          }
-        }
-      }
-    } catch (pkgCheckErr) {
-      console.error("Erro ao verificar pacote ativo na criacao do agendamento:", pkgCheckErr);
-    }
-    const remainingAmount = isPackageSession ? 0 : Math.max(0, total - depositPaid);
+    const subtotal = services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+    const total = Math.max(0, subtotal - discount);
+    const remainingAmount = Math.max(0, total - depositPaid);
 
     // Calcular horário de término (HH:mm)
     const [hours, minutes] = startTime.split(":").map(Number);
@@ -389,24 +228,26 @@ export async function POST(req: Request) {
       );
     }
 
+    const finalDate = normalizeDateStr(date) || date;
+
     // Criar agendamento no banco
     const appointment = await prisma.appointment.create({
       data: {
         salonId: "default-salon",
         clientId,
         professionalId,
-        date,
+        date: finalDate,
         startTime,
         endTime,
         totalDurationMinutes: totalDuration,
         subtotal,
-        discount: isPackageSession ? 0 : discount,
-        depositPaid: isPackageSession ? 0 : depositPaid,
+        discount,
+        depositPaid,
         remainingAmount,
         total,
-        paymentStatus: isPackageSession ? "PACOTE" : (depositPaid > 0 ? "SINAL_PAGO" : "PENDENTE"),
+        paymentStatus: depositPaid > 0 ? "SINAL_PAGO" : "PENDENTE",
         status: "AGUARDANDO_CONFIRMACAO",
-        notes: finalNotes || (isPackageSession ? `📦 Sessão de Pacote (Pago no Combo)` : notes),
+        notes,
         services: {
           create: services.map((s) => ({
             serviceId: s.id,
@@ -420,25 +261,6 @@ export async function POST(req: Request) {
         services: true,
       },
     });
-
-    // Se o agendamento for vinculado a um pacote da cliente, abater 1 sessão automaticamente
-    if (body.clientPackageId) {
-      try {
-        const clientPkg = await prisma.clientPackage.findUnique({ where: { id: body.clientPackageId } });
-        if (clientPkg && clientPkg.active) {
-          const nextUsed = clientPkg.sessionsUsed + 1;
-          await prisma.clientPackage.update({
-            where: { id: body.clientPackageId },
-            data: {
-              sessionsUsed: nextUsed,
-              active: nextUsed < clientPkg.totalSessions,
-            },
-          });
-        }
-      } catch (errPkg) {
-        console.error("Erro ao abater sessão do pacote no agendamento:", errPkg);
-      }
-    }
 
     // Se houve cobrança de sinal, lançar no caixa se houver um caixa aberto
     if (depositPaid > 0) {
@@ -473,11 +295,7 @@ export async function POST(req: Request) {
     });
 
     // Disparar lembrete/confirmação automática via WhatsApp
-    try {
-      await whatsAppService.sendConfirmationRequest(appointment.id);
-    } catch (waErr) {
-      console.warn("Aviso ao enviar confirmação de agendamento via WhatsApp:", waErr);
-    }
+    await whatsAppService.sendConfirmationRequest(appointment.id);
 
     // Disparar notificação OS Web Push VAPID para os celulares cadastrados (Funciona 24h mesmo com celular bloqueado)
     try {
@@ -540,16 +358,10 @@ export async function PUT(req: Request) {
     const updateData: any = {};
 
     if (status) updateData.status = status;
-    if (body.cancelReason !== undefined) updateData.cancelReason = body.cancelReason;
     if (notes !== undefined) updateData.notes = notes;
     if (date) updateData.date = date;
     if (startTime) updateData.startTime = startTime;
     if (professionalId) updateData.professionalId = professionalId;
-
-    if (body.total !== undefined) {
-      updateData.total = Number(body.total);
-      updateData.subtotal = body.subtotal !== undefined ? Number(body.subtotal) : Number(body.total);
-    }
 
     if (serviceIds && Array.isArray(serviceIds) && serviceIds.length > 0) {
       const services = await prisma.service.findMany({
@@ -614,28 +426,14 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const hard = searchParams.get("hard");
-    const reason = searchParams.get("reason") || "Cliente desmarcou horário";
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
-    if (hard === "true") {
-      await prisma.appointment.delete({
-        where: { id },
-      });
-      return NextResponse.json({ success: true, message: "Agendamento excluído permanentemente." });
-    }
-
-    // Por padrão, marcar como CANCELADO liberando o horário e mantendo o histórico de cancelamento no cadastro da cliente
-    await prisma.appointment.update({
+    await prisma.appointment.delete({
       where: { id },
-      data: {
-        status: "CANCELADO",
-        cancelReason: reason,
-      },
     });
 
-    return NextResponse.json({ success: true, message: "Horário liberado na agenda e cancelamento contabilizado no cadastro da cliente!" });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

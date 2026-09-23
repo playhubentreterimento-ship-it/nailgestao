@@ -7,9 +7,6 @@ import confetti from "canvas-confetti";
 export default function AtendimentoPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [activeApp, setActiveApp] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [professionals, setProfessionals] = useState<any[]>([]);
-  const [selectedProfFilter, setSelectedProfFilter] = useState<string>("ALL");
   const [paymentMethod, setPaymentMethod] = useState("PIX");
   const [discount, setDiscount] = useState(0);
   const [giftCardCode, setGiftCardCode] = useState("");
@@ -29,43 +26,21 @@ export default function AtendimentoPage() {
     fetch(`/api/appointments?date=${today}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) =>
-          (a.startTime || "").localeCompare(b.startTime || "")
-        );
-        setAppointments(sorted);
+        const arr = Array.isArray(data) ? data : [];
+        setAppointments(arr);
+        const inProgress = arr.find((a: any) => a.status === "EM_ATENDIMENTO" || a.status === "CONFIRMADO");
+        if (inProgress) setActiveApp(inProgress);
       })
-      .catch(() => {});
+      .catch(() => setAppointments([]));
   };
 
   useEffect(() => {
     loadAppointments();
-    fetch("/api/professionals")
-      .then((r) => r.json())
-      .then((profs) => setProfessionals(Array.isArray(profs) ? profs : []))
-      .catch(() => {});
-
-    fetch("/api/auth/session")
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.authenticated && res.user) {
-          setCurrentUser(res.user);
-        }
-      })
-      .catch(() => {});
-
     window.addEventListener("focus", loadAppointments);
-    const interval = setInterval(loadAppointments, 8000);
-    return () => {
-      window.removeEventListener("focus", loadAppointments);
-      clearInterval(interval);
-    };
+    return () => window.removeEventListener("focus", loadAppointments);
   }, []);
 
   const handleStartAttendance = async (appId: string) => {
-    // Atualização Otimista Instantânea (0ms de espera!)
-    setAppointments((prev) =>
-      prev.map((app) => (app.id === appId ? { ...app, status: "EM_ATENDIMENTO" } : app))
-    );
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -97,34 +72,15 @@ export default function AtendimentoPage() {
       }
 
       // 2. Lançar recebimento no caixa do dia
-      const servicesTotal = activeApp.services && Array.isArray(activeApp.services) && activeApp.services.length > 0
-        ? activeApp.services.reduce((acc: number, s: any) => acc + Number(s.price || 0), 0)
-        : 0;
-
-      const fullPrice = activeApp.total && Number(activeApp.total) > 0 ? Number(activeApp.total) : servicesTotal;
-
-      let checkoutAmount = Math.max(0, fullPrice - discount);
-      const notesStr = activeApp.notes || "";
-      const isPkgSession = notesStr.includes("Pacote") || notesStr.includes("Combo") || notesStr.includes("Sessão");
-      const isLaterSession = notesStr.includes("Sessão 2/") ||
-                             notesStr.includes("Sessão 3/") ||
-                             notesStr.includes("Sessão 4/") ||
-                             notesStr.includes("Sessão 5/") ||
-                             notesStr.includes("(R$ 0,00)");
-
-      if (isLaterSession) {
-        checkoutAmount = 0.0;
-      }
-
       await fetch("/api/cash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "TRANSACTION",
           category: "ATENDIMENTO",
-          amount: checkoutAmount,
+          amount: Math.max(0, activeApp.total - discount),
           paymentMethod,
-          description: `Checkout do atendimento: ${activeApp.clientName}${isPkgSession ? " (Sessão de Pacote)" : ""}`,
+          description: `Checkout do atendimento: ${activeApp.clientName}`,
         }),
       });
 
@@ -143,36 +99,6 @@ export default function AtendimentoPage() {
     }
   };
 
-  // Identificar se a usuária logada é uma profissional
-  const isProfessionalUser = currentUser?.role === "PROFISSIONAL" || currentUser?.role === "COLABORADORA" || currentUser?.role === "ATENDENTE";
-
-  // Tentar casar a usuária logada com um registro de Professional
-  const matchedProf = professionals.find(
-    (p: any) =>
-      p.id === currentUser?.id ||
-      (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
-      (p.name && currentUser?.name && p.name.toLowerCase().includes(currentUser.name.toLowerCase())) ||
-      (p.name && currentUser?.name && currentUser.name.toLowerCase().includes(p.name.toLowerCase()))
-  );
-
-  // Determinar lista de agendamentos visíveis exclusivamente
-  const filteredAppointments = appointments.filter((app: any) => {
-    if (isProfessionalUser) {
-      if (matchedProf) {
-        return app.professionalId === matchedProf.id || (app.professionalName && app.professionalName.toLowerCase().includes(matchedProf.name.toLowerCase()));
-      }
-      if (currentUser?.name) {
-        return app.professionalName && app.professionalName.toLowerCase().includes(currentUser.name.toLowerCase());
-      }
-      return true;
-    }
-    // Se for Admin/Gerente/Recepção
-    if (selectedProfFilter !== "ALL") {
-      return app.professionalId === selectedProfFilter;
-    }
-    return true;
-  });
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -184,84 +110,38 @@ export default function AtendimentoPage() {
         </p>
       </div>
 
-      {/* Banner / Filtro Exclusivo de Profissional */}
-      {isProfessionalUser ? (
-        <div className="rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-amber-50 p-3.5 text-xs font-bold text-rose-900 dark:border-rose-900/60 dark:from-slate-900 dark:to-slate-800 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm">
-          <div className="flex items-center space-x-2">
-            <span>🔒 Modo Exclusivo da Profissional:</span>
-            <span className="font-extrabold text-[#6B1615] dark:text-amber-300">👤 {matchedProf?.name || currentUser?.name || "Minha Agenda"}</span>
-          </div>
-          <span className="text-[10px] bg-rose-200/80 dark:bg-rose-950 px-2.5 py-1 rounded-full text-rose-800 dark:text-rose-300 font-bold">
-            Exibindo apenas seus clientes de hoje
-          </span>
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-2xl bg-white p-3.5 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 shadow-sm gap-2">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">👤 Visualização Painel Master:</span>
-          <select
-            value={selectedProfFilter}
-            onChange={(e) => {
-              setSelectedProfFilter(e.target.value);
-              setActiveApp(null);
-            }}
-            className="rounded-xl border border-rose-300 bg-rose-50/50 p-2 font-bold text-xs outline-none dark:bg-slate-800 text-slate-900 dark:text-white"
-          >
-            <option value="ALL">Todas as Profissionais ({appointments.length} atendimentos)</option>
-            {professionals.map((p) => (
-              <option key={p.id} value={p.id}>
-                👤 {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       {/* Seleção do Atendimento de Hoje */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2 md:col-span-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Agendamentos de Hoje</h3>
-          {filteredAppointments.length > 0 ? (
-            filteredAppointments.map((app) => (
-              <div
-                key={app.id}
-                onClick={() => setActiveApp(app)}
-                className={`cursor-pointer rounded-2xl border p-4 transition ${
-                  activeApp?.id === app.id
-                    ? "border-rose-400 bg-rose-50 shadow-md dark:bg-slate-800"
-                    : "border-slate-100 bg-white hover:border-rose-200 dark:border-slate-800 dark:bg-slate-900"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-serif text-sm font-bold text-slate-800 dark:text-white">{app.startTime}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      app.status === "EM_ATENDIMENTO"
-                        ? "bg-rose-500 text-white animate-pulse"
-                        : app.status === "CONCLUIDO"
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                    }`}
-                  >
-                    {app.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs font-bold text-slate-900 dark:text-white">{app.clientName}</p>
-                <p className="text-[11px] text-slate-500">{app.services?.map((s: any) => s.serviceName).join(", ")}</p>
-                {app.notes && (app.notes.includes("Pacote") || app.notes.includes("Combo") || app.notes.includes("Sessão")) && (
-                  <span className="mt-1 block text-[10px] font-extrabold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-md w-fit border border-amber-200">
-                    📦 {app.notes.includes("1/4") ? "Combo (Sessão 1/4)" : app.notes.includes("2/4") ? "Combo (Sessão 2/4)" : app.notes.includes("3/4") ? "Combo (Sessão 3/4)" : app.notes.includes("4/4") ? "Combo (Sessão 4/4)" : "Atendimento de Pacote"}
-                  </span>
-                )}
-                {!isProfessionalUser && (
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300 font-bold mt-1">👤 {app.professionalName}</p>
-                )}
+          {appointments.map((app) => (
+            <div
+              key={app.id}
+              onClick={() => setActiveApp(app)}
+              className={`cursor-pointer rounded-2xl border p-4 transition ${
+                activeApp?.id === app.id
+                  ? "border-rose-400 bg-rose-50 shadow-md dark:bg-slate-800"
+                  : "border-slate-100 bg-white hover:border-rose-200 dark:border-slate-800 dark:bg-slate-900"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-serif text-sm font-bold text-slate-800 dark:text-white">{app.startTime}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    app.status === "EM_ATENDIMENTO"
+                      ? "bg-rose-500 text-white animate-pulse"
+                      : app.status === "CONCLUIDO"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                  }`}
+                >
+                  {app.status}
+                </span>
               </div>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-center text-xs font-semibold text-slate-400 dark:bg-slate-900 dark:border-slate-800">
-              Nenhum agendamento para esta profissional hoje.
+              <p className="mt-1 text-xs font-bold text-slate-900 dark:text-white">{app.clientName}</p>
+              <p className="text-[11px] text-slate-500">{app.services?.map((s: any) => s.serviceName).join(", ")}</p>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Detalhes & Controle do Atendimento Ativo */}
@@ -277,14 +157,6 @@ export default function AtendimentoPage() {
                     {activeApp.clientName}
                   </h3>
                   <p className="text-xs text-slate-500">Profissional: {activeApp.professionalName}</p>
-
-                  {/* Badge de Observação de Pacote Ativo */}
-                  {activeApp.notes && (activeApp.notes.includes("Pacote") || activeApp.notes.includes("Combo") || activeApp.notes.includes("Sessão")) && (
-                    <div className="mt-2.5 inline-flex items-center space-x-2 rounded-xl bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-extrabold text-amber-950 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200 shadow-2xs">
-                      <span>📦 ATENDIMENTO DE PACOTE:</span>
-                      <span>{activeApp.notes}</span>
-                    </div>
-                  )}
                 </div>
                 <div className="text-right">
                   <span className="block text-xs text-slate-400">VALOR DO ATENDIMENTO</span>

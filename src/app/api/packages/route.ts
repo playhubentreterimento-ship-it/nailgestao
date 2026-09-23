@@ -1,21 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-async function ensurePackageTableColumns() {
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "weeklyServices" TEXT;`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "discountType" TEXT DEFAULT 'FIXED';`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "discountValue" DOUBLE PRECISION DEFAULT 0;`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "Package" ADD COLUMN IF NOT EXISTS "originalPrice" DOUBLE PRECISION DEFAULT 0;`);
-  } catch (e) {
-    console.error("Auto migration column error:", e);
-  }
-}
-
 export async function GET() {
   try {
-    await ensurePackageTableColumns();
-
     let packages = await prisma.package.findMany({
       where: { salonId: "default-salon", active: true },
       orderBy: { name: "asc" },
@@ -25,20 +12,6 @@ export async function GET() {
     if (packages.length === 0) {
       await prisma.package.createMany({
         data: [
-          {
-            salonId: "default-salon",
-            name: "Combo banho de gel com adicional",
-            price: 263.90,
-            totalSessions: 4,
-            validityDays: 90,
-            description: "Cronograma 4 Semanas: Semana 1: Banho de Gel com adicional, Semana 2: Pé e mão tradicional, Semana 3: Mão tradicional, Semana 4: Pé e mão tradicional",
-            weeklyServices: JSON.stringify([
-              "Banho de Gel com adicional",
-              "Pé e mão tradicional",
-              "Mão tradicional",
-              "Pé e mão tradicional"
-            ]),
-          },
           {
             salonId: "default-salon",
             name: "Combo Club 3 Manutenções em Fibra",
@@ -57,17 +30,11 @@ export async function GET() {
           },
           {
             salonId: "default-salon",
-            name: "Combo Tradicional",
-            price: 172.90,
+            name: "Pacote 4 Sessões Manicure & Pedicure",
+            price: 180.0,
             totalSessions: 4,
             validityDays: 60,
-            description: "Manutenção completa de mãos e pés (4 semanas).",
-            weeklyServices: JSON.stringify([
-              "Pé e mão tradicional",
-              "Mão tradicional",
-              "Pé e mão tradicional",
-              "Mão tradicional"
-            ]),
+            description: "Manutenção completa de mãos e pés para o mês.",
           },
         ],
       });
@@ -77,12 +44,6 @@ export async function GET() {
         orderBy: { name: "asc" },
       });
     }
-
-    // Atualizar preço de Combo Tradicional caso estivesse cadastrado com outro valor
-    await prisma.package.updateMany({
-      where: { name: { contains: "Tradicional", mode: "insensitive" } },
-      data: { price: 172.90, name: "Combo Tradicional" },
-    }).catch(() => {});
 
     const clientPackages = await prisma.clientPackage.findMany({
       where: { active: true },
@@ -95,50 +56,7 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    let services = await prisma.service.findMany({
-      where: { salonId: "default-salon" },
-      select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
-      orderBy: { name: "asc" },
-    });
-
-    if (services.length === 0) {
-      services = await prisma.service.findMany({
-        select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
-        orderBy: { name: "asc" },
-      });
-    }
-
-    if (services.length === 0) {
-      let defaultCat = await prisma.serviceCategory.findFirst({ where: { salonId: "default-salon" } });
-      if (!defaultCat) {
-        defaultCat = await prisma.serviceCategory.create({
-          data: { salonId: "default-salon", name: "Alongamento & Estética de Unhas" },
-        });
-      }
-      await prisma.service.createMany({
-        data: [
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Aplicação Fibra de Vidro Premium", price: 180.0, durationMinutes: 120 },
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Manutenção de Fibra de Vidro", price: 110.0, durationMinutes: 90 },
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Banho de Gel / Gel Moldado", price: 130.0, durationMinutes: 90 },
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Esmaltação em Gel & Cutilagem", price: 70.0, durationMinutes: 60 },
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Spa das Mãos & Nivelamento", price: 60.0, durationMinutes: 45 },
-          { salonId: "default-salon", categoryId: defaultCat.id, name: "Remoção & Blindagem de Unhas", price: 80.0, durationMinutes: 60 },
-        ],
-      });
-      services = await prisma.service.findMany({
-        where: { salonId: "default-salon" },
-        select: { id: true, name: true, price: true, promoPrice: true, durationMinutes: true },
-        orderBy: { name: "asc" },
-      });
-    }
-
-    const professionals = await prisma.professional.findMany({
-      where: { salonId: "default-salon", active: true },
-      select: { id: true, name: true, color: true },
-      orderBy: { name: "asc" },
-    });
-
-    return NextResponse.json({ packages, clientPackages, clients, services, professionals });
+    return NextResponse.json({ packages, clientPackages, clients });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -150,7 +68,7 @@ export async function POST(req: Request) {
 
     // Vinculo de Pacote com Cliente
     if (body.action === "ASSIGN_TO_CLIENT") {
-      const { clientId, packageId, paymentDate, paymentMethod = "PIX", amountPaid } = body;
+      const { clientId, packageId } = body;
       if (!clientId || !packageId) {
         return NextResponse.json({ error: "Cliente e Pacote são obrigatórios." }, { status: 400 });
       }
@@ -160,8 +78,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Pacote não encontrado." }, { status: 404 });
       }
 
-      const purchaseDate = paymentDate ? new Date(paymentDate + "T12:00:00Z") : new Date();
-      const expiryDate = new Date(purchaseDate);
+      const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + (targetPackage.validityDays || 90));
 
       const clientPackage = await prisma.clientPackage.create({
@@ -170,58 +87,11 @@ export async function POST(req: Request) {
           packageId,
           totalSessions: targetPackage.totalSessions,
           sessionsUsed: 0,
-          purchaseDate,
+          purchaseDate: new Date(),
           expiryDate,
           active: true,
         },
       });
-
-      // Lançar valor total do pacote no caixa na data de pagamento informada
-      const finalAmount = amountPaid !== undefined && amountPaid !== null ? Number(amountPaid) : targetPackage.price;
-
-      // Atualizar Agendamentos da Cliente a partir da data de início do pacote (paymentDate):
-      // A 1ª sessão agendada a partir de paymentDate recebe o valor cheio do pacote (finalAmount).
-      // As sessões seguintes daquele ciclo de pacote ficam zeradas (R$ 0,00)!
-      try {
-        const startDateStr = paymentDate || new Date().toISOString().split("T")[0];
-        const clientApps = await prisma.appointment.findMany({
-          where: { clientId, date: { gte: startDateStr }, status: { not: "CANCELADO" } },
-          orderBy: [{ date: "asc" }, { startTime: "asc" }],
-        });
-
-        if (clientApps.length > 0) {
-          // 1ª Sessão na data do pagamento/início do pacote
-          const firstApp = clientApps[0];
-          await prisma.appointment.update({
-            where: { id: firstApp.id },
-            data: {
-              total: finalAmount,
-              subtotal: finalAmount,
-              notes: `📦 Pacote Ativo: ${targetPackage.name} | Sessão 1/${targetPackage.totalSessions} (Entrada R$ ${finalAmount.toFixed(2)})`,
-            },
-          });
-
-          // Demais sessões do ciclo zeradas (R$ 0,00)
-          const remainingCycleApps = clientApps.slice(1, targetPackage.totalSessions);
-          for (let idx = 0; idx < remainingCycleApps.length; idx++) {
-            const rApp = remainingCycleApps[idx];
-            const sessionNum = idx + 2;
-            await prisma.appointment.update({
-              where: { id: rApp.id },
-              data: {
-                total: 0.0,
-                subtotal: 0.0,
-                notes: `📦 Sessão ${sessionNum}/${targetPackage.totalSessions} do Pacote "${targetPackage.name}" (R$ 0,00)`,
-              },
-            });
-          }
-        }
-      } catch (appErr) {
-        console.error("Erro ao atualizar agendamentos do pacote:", appErr);
-      }
-
-      // O valor integral do pacote (ex: R$ 95,00) será registrado no Caixa via 1ª Sessão na Tela de Atendimento!
-      // Portanto, não criamos uma entrada duplicada de VENDA_PACOTE no caixa aqui.
 
       return NextResponse.json(clientPackage);
     }
@@ -250,114 +120,49 @@ export async function POST(req: Request) {
     }
 
     // Criar Novo Pacote
-    const {
-      name,
-      price,
-      totalSessions,
-      validityDays,
-      description,
-      weeklyServices,
-      discountType,
-      discountValue,
-      originalPrice,
-    } = body;
+    const { name, price, totalSessions, validityDays, description } = body;
 
-    if (!name || price === undefined || price === null || !totalSessions) {
+    if (!name || !price || !totalSessions) {
       return NextResponse.json({ error: "Nome, preço e total de sessões são obrigatórios." }, { status: 400 });
     }
 
-    await ensurePackageTableColumns();
-
-    let newPackage;
-    try {
-      newPackage = await prisma.package.create({
-        data: {
-          salonId: "default-salon",
-          name,
-          price: Number(price),
-          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-          validityDays: Number(validityDays || 90),
-          description: description || null,
-          weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
-          discountType: discountType || "FIXED",
-          discountValue: Number(discountValue || 0),
-          originalPrice: Number(originalPrice || price),
-          active: true,
-        },
-      });
-    } catch (createErr: any) {
-      console.error("Erro no save completo, tentando fallback:", createErr);
-      newPackage = await prisma.package.create({
-        data: {
-          salonId: "default-salon",
-          name,
-          price: Number(price),
-          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-          validityDays: Number(validityDays || 90),
-          description: description || null,
-          active: true,
-        },
-      });
-    }
+    const newPackage = await prisma.package.create({
+      data: {
+        salonId: "default-salon",
+        name,
+        price: Number(price),
+        totalSessions: Number(totalSessions),
+        validityDays: Number(validityDays || 90),
+        description: description || null,
+        active: true,
+      },
+    });
 
     return NextResponse.json(newPackage);
   } catch (error: any) {
-    console.error("Erro fatal POST /api/packages:", error);
-    return NextResponse.json({ error: error.message || "Erro ao salvar pacote" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const {
-      id,
-      name,
-      price,
-      totalSessions,
-      validityDays,
-      description,
-      weeklyServices,
-      discountType,
-      discountValue,
-      originalPrice,
-    } = body;
+    const { id, name, price, totalSessions, validityDays, description } = body;
 
     if (!id || !name) {
       return NextResponse.json({ error: "ID e nome do pacote são obrigatórios." }, { status: 400 });
     }
 
-    await ensurePackageTableColumns();
-
-    let updated;
-    try {
-      updated = await prisma.package.update({
-        where: { id },
-        data: {
-          name,
-          price: Number(price),
-          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-          validityDays: Number(validityDays || 90),
-          description: description || null,
-          weeklyServices: typeof weeklyServices === "string" ? weeklyServices : JSON.stringify(weeklyServices || []),
-          discountType: discountType || "FIXED",
-          discountValue: Number(discountValue || 0),
-          originalPrice: Number(originalPrice || price),
-        },
-      });
-    } catch (updateErr: any) {
-      console.error("Erro no update completo, tentando fallback:", updateErr);
-      updated = await prisma.package.update({
-        where: { id },
-        data: {
-          name,
-          price: Number(price),
-          totalSessions: Math.min(6, Math.max(1, Number(totalSessions))),
-          validityDays: Number(validityDays || 90),
-          description: description || null,
-        },
-      });
-    }
+    const updated = await prisma.package.update({
+      where: { id },
+      data: {
+        name,
+        price: Number(price),
+        totalSessions: Number(totalSessions),
+        validityDays: Number(validityDays || 90),
+        description: description || null,
+      },
+    });
 
     return NextResponse.json(updated);
   } catch (error: any) {
@@ -369,26 +174,14 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const type = searchParams.get("type");
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório para exclusão." }, { status: 400 });
     }
 
-    if (type === "CLIENT_PACKAGE") {
-      await prisma.clientPackage.delete({ where: { id } });
-      return NextResponse.json({ success: true, message: "Pacote da cliente removido com sucesso." });
-    }
+    await prisma.package.delete({ where: { id } });
 
-    try {
-      await prisma.clientPackage.deleteMany({ where: { packageId: id } });
-      await prisma.package.delete({ where: { id } });
-    } catch (err) {
-      await prisma.clientPackage.delete({ where: { id } }).catch(() => {});
-      await prisma.package.delete({ where: { id } }).catch(() => {});
-    }
-
-    return NextResponse.json({ success: true, message: "Excluído com sucesso." });
+    return NextResponse.json({ success: true, message: "Pacote excluído." });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
