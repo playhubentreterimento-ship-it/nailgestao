@@ -19,7 +19,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [salonName, setSalonName] = useState<string>("Seu Salão");
 
   const isPublicPage =
-    pathname === "/" ||
     pathname === "/landing" ||
     pathname === "/onboarding" ||
     pathname === "/agendar" ||

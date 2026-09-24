@@ -3,13 +3,16 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
+    const targetSalon = await prisma.salon.findFirst().catch(() => null);
+    const activeSalonId = targetSalon?.id || "67998370966";
+
     const professionals = await prisma.professional.findMany({
-      where: { salonId: "default-salon" },
+      where: { OR: [{ salonId: activeSalonId }, { salonId: "default-salon" }, { salonId: "67998370966" }] },
       orderBy: { name: "asc" },
     });
 
     const users = await prisma.user.findMany({
-      where: { salonId: "default-salon" },
+      where: { OR: [{ salonId: activeSalonId }, { salonId: "default-salon" }, { salonId: "67998370966" }] },
     });
 
     const enriched = professionals.map((p) => {

@@ -5,24 +5,17 @@ import { seedDatabase } from "@/lib/seed-data";
 
 export async function GET() {
   try {
-    let categories = await prisma.serviceCategory.findMany({
-      where: { salonId: "default-salon" },
+    const targetSalon = await prisma.salon.findFirst().catch(() => null);
+    const activeSalonId = targetSalon?.id || "67998370966";
+
+    const categories = await prisma.serviceCategory.findMany({
+      where: { OR: [{ salonId: activeSalonId }, { salonId: "default-salon" }, { salonId: "67998370966" }] },
       include: { services: true },
       orderBy: { order: "asc" },
     }).catch(() => []);
 
-    const salonExists = await prisma.salon.findUnique({ where: { id: "default-salon" } }).catch(() => null);
-    if (!salonExists) {
-      await seedDatabase().catch(() => null);
-      categories = await prisma.serviceCategory.findMany({
-        where: { salonId: "default-salon" },
-        include: { services: true },
-        orderBy: { order: "asc" },
-      }).catch(() => []);
-    }
-
     const services = await prisma.service.findMany({
-      where: { salonId: "default-salon" },
+      where: { OR: [{ salonId: activeSalonId }, { salonId: "default-salon" }, { salonId: "67998370966" }] },
       orderBy: { name: "asc" },
     }).catch(() => []);
 

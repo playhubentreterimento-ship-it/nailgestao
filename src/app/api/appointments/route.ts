@@ -46,7 +46,16 @@ export async function GET(req: Request) {
     const startDate = normalizeDateStr(rawStartDate);
     const endDate = normalizeDateStr(rawEndDate);
 
-    const whereClause: any = { salonId: "default-salon" };
+    const salonObj = await prisma.salon.findFirst().catch(() => null);
+    const activeSalonId = salonObj?.id || "67998370966";
+
+    const whereClause: any = {
+      OR: [
+        { salonId: activeSalonId },
+        { salonId: "default-salon" },
+        { salonId: "67998370966" }
+      ]
+    };
     if (date && date !== "all") {
       whereClause.OR = [{ date: date }, { date: rawDate }];
     }
@@ -243,10 +252,13 @@ export async function POST(req: Request) {
 
     const finalDate = normalizeDateStr(date) || date;
 
+    const targetSalon = await prisma.salon.findFirst().catch(() => null);
+    const activeSalonId = targetSalon?.id || "67998370966";
+
     // Criar agendamento no banco
     const appointment = await prisma.appointment.create({
       data: {
-        salonId: "default-salon",
+        salonId: activeSalonId,
         clientId,
         professionalId,
         date: finalDate,
