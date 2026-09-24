@@ -10,12 +10,12 @@ generator client {
 
 model Salon {
   id                    String   @id @default(uuid())
-  name                  String   @default("Studio Luxe Nail Designer")
-  ownerName             String?  @default("Juliana Silva")
+  name                  String   @default("Selma Gloor Nails Studio")
+  ownerName             String?  @default("Selma Gloor")
   slogan                String?  @default("Especialistas em Alongamento & Estética de Unhas")
   logoUrl               String?  @default("/logo.png")
-  phone                 String   @default("(11) 99999-8888")
-  whatsapp              String   @default("5511999998888")
+  phone                 String   @default("(67) 99837-0966")
+  whatsapp              String   @default("5567998370966")
   instagram             String?  @default("@studioluxenails")
   email                 String?  @default("contato@studioluxe.com.br")
   cnpj                  String?  @default("12.345.678/0001-90")

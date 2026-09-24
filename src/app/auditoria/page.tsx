@@ -4,7 +4,7 @@ import { ShieldCheck, Lock, FileText, CheckCircle } from "lucide-react";
 
 export default function AuditoriaPage() {
   const logs = [
-    { id: "1", date: "11/08/2026 10:45", user: "Juliana Silva", action: "CRIAR_AGENDAMENTO", details: "Agendamento Maria Fernanda Rossi" },
+    { id: "1", date: "11/08/2026 10:45", user: "Selma Gloor", action: "CRIAR_AGENDAMENTO", details: "Agendamento Maria Fernanda Rossi" },
     { id: "2", date: "11/08/2026 09:30", user: "Mariana Alvez", action: "ABERTURA_CAIXA", details: "Abertura de caixa com R$ 200,00" },
     { id: "3", date: "11/08/2026 09:00", user: "Sistema Auto", action: "CONFIRMACAO_WHATSAPP", details: "Cliente confirmou presença via WhatsApp" },
   ];

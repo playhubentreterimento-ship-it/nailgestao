@@ -36,7 +36,7 @@ export default function ConfiguracoesPage() {
       .then((data) => {
         setSalon(data);
         setName(data.name || "");
-        setOwnerName(data.ownerName || "Juliana Silva");
+        setOwnerName(data.ownerName || "Selma Gloor");
         setSlogan(data.slogan || "");
         setLogoUrl(data.logoUrl || "");
         setPhone(data.phone || "");
@@ -327,7 +327,7 @@ export default function ConfiguracoesPage() {
                 type="text"
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="Ex: Juliana Silva ou Seu Nome..."
+                placeholder="Ex: Selma Gloor ou Seu Nome..."
                 className="mt-1 w-full rounded-xl border p-3 font-medium dark:bg-slate-800"
                 required
               />

@@ -105,7 +105,7 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
       }
     }
 
-    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Studio Luxe"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
+    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Selma Gloor Nails Studio"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
 
     const sendRes = await this.sendMessage({
       to: formattedPhone,

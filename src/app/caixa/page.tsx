@@ -135,7 +135,7 @@ export default function CaixaPage() {
                 <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
                   Caixa Aberto &mdash; {new Date(activeRegister.openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">Responsável: Juliana Silva</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Responsável: Selma Gloor</p>
               </div>
             </div>
 

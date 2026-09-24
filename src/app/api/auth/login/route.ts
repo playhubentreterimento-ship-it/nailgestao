@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         email: user.email,
         role: user.role,
         salonId: user.salonId,
-        salonName: salon?.name || "Studio Luxe",
+        salonName: salon?.name || "Selma Gloor Nails Studio",
         avatarUrl: user.avatarUrl,
         subscriptionStatus: salon?.subscriptionStatus || "TRIAL",
         trialEndsAt: trialEndsAtIso,
@@ -71,11 +71,11 @@ export async function POST(req: Request) {
 
       const sessionUser = {
         id: "usr-" + Date.now(),
-        name: formattedOwnerName || "Administradora",
+        name: formattedOwnerName || "Selma Gloor",
         email: cleanEmail,
         role: "ADMINISTRADOR",
-        salonId: salon?.id || "salon-trial-" + Date.now(),
-        salonName: salon?.name || "Studio Luxe Nail Designer",
+        salonId: salon?.id || "default-salon",
+        salonName: salon?.name || "Selma Gloor Nails Studio",
         subscriptionStatus: "TRIAL",
         trialEndsAt: trialEndsAtIso,
       };

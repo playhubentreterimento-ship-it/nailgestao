@@ -31,55 +31,48 @@ export async function GET() {
 
     let salon = await prisma.salon.findFirst().catch(() => null);
 
-    // Se o banco contiver o nome default ou Selma/Gloor, mas a cliente registrou seu próprio salão na sessão:
-    const effectiveSalonName =
-      (salon?.name && !salon.name.includes("Selma") && !salon.name.includes("Gloor") && salon.name !== "Studio Luxe Nail Designer")
-        ? salon.name
-        : sessionUser?.salonName || salon?.name || "Meu Salão de Unhas";
+    const adminUser = await prisma.user.findFirst({
+      where: { role: "ADMINISTRADOR" },
+    }).catch(() => null);
 
-    const effectiveOwnerName =
-      (salon?.ownerName && salon.ownerName !== "Juliana Silva")
-        ? salon.ownerName
-        : sessionUser?.ownerName || sessionUser?.name || salon?.ownerName || "Administradora";
-
-    const effectiveEmail =
-      sessionUser?.email || salon?.email || "contato@nailgestao.com.br";
+    const effectiveSalonName = salon?.name || sessionUser?.salonName || "Selma Gloor Nails Studio";
+    const effectiveOwnerName = salon?.ownerName || sessionUser?.ownerName || sessionUser?.name || "Selma Gloor";
+    const effectiveEmail = adminUser?.email || salon?.email || sessionUser?.email || "selma@studioluxe.com.br";
 
     const professionals = await prisma.professional.findMany({
       where: { salonId: salon?.id || "default-salon" },
       orderBy: { createdAt: "asc" },
     }).catch(() => []);
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMINISTRADOR" },
-    }).catch(() => null);
-
-    let realPhone = salon?.whatsapp || salon?.phone || sessionUser?.whatsapp || sessionUser?.phone || "";
-    const activeWhatsApp = realPhone ? formatPhoneWithDDI(realPhone) : "";
+    let realPhone = salon?.whatsapp || salon?.phone || sessionUser?.whatsapp || sessionUser?.phone || "5567998370966";
+    const activeWhatsApp = realPhone ? formatPhoneWithDDI(realPhone) : "5567998370966";
 
     return NextResponse.json({
       ...(salon || {}),
       id: salon?.id || "default-salon",
       name: effectiveSalonName,
       ownerName: effectiveOwnerName,
-      slogan: salon?.slogan || sessionUser?.slogan || "Especialistas em Alongamento & Estética de Alta Performance",
-      primaryColor: salon?.primaryColor || sessionUser?.primaryColor || "#E0A96D",
-      logoUrl: salon?.logoUrl || null,
-      phone: salon?.phone || sessionUser?.phone || "(11) 99999-8888",
-      whatsapp: salon?.whatsapp || sessionUser?.whatsapp || "5511999998888",
+      slogan: salon?.slogan || "Especialistas em Alongamento & Estética de Unhas",
+      primaryColor: salon?.primaryColor || "#E0A96D",
+      logoUrl: salon?.logoUrl || "/salon-logo-official.png",
+      phone: salon?.phone || "(67) 99837-0966",
+      whatsapp: salon?.whatsapp || "5567998370966",
       address: salon?.address || "Atendimento em Studio & Domiciliar",
       activeWhatsApp,
-      adminEmail: adminUser?.email || effectiveEmail,
+      adminEmail: effectiveEmail,
     });
   } catch (error: any) {
     return NextResponse.json({
       id: "default-salon",
-      name: "Meu Salão de Unhas",
-      ownerName: "Administradora",
-      slogan: "Especialistas em Alongamento & Estética de Alta Performance",
+      name: "Selma Gloor Nails Studio",
+      ownerName: "Selma Gloor",
+      slogan: "Especialistas em Alongamento & Estética de Unhas",
       primaryColor: "#E0A96D",
-      adminEmail: "contato@nailgestao.com.br",
-      activeWhatsApp: "5511999998888",
+      logoUrl: "/salon-logo-official.png",
+      phone: "(67) 99837-0966",
+      whatsapp: "5567998370966",
+      activeWhatsApp: "5567998370966",
+      adminEmail: "selma@studioluxe.com.br",
     });
   }
 }
