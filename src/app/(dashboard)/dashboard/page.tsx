@@ -95,9 +95,7 @@ export default function DashboardPage() {
           )}
           <div>
             <h1 className="font-serif text-2xl font-bold tracking-tight text-amber-200">
-              {salon?.name && !salon.name.includes("Selma") && !salon.name.includes("Gloor")
-                ? salon.name
-                : "Studio Luxe Nail Designer"}
+              {salon?.name || "Meu Salão de Unhas"}
             </h1>
             <p className="text-xs text-rose-100/90 font-medium">
               {salon?.slogan || "Especialistas em Alongamento & Estética de Alta Performance"}

@@ -243,9 +243,7 @@ export default function AgendarPublicPage() {
             <img src="/luxe-logo.jpg" alt="Studio Luxe Nail Designer" className="h-full w-full object-cover rounded-2xl" />
           </div>
           <h1 className="mt-3 font-serif text-2xl font-bold text-slate-900 dark:text-white">
-            {salon?.name && !salon.name.includes("Selma") && !salon.name.includes("Gloor")
-              ? salon.name
-              : "Studio Luxe Nail Designer"}
+            {salon?.name || "Meu Salão de Unhas"}
           </h1>
           <p className="text-xs text-rose-600 font-semibold">
             {salon?.slogan || "Agendamento Online 24h • Rápido & Sem Cadastro"}

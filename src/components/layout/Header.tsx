@@ -177,10 +177,7 @@ export function Header({ userRole }: HeaderProps) {
 
   const displayName = currentUser?.name || salon?.ownerName || "Administradora";
   const displayRole = isCollaborator ? "Colaboradora" : "Administradora";
-  const rawSalonName = salon?.name || "";
-  const salonDisplayName = (rawSalonName && !rawSalonName.includes("Selma") && !rawSalonName.includes("Gloor") && rawSalonName !== "Studio Luxe Nail Designer")
-    ? rawSalonName
-    : "Meu Salão de Unhas";
+  const salonDisplayName = salon?.name || "Meu Salão de Unhas";
 
   const initials = displayName
     .split(" ")

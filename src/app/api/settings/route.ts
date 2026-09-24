@@ -31,16 +31,8 @@ export async function GET() {
 
     let salon = await prisma.salon.findFirst().catch(() => null);
 
-    // Se o banco contiver o nome default ou Selma/Gloor, mas a cliente registrou seu próprio salão na sessão:
-    const effectiveSalonName =
-      (salon?.name && !salon.name.includes("Selma") && !salon.name.includes("Gloor") && salon.name !== "Studio Luxe Nail Designer")
-        ? salon.name
-        : sessionUser?.salonName || salon?.name || "Meu Salão de Unhas";
-
-    const effectiveOwnerName =
-      (salon?.ownerName && salon.ownerName !== "Juliana Silva")
-        ? salon.ownerName
-        : sessionUser?.ownerName || sessionUser?.name || salon?.ownerName || "Administradora";
+    const effectiveSalonName = salon?.name || sessionUser?.salonName || "Meu Salão de Unhas";
+    const effectiveOwnerName = salon?.ownerName || sessionUser?.ownerName || sessionUser?.name || "Administradora";
 
     const effectiveEmail =
       sessionUser?.email || salon?.email || "contato@nailgestao.com.br";
