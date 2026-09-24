@@ -57,10 +57,10 @@ export async function GET() {
       slogan: salon?.slogan || "Especialistas em Alongamento & Estética de Unhas",
       primaryColor: salon?.primaryColor || "#E0A96D",
       logoUrl: salon?.logoUrl || "/salon-logo-official.png",
-      phone: salon?.phone || "(67) 99963-5783",
-      whatsapp: salon?.whatsapp || "5567999635783",
+      phone: salon?.phone || "(67) 99837-0966",
+      whatsapp: salon?.whatsapp || "5567998370966",
       address: salon?.address || "Atendimento em Studio & Domiciliar",
-      activeWhatsApp: activeWhatsApp || "5567999635783",
+      activeWhatsApp: activeWhatsApp || "5567998370966",
       adminEmail: adminUser?.email || "selma@studioluxe.com.br",
     });
   } catch (error: any) {
@@ -72,7 +72,7 @@ export async function GET() {
       primaryColor: "#E0A96D",
       logoUrl: "/salon-logo-official.png",
       adminEmail: "selma@studioluxe.com.br",
-      activeWhatsApp: "5567999635783",
+      activeWhatsApp: "5567998370966",
     });
   }
 }

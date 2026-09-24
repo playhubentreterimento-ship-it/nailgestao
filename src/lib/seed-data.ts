@@ -14,8 +14,8 @@ export async function seedDatabase() {
       ownerName: "Selma Gloor",
       slogan: "Especialistas em Alongamento & Estética de Unhas",
       logoUrl: "/salon-logo-official.png",
-      phone: "(67) 99963-5783",
-      whatsapp: "5567999635783",
+      phone: "(67) 99837-0966",
+      whatsapp: "5567998370966",
       instagram: "@studioluxenails",
       email: "selma@studioluxe.com.br",
       cnpj: "12.345.678/0001-90",
@@ -45,7 +45,7 @@ export async function seedDatabase() {
         email: "selma@studioluxe.com.br",
         passwordHash: "$2a$12$e.vS2d5wGgZ6yJ4F0o7uMe1d5X8/z1K6vW9q8y3t1u5o9q8y3t1u5", // mock hash
         role: "ADMINISTRADOR",
-        phone: "(67) 99963-5783",
+        phone: "(67) 99837-0966",
         avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
       },
       {
@@ -88,7 +88,7 @@ export async function seedDatabase() {
       salonId: salon.id,
       userId: "usr-admin",
       name: "Selma Gloor",
-      phone: "(67) 99963-5783",
+      phone: "(67) 99837-0966",
       email: "selma@studioluxe.com.br",
       bio: "Master em Fibra de Vidro e Banho de Gel com 8 anos de experiência.",
       color: "#E0A96D",
