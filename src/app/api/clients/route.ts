@@ -1,38 +1,25 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-const RECOVERY_SALON_ID = "67998370966";
-
-async function getSalonId() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("nailgestao_session");
-
-  if (sessionCookie?.value) {
-    try {
-      const session = JSON.parse(sessionCookie.value);
-
-      if (session?.salonId) {
-        return session.salonId;
-      }
-    } catch {}
-  }
-
-  return RECOVERY_SALON_ID;
-}
+import { seedDatabase } from "@/lib/seed-data";
 
 export async function GET() {
   try {
-    const salonId = await getSalonId();
-
-    const clients = await prisma.client.findMany({
-      where: { salonId },
+    let clients = await prisma.client.findMany({
       include: { photos: true },
       orderBy: { name: "asc" },
-    });
+    }).catch(() => []);
+
+    if (!clients || clients.length === 0) {
+      await seedDatabase().catch(() => null);
+      clients = await prisma.client.findMany({
+        include: { photos: true },
+        orderBy: { name: "asc" },
+      }).catch(() => []);
+    }
 
     const appointments = await prisma.appointment.findMany({
-      where: { salonId },
+      where: { salonId: "default-salon" },
       include: { services: true },
       orderBy: { date: "desc" },
     });
@@ -42,25 +29,19 @@ export async function GET() {
     });
 
     const packages = await prisma.package.findMany({
-      where: { salonId },
+      where: { salonId: "default-salon" },
     });
 
+    // Enriquecer clientes com o histórico completo de agendamentos e pacotes ativos
     const enriched = clients.map((cli) => {
-      const cliApps = appointments.filter(
-        (a) => a.clientId === cli.id
-      );
-
+      const cliApps = appointments.filter((a) => a.clientId === cli.id);
       const cliPkgs = clientPackages
         .filter((cp) => cp.clientId === cli.id)
         .map((cp) => {
-          const pkgObj = packages.find(
-            (p) => p.id === cp.packageId
-          );
-
+          const pkgObj = packages.find((p) => p.id === cp.packageId);
           return {
             ...cp,
-            packageName:
-              pkgObj?.name || "Pacote de Sessões",
+            packageName: pkgObj?.name || "Pacote de Sessões",
             price: pkgObj?.price || 0,
           };
         });
@@ -70,43 +51,25 @@ export async function GET() {
         appointments: cliApps,
         packages: cliPkgs,
         lastAppointment: cliApps[0] || null,
-        nextAppointment:
-          cliApps.find(
-            (a) => new Date(a.date) >= new Date()
-          ) || null,
+        nextAppointment: cliApps.find((a) => new Date(a.date) >= new Date()) || null,
       };
     });
 
     return NextResponse.json(enriched);
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const salonId = await getSalonId();
     const body = await req.json();
 
+    // Adicionar foto na galeria da cliente
     if (body.action === "ADD_PHOTO") {
-      const {
-        clientId,
-        photoUrl,
-        type = "RESULTADO",
-        description,
-      } = body;
-
+      const { clientId, photoUrl, type = "RESULTADO", description } = body;
       if (!clientId || !photoUrl) {
-        return NextResponse.json(
-          {
-            error:
-              "ID da cliente e URL da foto são obrigatórios.",
-          },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "ID da cliente e URL da foto são obrigatórios." }, { status: 400 });
       }
 
       const photo = await prisma.clientPhoto.create({
@@ -141,74 +104,48 @@ export async function POST(req: Request) {
     } = body;
 
     if (!name || (!phone && !whatsapp)) {
-      return NextResponse.json(
-        {
-          error:
-            "Nome e Telefone/WhatsApp são obrigatórios.",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Nome e Telefone/WhatsApp são obrigatórios." }, { status: 400 });
     }
 
-    const inputPhone = (
-      phone ||
-      whatsapp ||
-      ""
-    ).replace(/\D/g, "");
+    const inputPhone = (phone || whatsapp || "").replace(/\D/g, "");
 
+    // Busca Inteligente por WhatsApp/Telefone (Reaproveitamento de Cliente Fixo)
     if (inputPhone.length >= 8) {
-      const existingClients =
-        await prisma.client.findMany({
-          where: { salonId },
-        });
+      const existingClients = await prisma.client.findMany({
+        where: { salonId: "default-salon" },
+      });
 
-      const lastDigitsTarget =
-        inputPhone.slice(-8);
+      const lastDigitsTarget = inputPhone.slice(-8);
 
-      const matchedClient =
-        existingClients.find((c) => {
-          const cPhone = (c.phone || "").replace(
-            /\D/g,
-            ""
-          );
-
-          const cWa = (c.whatsapp || "").replace(
-            /\D/g,
-            ""
-          );
-
-          return (
-            (cPhone.length >= 8 &&
-              cPhone.slice(-8) ===
-                lastDigitsTarget) ||
-            (cWa.length >= 8 &&
-              cWa.slice(-8) ===
-                lastDigitsTarget)
-          );
-        });
+      const matchedClient = existingClients.find((c) => {
+        const cPhone = (c.phone || "").replace(/\D/g, "");
+        const cWa = (c.whatsapp || "").replace(/\D/g, "");
+        return (
+          (cPhone.length >= 8 && cPhone.slice(-8) === lastDigitsTarget) ||
+          (cWa.length >= 8 && cWa.slice(-8) === lastDigitsTarget)
+        );
+      });
 
       if (matchedClient) {
-        const updatedClient =
-          await prisma.client.update({
-            where: { id: matchedClient.id },
-            data: {
-              ...(name ? { name } : {}),
-              phone:
-                phone || matchedClient.phone,
-              whatsapp:
-                whatsapp ||
-                matchedClient.whatsapp,
-              ...(email ? { email } : {}),
-            },
-          });
+        // Atualizar nome ou contatos mantendo o mesmo perfil e histórico da cliente
+        const updatedClient = await prisma.client.update({
+          where: { id: matchedClient.id },
+          data: {
+            ...(name ? { name } : {}),
+            phone: phone || matchedClient.phone,
+            whatsapp: whatsapp || matchedClient.whatsapp,
+            ...(email ? { email } : {}),
+          },
+        });
 
         return NextResponse.json(updatedClient);
       }
     }
 
+    // Se for cliente nova, criar registro único
     const client = await prisma.client.create({
       data: {
-        salonId,
+        salonId: "default-salon",
         name,
         phone: phone || whatsapp,
         whatsapp: whatsapp || phone,
@@ -230,33 +167,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json(client);
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
+    const { id, appointments, packages, photos, lastAppointment, nextAppointment, ...data } = body;
 
-    const {
-      id,
-      appointments,
-      packages,
-      photos,
-      lastAppointment,
-      nextAppointment,
-      ...data
-    } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID é obrigatório." },
-        { status: 400 }
-      );
-    }
+    if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
     const client = await prisma.client.update({
       where: { id },
@@ -265,50 +185,26 @@ export async function PUT(req: Request) {
 
     return NextResponse.json(client);
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    const { searchParams } =
-      new URL(req.url);
-
+    const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const photoId =
-      searchParams.get("photoId");
+    const photoId = searchParams.get("photoId");
 
     if (photoId) {
-      await prisma.clientPhoto.delete({
-        where: { id: photoId },
-      });
-
-      return NextResponse.json({
-        success: true,
-      });
+      await prisma.clientPhoto.delete({ where: { id: photoId } });
+      return NextResponse.json({ success: true });
     }
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID é obrigatório." },
-        { status: 400 }
-      );
-    }
+    if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
-    await prisma.client.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({
-      success: true,
-    });
+    await prisma.client.delete({ where: { id } });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -52,26 +52,27 @@ export async function GET() {
     return NextResponse.json({
       ...(salon || {}),
       id: salon?.id || "default-salon",
-      name: effectiveSalonName,
-      ownerName: effectiveOwnerName,
-      slogan: salon?.slogan || sessionUser?.slogan || "Especialistas em Alongamento & Estética de Alta Performance",
-      primaryColor: salon?.primaryColor || sessionUser?.primaryColor || "#E0A96D",
-      logoUrl: salon?.logoUrl || null,
-      phone: salon?.phone || sessionUser?.phone || "(11) 99999-8888",
-      whatsapp: salon?.whatsapp || sessionUser?.whatsapp || "5511999998888",
+      name: salon?.name || "Selma Gloor Nails Studio",
+      ownerName: salon?.ownerName || "Selma Gloor",
+      slogan: salon?.slogan || "Especialistas em Alongamento & Estética de Unhas",
+      primaryColor: salon?.primaryColor || "#E0A96D",
+      logoUrl: salon?.logoUrl || "/salon-logo-official.png",
+      phone: salon?.phone || "(67) 99963-5783",
+      whatsapp: salon?.whatsapp || "5567999635783",
       address: salon?.address || "Atendimento em Studio & Domiciliar",
-      activeWhatsApp,
-      adminEmail: adminUser?.email || effectiveEmail,
+      activeWhatsApp: activeWhatsApp || "5567999635783",
+      adminEmail: adminUser?.email || "selma@studioluxe.com.br",
     });
   } catch (error: any) {
     return NextResponse.json({
       id: "default-salon",
-      name: "Meu Salão de Unhas",
-      ownerName: "Administradora",
-      slogan: "Especialistas em Alongamento & Estética de Alta Performance",
+      name: "Selma Gloor Nails Studio",
+      ownerName: "Selma Gloor",
+      slogan: "Especialistas em Alongamento & Estética de Unhas",
       primaryColor: "#E0A96D",
-      adminEmail: "contato@nailgestao.com.br",
-      activeWhatsApp: "5511999998888",
+      logoUrl: "/salon-logo-official.png",
+      adminEmail: "selma@studioluxe.com.br",
+      activeWhatsApp: "5567999635783",
     });
   }
 }

@@ -23,9 +23,7 @@ export async function POST(req: Request) {
       })
       .catch(() => null);
 
-    let salon = user?.salonId
-  ? await prisma.salon.findUnique({ where: { id: user.salonId } }).catch(() => null)
-  : await prisma.salon.findUnique({ where: { id: "67998370966" } }).catch(() => null);
+    let salon: any = await prisma.salon.findFirst().catch(() => null);
 
     // Determinar trialEndsAt preservando a data de criação original do salão
     let trialEndsAtIso: string;
@@ -46,7 +44,7 @@ export async function POST(req: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
-        salonId: salon?.id || user.salonId || "default-salon",
+        salonId: user.salonId,
         salonName: salon?.name || "Studio Luxe",
         avatarUrl: user.avatarUrl,
         subscriptionStatus: salon?.subscriptionStatus || "TRIAL",
