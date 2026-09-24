@@ -153,78 +153,15 @@ export async function GET() {
       },
       insights,
     });
-  } catch (error: any) {
+   } catch (error: any) {
     console.error("Erro no dashboard:", error);
-    return NextResponse.json({
-      today: {
-        totalAppointments: 6,
-        clientsCount: 6,
-        revenueExpected: 890.0,
-        revenueRealized: 540.0,
-        occupiedSlots: 6,
-        freeSlots: 4,
-        canceledCount: 0,
-        unconfirmedCount: 1,
-        appointments: [
-          {
-            id: "demo-1",
-            startTime: "09:00",
-            endTime: "10:30",
-            clientName: "Carolina Mendes",
-            professionalName: "Selma Gloor",
-            services: [{ serviceName: "Alongamento em Fibra de Vidro" }],
-            status: "CONFIRMADO",
-            total: 180.0,
-          },
-          {
-            id: "demo-2",
-            startTime: "11:00",
-            endTime: "12:00",
-            clientName: "Fernanda Lima",
-            professionalName: "Selma Gloor",
-            services: [{ serviceName: "Manutenção Fibra / Gel" }],
-            status: "EM_ATENDIMENTO",
-            total: 110.0,
-          },
-        ],
+
+    return NextResponse.json(
+      {
+        error: "Erro ao carregar dados reais do dashboard",
+        details: error?.message || String(error),
       },
-      month: {
-        totalRevenue: 14850.0,
-        estimatedProfit: 8613.0,
-        totalAttendances: 142,
-        averageTicket: 104.57,
-        newClients: 28,
-        recurringClients: 114,
-        noShowCount: 2,
-        cancellationCount: 3,
-      },
-      charts: {
-        paymentMethods: [
-          { name: "Pix", value: 7425.0 },
-          { name: "Cartão Crédito", value: 4455.0 },
-          { name: "Cartão Débito", value: 2227.5 },
-          { name: "Dinheiro", value: 742.5 },
-        ],
-        revenueByDay: [
-          { day: "Seg", faturamento: 1850 },
-          { day: "Ter", faturamento: 2200 },
-          { day: "Qua", faturamento: 2600 },
-          { day: "Qui", faturamento: 3100 },
-          { day: "Sex", faturamento: 4200 },
-          { day: "Sáb", faturamento: 4800 },
-        ],
-      },
-      insights: [
-        {
-          id: "ins-1",
-          category: "Faturamento",
-          title: "Sextas e Sábados têm 98% de ocupação",
-          description: "Recomendamos abrir vagas adicionais ou aplicar taxa de horário nobre nesses dias.",
-          importance: "HIGH",
-          actionLabel: "Ajustar Horários",
-          actionUrl: "/configuracoes",
-        },
-      ],
-    });
+      { status: 500 }
+    );
   }
 }
