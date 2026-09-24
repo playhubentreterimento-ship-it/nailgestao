@@ -10,16 +10,15 @@ export async function seedDatabase() {
   const salon = await prisma.salon.create({
     data: {
       id: "default-salon",
-      name: "Selma Gloor Nails Studio",
-      ownerName: "Selma Gloor",
-      slogan: "Especialistas em Alongamento & Estética de Unhas",
-      logoUrl: "/salon-logo-official.png",
-      phone: "(67) 99837-0966",
-      whatsapp: "5567998370966",
+      name: "Studio Luxe Nail Designer",
+      slogan: "Especialistas em Alongamento & Estética de Alta Performance",
+      logoUrl: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=300&auto=format&fit=crop&q=80",
+      phone: "(11) 98765-4321",
+      whatsapp: "5511987654321",
       instagram: "@studioluxenails",
-      email: "selma@studioluxe.com.br",
+      email: "contato@studioluxe.com.br",
       cnpj: "12.345.678/0001-90",
-      address: "Atendimento em Studio & Domiciliar",
+      address: "Av. Paulista, 1000 - Sala 402, Bela Vista, São Paulo - SP",
       primaryColor: "#E0A96D",
       secondaryColor: "#2B1B2F",
       buttonColor: "#C58B58",
@@ -41,11 +40,11 @@ export async function seedDatabase() {
       {
         id: "usr-admin",
         salonId: salon.id,
-        name: "Selma Gloor (Proprietária)",
-        email: "selma@studioluxe.com.br",
+        name: "Juliana Silva (Proprietária)",
+        email: "juliana@studioluxe.com.br",
         passwordHash: "$2a$12$e.vS2d5wGgZ6yJ4F0o7uMe1d5X8/z1K6vW9q8y3t1u5o9q8y3t1u5", // mock hash
         role: "ADMINISTRADOR",
-        phone: "(67) 99837-0966",
+        phone: "(11) 98765-4321",
         avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
       },
       {
@@ -87,9 +86,9 @@ export async function seedDatabase() {
       id: "prof-1",
       salonId: salon.id,
       userId: "usr-admin",
-      name: "Selma Gloor",
-      phone: "(67) 99837-0966",
-      email: "selma@studioluxe.com.br",
+      name: "Juliana Silva",
+      phone: "(11) 98765-4321",
+      email: "juliana@studioluxe.com.br",
       bio: "Master em Fibra de Vidro e Banho de Gel com 8 anos de experiência.",
       color: "#E0A96D",
       commissionRatePercent: 50.0,
@@ -725,35 +724,33 @@ export async function seedDatabase() {
 
 export async function clearDatabase() {
   console.log("🧹 Limpando todos os dados do banco de dados...");
-  const del = async (fn: () => Promise<any>) => { try { await fn(); } catch (e) {} };
-
-  await del(() => prisma.notification.deleteMany());
-  await del(() => prisma.auditLog.deleteMany());
-  await del(() => prisma.review.deleteMany());
-  await del(() => prisma.automationSetting.deleteMany());
-  await del(() => prisma.whatsAppMessage.deleteMany());
-  await del(() => prisma.whatsAppTemplate.deleteMany());
-  await del(() => prisma.inventoryMovement.deleteMany());
-  await del(() => prisma.product.deleteMany());
-  await del(() => prisma.supplier.deleteMany());
-  await del(() => prisma.commission.deleteMany());
-  await del(() => prisma.expense.deleteMany());
-  await del(() => prisma.cashTransaction.deleteMany());
-  await del(() => prisma.cashRegister.deleteMany());
-  await del(() => prisma.waitlist.deleteMany());
-  await del(() => prisma.appointmentService.deleteMany());
-  await del(() => prisma.appointment.deleteMany());
-  await del(() => prisma.loyaltyPoint.deleteMany());
-  await del(() => prisma.giftCard.deleteMany());
-  await del(() => prisma.clientPackage.deleteMany());
-  await del(() => prisma.package.deleteMany());
-  await del(() => prisma.service.deleteMany());
-  await del(() => prisma.serviceCategory.deleteMany());
-  await del(() => prisma.clientPhoto.deleteMany());
-  await del(() => prisma.client.deleteMany());
-  await del(() => prisma.professional.deleteMany());
-  await del(() => prisma.user.deleteMany());
-  await del(() => prisma.salon.deleteMany());
+  await prisma.notification.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.automationSetting.deleteMany();
+  await prisma.whatsAppMessage.deleteMany();
+  await prisma.whatsAppTemplate.deleteMany();
+  await prisma.inventoryMovement.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.supplier.deleteMany();
+  await prisma.commission.deleteMany();
+  await prisma.expense.deleteMany();
+  await prisma.cashTransaction.deleteMany();
+  await prisma.cashRegister.deleteMany();
+  await prisma.waitlist.deleteMany();
+  await prisma.appointmentService.deleteMany();
+  await prisma.appointment.deleteMany();
+  await prisma.loyaltyPoint.deleteMany();
+  await prisma.giftCard.deleteMany();
+  await prisma.clientPackage.deleteMany();
+  await prisma.package.deleteMany();
+  await prisma.service.deleteMany();
+  await prisma.serviceCategory.deleteMany();
+  await prisma.clientPhoto.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.professional.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.salon.deleteMany();
 
   console.log("✨ Banco de dados limpo com sucesso!");
 }
