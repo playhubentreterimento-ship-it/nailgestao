@@ -10,7 +10,8 @@ export async function GET() {
       orderBy: { name: "asc" },
     }).catch(() => []);
 
-    if (!clients || clients.length === 0) {
+    const salonExists = await prisma.salon.findUnique({ where: { id: "default-salon" } }).catch(() => null);
+    if (!salonExists) {
       await seedDatabase().catch(() => null);
       clients = await prisma.client.findMany({
         include: { photos: true },

@@ -65,7 +65,8 @@ export async function GET(req: Request) {
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     }).catch(() => []);
 
-    if (!appointments || appointments.length === 0) {
+    const salonExists = await prisma.salon.findUnique({ where: { id: "default-salon" } }).catch(() => null);
+    if (!salonExists) {
       const { seedDatabase } = await import("@/lib/seed-data");
       await seedDatabase().catch(() => null);
       appointments = await prisma.appointment.findMany({

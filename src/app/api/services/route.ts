@@ -11,7 +11,8 @@ export async function GET() {
       orderBy: { order: "asc" },
     }).catch(() => []);
 
-    if (!categories || categories.length === 0) {
+    const salonExists = await prisma.salon.findUnique({ where: { id: "default-salon" } }).catch(() => null);
+    if (!salonExists) {
       await seedDatabase().catch(() => null);
       categories = await prisma.serviceCategory.findMany({
         where: { salonId: "default-salon" },
