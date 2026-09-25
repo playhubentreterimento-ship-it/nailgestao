@@ -388,6 +388,14 @@ export async function PUT(req: Request) {
     if (startTime) updateData.startTime = startTime;
     if (professionalId) updateData.professionalId = professionalId;
 
+    if (body.total !== undefined) {
+      const newTotal = Math.max(0, Number(body.total));
+      const dep = depositPaid !== undefined ? Number(depositPaid) : existingApp.depositPaid || 0;
+      updateData.total = newTotal;
+      updateData.subtotal = newTotal;
+      updateData.remainingAmount = Math.max(0, newTotal - dep);
+    }
+
     if (serviceIds && Array.isArray(serviceIds) && serviceIds.length > 0) {
       const services = await prisma.service.findMany({
         where: { id: { in: serviceIds } },

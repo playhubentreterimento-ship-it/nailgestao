@@ -60,6 +60,31 @@ export default function ClientesPage() {
   const [editExtensionType, setEditExtensionType] = useState("Fibra de Vidro");
   const [editNailDecoration, setEditNailDecoration] = useState("Francesa Reversa");
 
+  // Form de Edição de Valor de Atendimento
+  const [editingAppId, setEditingAppId] = useState<string | null>(null);
+  const [editAppPrice, setEditAppPrice] = useState("");
+
+  const handleSaveAppPrice = async (appId: string) => {
+    const numericPrice = parseFloat(editAppPrice);
+    if (isNaN(numericPrice) || numericPrice < 0) {
+      alert("Por favor, insira um valor válido.");
+      return;
+    }
+    const res = await fetch("/api/appointments", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: appId, total: numericPrice }),
+    });
+    if (res.ok) {
+      alert("✨ Valor do atendimento/plano atualizado com sucesso!");
+      setEditingAppId(null);
+      setEditAppPrice("");
+      loadClients();
+    } else {
+      alert("Erro ao atualizar valor.");
+    }
+  };
+
   const loadClients = () => {
     fetch("/api/clients", { cache: "no-store" })
       .then((res) => res.json())
@@ -587,9 +612,49 @@ export default function ClientesPage() {
                               <p className="font-bold text-slate-800 dark:text-white">{formattedDate} às {app.startTime}</p>
                               <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
                             </div>
-                            <div className="text-right">
-                              <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                              <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
+                            <div className="text-right flex items-center space-x-2">
+                              {editingAppId === app.id ? (
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">R$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editAppPrice}
+                                    onChange={(e) => setEditAppPrice(e.target.value)}
+                                    className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                  />
+                                  <button
+                                    onClick={() => handleSaveAppPrice(app.id)}
+                                    className="rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm"
+                                  >
+                                    Salvar
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingAppId(null)}
+                                    className="rounded-lg bg-slate-300 px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-400 dark:bg-slate-700 dark:text-slate-200"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="text-right">
+                                    <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                                    <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setEditingAppId(app.id);
+                                      setEditAppPrice((app.total || 0).toString());
+                                    }}
+                                    title="Editar Valor do Plano / Atendimento"
+                                    className="flex items-center space-x-1 rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-100 transition dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                                  >
+                                    <Edit className="h-3 w-3 text-amber-600" />
+                                    <span>Editar Valor</span>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
