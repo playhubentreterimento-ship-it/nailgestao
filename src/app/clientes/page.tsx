@@ -561,18 +561,39 @@ export default function ClientesPage() {
                 </h4>
                 <div className="mt-2 space-y-2">
                   {selectedClient.appointments && selectedClient.appointments.length > 0 ? (
-                    selectedClient.appointments.map((app: any) => (
-                      <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
-                        <div>
-                          <p className="font-bold text-slate-800 dark:text-white">{app.date} às {app.startTime}</p>
-                          <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
-                          <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
-                        </div>
-                      </div>
-                    ))
+                    [...selectedClient.appointments]
+                      .sort((a: any, b: any) => {
+                        const normA = (a.date || "").replace(/\D/g, "");
+                        const normB = (b.date || "").replace(/\D/g, "");
+                        const timeA = (a.startTime || "").replace(/\D/g, "").padStart(4, "0");
+                        const timeB = (b.startTime || "").replace(/\D/g, "").padStart(4, "0");
+                        return (normA + timeA).localeCompare(normB + timeB);
+                      })
+                      .map((app: any) => {
+                        let formattedDate = app.date;
+                        if (app.date && app.date.includes("-")) {
+                          const parts = app.date.split("-");
+                          if (parts.length === 3) {
+                            if (parts[0].length === 4) {
+                              formattedDate = `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
+                            } else {
+                              formattedDate = `${parts[0].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[2]}`;
+                            }
+                          }
+                        }
+                        return (
+                          <div key={app.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-800">
+                            <div>
+                              <p className="font-bold text-slate-800 dark:text-white">{formattedDate} às {app.startTime}</p>
+                              <p className="text-[11px] text-slate-500">Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(app.total || 0).toFixed(2)}</span>
+                              <span className="block text-[10px] font-bold text-emerald-600">{app.status}</span>
+                            </div>
+                          </div>
+                        );
+                      })
                   ) : (
                     <p className="text-slate-400">Nenhum atendimento registrado anteriormente.</p>
                   )}
