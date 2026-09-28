@@ -137,7 +137,7 @@ export async function GET() {
       },
     });
 
-    const previousRegisters = await prisma.cashRegister.findMany({
+    const rawPreviousRegisters = await prisma.cashRegister.findMany({
       where: { salonId: "default-salon", status: "FECHADO" },
       include: {
         transactions: {
@@ -145,12 +145,64 @@ export async function GET() {
         },
       },
       orderBy: { openedAt: "desc" },
-      take: 10,
     });
 
+    const enrichRegister = (reg: any) => {
+      if (!reg) return null;
+      const byPaymentMethod: Record<string, number> = {
+        DINHEIRO: 0,
+        PIX: 0,
+        CREDITO: 0,
+        DEBITO: 0,
+        OUTRO: 0,
+      };
+      let totalEntradasBruto = 0;
+      let totalTaxas = 0;
+      let totalEntradasLiquido = 0;
+      let totalSangrias = 0;
+      let totalSuprimentos = 0;
+
+      for (const t of reg.transactions || []) {
+        const isOut = t.type === "SANGRIA" || t.type === "DESPESA";
+        const isEntrada = t.type === "ENTRADA" || t.type === "SUPRIMENTO";
+        const method = (t.paymentMethod || "DINHEIRO").toUpperCase();
+
+        if (isEntrada) {
+          const amt = t.amount || 0;
+          const net = t.netAmount ?? amt;
+          totalEntradasBruto += amt;
+          totalTaxas += t.feeAmount || 0;
+          totalEntradasLiquido += net;
+          if (byPaymentMethod[method] !== undefined) {
+            byPaymentMethod[method] += net;
+          } else {
+            byPaymentMethod.OUTRO += net;
+          }
+          if (t.type === "SUPRIMENTO") {
+            totalSuprimentos += amt;
+          }
+        } else if (isOut) {
+          totalSangrias += t.amount || 0;
+        }
+      }
+
+      return {
+        ...reg,
+        byPaymentMethod,
+        totalEntradasBruto,
+        totalTaxas,
+        totalEntradasLiquido,
+        totalSangrias,
+        totalSuprimentos,
+      };
+    };
+
+    const enrichedActive = enrichRegister(activeRegister);
+    const enrichedHistory = rawPreviousRegisters.map(enrichRegister);
+
     return NextResponse.json({
-      activeRegister,
-      history: previousRegisters,
+      activeRegister: enrichedActive,
+      history: enrichedHistory,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
