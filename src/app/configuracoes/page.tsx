@@ -14,8 +14,8 @@ export default function ConfiguracoesPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#E0A96D");
-  const [creditFee, setCreditFee] = useState(2.99);
-  const [debitFee, setDebitFee] = useState(1.49);
+  const [creditFee, setCreditFee] = useState(0);
+  const [debitFee, setDebitFee] = useState(0);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [saved, setSaved] = useState(false);
@@ -44,8 +44,8 @@ export default function ConfiguracoesPage() {
         const loadedColor = data.primaryColor || "#6B1615";
         setPrimaryColor(loadedColor);
         applyPrimaryColor(loadedColor);
-        setCreditFee(data.creditFeePercent || 2.99);
-        setDebitFee(data.debitFeePercent || 1.49);
+        setCreditFee(data.creditFeePercent ?? 0);
+        setDebitFee(data.debitFeePercent ?? 0);
         if (data.adminEmail) {
           setAdminEmail(data.adminEmail);
         }

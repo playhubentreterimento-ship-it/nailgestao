@@ -210,8 +210,8 @@ export async function POST(req: Request) {
 
       const salon = await prisma.salon.findFirst();
       let feeAmount = 0;
-      if (paymentMethod === "CREDITO") feeAmount = numAmount * ((salon?.creditFeePercent || 2.99) / 100);
-      if (paymentMethod === "DEBITO") feeAmount = numAmount * ((salon?.debitFeePercent || 1.49) / 100);
+      if (paymentMethod === "CREDITO") feeAmount = numAmount * ((salon?.creditFeePercent ?? 0) / 100);
+      if (paymentMethod === "DEBITO") feeAmount = numAmount * ((salon?.debitFeePercent ?? 0) / 100);
 
       const netAmount = numAmount - feeAmount;
 

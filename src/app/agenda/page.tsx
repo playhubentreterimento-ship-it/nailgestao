@@ -130,7 +130,7 @@ export default function AgendaPage() {
   const [formTime, setFormTime] = useState("10:00");
   const [formSelectedServices, setFormSelectedServices] = useState<string[]>([]);
   const [formDiscount, setFormDiscount] = useState<number>(0);
-  const [formDeposit, setFormDeposit] = useState<number>(50);
+  const [formDeposit, setFormDeposit] = useState<number>(0);
   const [formNotes, setFormNotes] = useState("");
 
   // Form de Edição de Agendamento

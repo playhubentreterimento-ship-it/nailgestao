@@ -28,10 +28,10 @@ export async function seedDatabase() {
       defaultDurationMinutes: 90,
       minAdvanceHours: 2,
       cancelWindowHours: 24,
-      requireDeposit: true,
-      defaultDepositAmount: 50.0,
-      creditFeePercent: 2.99,
-      debitFeePercent: 1.49,
+      requireDeposit: false,
+      defaultDepositAmount: 0.0,
+      creditFeePercent: 0.0,
+      debitFeePercent: 0.0,
     },
   });
 
