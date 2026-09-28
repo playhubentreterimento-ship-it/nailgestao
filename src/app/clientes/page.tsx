@@ -244,7 +244,10 @@ export default function ClientesPage() {
   const safeClients = Array.isArray(clients) ? clients : [];
   const filteredClients = safeClients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
-    const matchTag = filterTag === "all" || c.tag === filterTag;
+    let matchTag = false;
+    if (filterTag === "all") matchTag = true;
+    else if (filterTag === "PACOTES") matchTag = (c.packages && c.packages.length > 0) || c.tag === "PACOTES";
+    else matchTag = c.tag === filterTag;
     return matchSearch && matchTag;
   });
 
@@ -284,7 +287,7 @@ export default function ClientesPage() {
         </div>
 
         <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-          {["all", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
+          {["all", "PACOTES", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
             <button
               key={t}
               onClick={() => setFilterTag(t)}
@@ -294,7 +297,7 @@ export default function ClientesPage() {
                   : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
               }`}
             >
-              {t === "all" ? "Todos os Perfis" : t}
+              {t === "all" ? "Todos os Perfis" : t === "PACOTES" ? "📦 Clientes de Pacotes" : t}
             </button>
           ))}
         </div>
@@ -333,8 +336,25 @@ export default function ClientesPage() {
                 </span>
               </div>
 
+              {/* Pacotes & Procedimentos Ativos da Cliente */}
+              {client.packages && client.packages.length > 0 && (
+                <div className="mt-3 rounded-2xl bg-amber-50/90 p-3 border border-amber-200/90 dark:bg-slate-800/90 dark:border-amber-900/60 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-serif font-extrabold text-amber-900 dark:text-amber-300 flex items-center space-x-1">
+                      <span>📦 Pacote Ativo:</span>
+                    </span>
+                    <span className="rounded-md bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:text-amber-200">
+                      {client.packages[0].sessionsUsed} / {client.packages[0].totalSessions} sessões
+                    </span>
+                  </div>
+                  <p className="mt-1 font-bold text-xs text-slate-900 dark:text-white">
+                    💅 {client.packages[0].packageName || "Pacote de Sessões"}
+                  </p>
+                </div>
+              )}
+
               {/* Ficha Técnica de Unhas */}
-              <div className="mt-4 rounded-2xl bg-rose-50/60 p-3 text-xs dark:bg-slate-800/60">
+              <div className="mt-3 rounded-2xl bg-rose-50/60 p-3 text-xs dark:bg-slate-800/60">
                 <p className="font-bold text-rose-700 dark:text-rose-400">💅 Ficha de Unhas Atual:</p>
                 <div className="mt-1 grid grid-cols-2 gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
                   <div>Formato: <span className="font-semibold text-slate-900 dark:text-white">{client.nailForm || "Amendoado"}</span></div>
