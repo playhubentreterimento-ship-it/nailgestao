@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         where: {
           salonId: "default-salon",
           date: tomorrowStr,
-          status: { in: ["AGENDADO", "AGUARDANDO_CONFIRMACAO"] },
+          status: { in: ["AGENDADO", "AGUARDANDO_CONFIRMACAO", "CONFIRMADO"] },
         },
       });
 
@@ -68,7 +68,11 @@ export async function POST(req: Request) {
       for (const app of tomorrowApps) {
         const res = await whatsAppService.sendAppointmentReminder(app.id, 24);
         if (res.success) {
-          items.push(res);
+          items.push({
+            ...res,
+            appointmentDate: app.date,
+            appointmentTime: app.startTime,
+          });
         }
       }
 
@@ -77,6 +81,42 @@ export async function POST(req: Request) {
         count: items.length,
         total: tomorrowApps.length,
         date: tomorrowStr,
+        items,
+      });
+    }
+
+    // Disparar lembretes para QUALQUER DATA ou MÚLTIPLAS DATAS selecionadas
+    if (action === "SEND_DATE_REMINDERS") {
+      const rawDates = Array.isArray(body.dates) ? body.dates : body.date ? [body.date] : [];
+      if (rawDates.length === 0) {
+        return NextResponse.json({ error: "Selecione ao menos uma data válida." }, { status: 400 });
+      }
+
+      const targetApps = await prisma.appointment.findMany({
+        where: {
+          salonId: "default-salon",
+          date: { in: rawDates },
+          status: { in: ["AGENDADO", "AGUARDANDO_CONFIRMACAO", "CONFIRMADO"] },
+        },
+      });
+
+      const items: any[] = [];
+      for (const app of targetApps) {
+        const res = await whatsAppService.sendAppointmentReminder(app.id, 24);
+        if (res.success) {
+          items.push({
+            ...res,
+            appointmentDate: app.date,
+            appointmentTime: app.startTime,
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: items.length,
+        total: targetApps.length,
+        dates: rawDates,
         items,
       });
     }

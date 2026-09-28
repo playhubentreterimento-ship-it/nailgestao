@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Send, CheckCheck, RefreshCw, AlertCircle, Bot, Zap, Plus, Sparkles, ExternalLink, CheckCircle } from "lucide-react";
+import {
+  MessageSquare,
+  Send,
+  CheckCheck,
+  RefreshCw,
+  AlertCircle,
+  Bot,
+  Zap,
+  Plus,
+  Sparkles,
+  ExternalLink,
+  CheckCircle,
+  Calendar,
+  X,
+  Trash2,
+} from "lucide-react";
 
 export default function WhatsAppHubPage() {
   const [data, setData] = useState<any>(null);
@@ -9,6 +24,28 @@ export default function WhatsAppHubPage() {
   const [testMessage, setTestMessage] = useState("CONFIRMAR");
   const [webhookLog, setWebhookLog] = useState<string[]>([]);
   const [reminderResults, setReminderResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Seleção de Múltiplas Datas para Envio de Lembretes
+  const getTomorrowString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDates, setSelectedDates] = useState<string[]>([getTomorrowString()]);
+  const [customDateInput, setCustomDateInput] = useState<string>(getTomorrowString());
 
   const loadWhatsApp = () => {
     fetch("/api/whatsapp")
@@ -20,18 +57,82 @@ export default function WhatsAppHubPage() {
     loadWhatsApp();
   }, []);
 
-  const handleDispatchReminders = async () => {
-    if (confirm("Deseja enviar lembretes automáticos via WhatsApp para TODAS as clientes agendadas para amanhã?")) {
+  const handleAddCustomDate = () => {
+    if (!customDateInput) return;
+    if (!selectedDates.includes(customDateInput)) {
+      setSelectedDates((prev) => [...prev, customDateInput].sort());
+    }
+  };
+
+  const handleRemoveDate = (dateToRemove: string) => {
+    setSelectedDates((prev) => prev.filter((d) => d !== dateToRemove));
+  };
+
+  const handleSetPreset = (preset: "TODAY" | "TOMORROW" | "NEXT_3" | "NEXT_7") => {
+    const dates: string[] = [];
+    const base = new Date();
+
+    if (preset === "TODAY") {
+      dates.push(getTodayString());
+    } else if (preset === "TOMORROW") {
+      dates.push(getTomorrowString());
+    } else if (preset === "NEXT_3") {
+      for (let i = 0; i < 3; i++) {
+        const d = new Date();
+        d.setDate(base.getDate() + i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        dates.push(`${y}-${m}-${day}`);
+      }
+    } else if (preset === "NEXT_7") {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date();
+        d.setDate(base.getDate() + i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        dates.push(`${y}-${m}-${day}`);
+      }
+    }
+
+    setSelectedDates(dates);
+  };
+
+  const handleDispatchDateReminders = async () => {
+    if (selectedDates.length === 0) {
+      alert("Por favor, selecione ao menos 1 data para enviar lembretes.");
+      return;
+    }
+
+    const formattedDatesList = selectedDates
+      .map((d) => d.split("-").reverse().join("/"))
+      .join(", ");
+
+    if (
+      confirm(
+        `Deseja disparar lembretes via WhatsApp para as clientes agendadas nas seguintes datas?\n\n📅 ${formattedDatesList}`
+      )
+    ) {
+      setLoading(true);
       const res = await fetch("/api/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "SEND_TOMORROW_REMINDERS" }),
+        body: JSON.stringify({
+          action: "SEND_DATE_REMINDERS",
+          dates: selectedDates,
+        }),
       });
+
       const resData = await res.json();
+      setLoading(false);
+
       if (resData.items && resData.items.length > 0) {
         setReminderResults(resData.items);
       } else {
-        alert(`✨ ${resData.count || 0} lembrete(s) processado(s) para o dia ${resData.date}.`);
+        alert(
+          `✨ NENHUM agendamento pendente/confirmado encontrado para a(s) data(s) selecionada(s) (${formattedDatesList}).`
+        );
       }
       loadWhatsApp();
     }
@@ -67,19 +168,11 @@ export default function WhatsAppHubPage() {
             WhatsApp Automation Hub
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-200 font-semibold">
-            Conexão com WhatsApp API, disparo com DDI 55 automático e confirmações de presença.
+            Conexão com WhatsApp API, disparo para qualquer data ou múltiplas datas e confirmação automática.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
-          <button
-            onClick={handleDispatchReminders}
-            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md hover:opacity-95"
-          >
-            <Send className="h-4 w-4" />
-            <span>📲 Disparar Lembretes de Amanhã (24h)</span>
-          </button>
-
           <span className="flex items-center space-x-1.5 rounded-full bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>API Oficial / Conectado</span>
@@ -87,13 +180,149 @@ export default function WhatsAppHubPage() {
         </div>
       </div>
 
+      {/* PAINEL SELETOR DE MÚLTIPLAS DATAS E DISPARO DE LEMBRETES */}
+      <div className="rounded-3xl border-2 border-emerald-400 bg-white p-6 shadow-md dark:border-emerald-600 dark:bg-slate-900 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 border-emerald-100 dark:border-slate-800">
+          <div className="flex items-center space-x-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white font-bold text-lg shadow-md">
+              📲
+            </div>
+            <div>
+              <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+                Disparo de Lembretes por Data Personalizada & Múltiplas Datas
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                Escolha qualquer data específica ou selecione várias datas simultâneas para enviar os lembretes do WhatsApp.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDispatchDateReminders}
+            disabled={loading || selectedDates.length === 0}
+            className="flex items-center justify-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-xs font-extrabold text-white shadow-lg hover:opacity-95 disabled:opacity-50 shrink-0"
+          >
+            <Send className="h-4 w-4" />
+            <span>
+              {loading ? "Disparando..." : `Disparar Lembretes (${selectedDates.length} Data${selectedDates.length > 1 ? "s" : ""}) &rarr;`}
+            </span>
+          </button>
+        </div>
+
+        {/* Seleção Rápida (Presets) & Seletor Customizado */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Presets Rápidos */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+              ⚡ Atalhos Rápidos de Seleção de Datas:
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleSetPreset("TODAY")}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                📅 Hoje
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetPreset("TOMORROW")}
+                className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+              >
+                📅 Amanhã
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetPreset("NEXT_3")}
+                className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+              >
+                🗓️ Próximos 3 Dias
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetPreset("NEXT_7")}
+                className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-800 hover:bg-purple-100 dark:border-purple-900 dark:bg-purple-950 dark:text-purple-300"
+              >
+                🗓️ Próximos 7 Dias
+              </button>
+            </div>
+          </div>
+
+          {/* Adicionar Data Específica */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+              ➕ Escolher Qualquer Outra Data Específica:
+            </label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="date"
+                value={customDateInput}
+                onChange={(e) => setCustomDateInput(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-300 bg-white p-2.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomDate}
+                className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+              >
+                + Adicionar Data
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de Datas Selecionadas */}
+        <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 dark:bg-slate-800/80 dark:border-slate-700 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              📅 Datas Selecionadas para o Disparo ({selectedDates.length}):
+            </span>
+            {selectedDates.length > 0 && (
+              <button
+                onClick={() => setSelectedDates([])}
+                className="text-[11px] font-bold text-rose-600 hover:underline dark:text-rose-400"
+              >
+                Limpar Todas as Datas
+              </button>
+            )}
+          </div>
+
+          {selectedDates.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {selectedDates.map((dateStr) => {
+                const formattedDate = dateStr.split("-").reverse().join("/");
+                return (
+                  <span
+                    key={dateStr}
+                    className="inline-flex items-center space-x-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-extrabold text-slate-900 shadow-sm border border-emerald-300 dark:bg-slate-900 dark:text-white dark:border-emerald-700"
+                  >
+                    <span>📅 {formattedDate}</span>
+                    <button
+                      onClick={() => handleRemoveDate(dateStr)}
+                      className="ml-1 rounded-full text-slate-400 hover:text-rose-600 transition"
+                      title="Remover esta data"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">
+              Nenhuma data selecionada no momento. Use os atalhos ou o seletor acima para escolher as datas desejadas.
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* PAINEL DE LINKS DIRETOS PARA WHATSAPP WEB */}
       {reminderResults.length > 0 && (
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-800 dark:bg-slate-900 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between border-b pb-3 border-emerald-200 dark:border-slate-800">
             <h3 className="font-serif text-base font-bold text-emerald-900 dark:text-emerald-300 flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-emerald-600" />
-              <span>✨ Lembretes de Amanhã Processados com DDI 55 ({reminderResults.length})</span>
+              <span>✨ {reminderResults.length} Lembrete(s) de WhatsApp Gerado(s) com Sucesso</span>
             </h3>
             <button
               onClick={() => setReminderResults([])}
@@ -107,8 +336,15 @@ export default function WhatsAppHubPage() {
             {reminderResults.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between rounded-2xl bg-white p-3.5 shadow-sm dark:bg-slate-800">
                 <div>
-                  <p className="font-bold text-slate-900 dark:text-white text-xs">{item.clientName}</p>
-                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                  <div className="flex items-center space-x-2">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">{item.clientName}</p>
+                    {item.appointmentDate && (
+                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                        {item.appointmentDate.split("-").reverse().join("/")} às {item.appointmentTime}h
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
                     📞 WhatsApp: {item.phone}
                   </p>
                 </div>
