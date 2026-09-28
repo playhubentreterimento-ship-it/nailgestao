@@ -227,25 +227,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* BANNER INFORMATIVO DE DIAS RESTANTES DO TESTE */}
-      {typeof trialDaysLeft === "number" && trialDaysLeft > 0 && userRole !== "DEMO" && (
-        <div className={`${bannerBgClass} px-4 py-2 text-center text-xs font-bold text-white shadow-md flex flex-wrap items-center justify-between gap-2 z-40`}>
-          <div className="flex items-center gap-2 mx-auto sm:mx-0">
-            {isAlert && <AlertTriangle className="h-4 w-4 text-amber-200 animate-bounce" />}
-            <span>{bannerText}</span>
-          </div>
-          <div className="flex items-center gap-2 mx-auto sm:mx-0">
-            <Link
-              href="/planos#planos"
-              data-cta="click_view_plans"
-              className="px-3.5 py-1 bg-white text-slate-950 hover:bg-slate-100 rounded-lg font-extrabold transition flex items-center gap-1 shadow"
-            >
-              <span>ESCOLHER MEU PLANO</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      )}
+
 
       <Header userRole={userRole} />
       <div className="flex flex-1 overflow-hidden">

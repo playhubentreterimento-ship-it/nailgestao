@@ -116,53 +116,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* CARD DO TESTE GRATUITO / ASSINATURA */}
-      {session && !session.isDemo && (
-        <div className={`rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border transition-colors ${
-          session.isTrialExpired
-            ? "bg-rose-500/10 border-rose-500/40"
-            : session.trialDaysLeft <= 3
-            ? "bg-amber-500/10 border-amber-500/40"
-            : "bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 border-amber-500/30"
-        }`}>
-          <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30 text-lg">
-              {session.isTrialExpired ? "🔒" : session.trialDaysLeft <= 3 ? "⚠️" : "🎁"}
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                {session.isTrialExpired
-                  ? "Seu período gratuito terminou."
-                  : session.trialDaysLeft <= 3
-                  ? "⚠️ Seu teste gratuito expira em breve!"
-                  : "Seu teste gratuito"}
-              </h4>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                {session.isTrialExpired
-                  ? "Escolha um plano para continuar utilizando todas as funções do NailGestão."
-                  : session.trialDaysLeft === 3
-                  ? "Restam apenas 3 dias de teste! Escolha o plano ideal antes do bloqueio da sua agenda."
-                  : session.trialDaysLeft === 2
-                  ? "Restam apenas 2 dias do seu teste gratuito."
-                  : session.trialDaysLeft === 1
-                  ? "⚠️ ÚLTIMO DIA DE TESTE! Seu acesso gratuito expira amanhã."
-                  : session.trialDaysLeft === 0
-                  ? "Seu teste expira hoje."
-                  : `Restam ${session.trialDaysLeft} dias de uso gratuito.`}
-              </p>
-            </div>
-          </div>
 
-          <Link
-            href="/planos#planos"
-            data-cta="click_view_plans"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white font-extrabold text-xs text-center shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <span>{session.isTrialExpired ? "ESCOLHER UM PLANO" : "Ver planos"}</span>
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
-      )}
 
       {/* 1. RESUMO DO DIA */}
       <div>
