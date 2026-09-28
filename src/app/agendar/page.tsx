@@ -240,7 +240,7 @@ export default function AgendarPublicPage() {
         {/* Header do Salão */}
         <div className="text-center mb-6">
           <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-3xl bg-slate-900 p-1.5 shadow-xl shadow-rose-200/60 border-2 border-amber-300/80 dark:border-slate-800 overflow-hidden">
-            <img src="/luxe-logo.jpg" alt="Studio Luxe Nail Designer" className="h-full w-full object-cover rounded-2xl" />
+            <img src={salon?.logoUrl || "/selma-logo.jpg"} alt={salon?.name || "Meu Salão de Unhas"} className="h-full w-full object-cover rounded-2xl" />
           </div>
           <h1 className="mt-3 font-serif text-2xl font-bold text-slate-900 dark:text-white">
             {salon?.name || "Meu Salão de Unhas"}
