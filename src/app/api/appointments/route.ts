@@ -56,7 +56,18 @@ export async function GET(req: Request) {
         { salonId: "67998370966" }
       ]
     };
-    if (date && date !== "all") {
+    const allDatesParam = searchParams.get("allDates");
+    const clientIdParam = searchParams.get("clientId");
+
+    if (clientIdParam && clientIdParam !== "all") {
+      whereClause.clientId = clientIdParam;
+    }
+
+    if (!allDatesParam && !clientIdParam) {
+      if (date && date !== "all") {
+        whereClause.OR = [{ date: date }, { date: rawDate }];
+      }
+    } else if (date && date !== "all" && !allDatesParam) {
       whereClause.OR = [{ date: date }, { date: rawDate }];
     }
     if (monthParam) whereClause.date = { startsWith: monthParam };

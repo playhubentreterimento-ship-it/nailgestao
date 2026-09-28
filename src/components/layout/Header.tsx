@@ -30,6 +30,7 @@ export function Header({ userRole }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState("light");
   const [pushStatus, setPushStatus] = useState<string>("default");
+  const [headerSearch, setHeaderSearch] = useState("");
 
   const knownAppIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef<boolean>(true);
@@ -217,7 +218,14 @@ export function Header({ userRole }: HeaderProps) {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar cliente, serviço..."
+              value={headerSearch}
+              onChange={(e) => setHeaderSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && headerSearch.trim()) {
+                  window.location.href = `/agenda?searchClient=${encodeURIComponent(headerSearch.trim())}`;
+                }
+              }}
+              placeholder="Buscar cliente, agendamentos..."
               className="h-9 w-60 rounded-full bg-slate-100 pl-9 pr-4 text-xs font-medium text-slate-700 outline-none ring-rose-400 focus:ring-2 dark:bg-slate-800 dark:text-slate-200"
             />
           </div>

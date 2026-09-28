@@ -19,6 +19,7 @@ import {
   Eye,
   Phone,
   Check,
+  Search,
 } from "lucide-react";
 import { sendLocalPushNotification } from "@/lib/notifications";
 
@@ -122,6 +123,39 @@ export default function AgendaPage() {
   const [filterProf, setFilterProf] = useState<string>("all");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Modal de Pesquisa de Agendamentos da Cliente
+  const [showClientSearchModal, setShowClientSearchModal] = useState<boolean>(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [selectedSearchClient, setSelectedSearchClient] = useState<any>(null);
+  const [searchedClientApps, setSearchedClientApps] = useState<any[]>([]);
+  const [loadingSearchApps, setLoadingSearchApps] = useState(false);
+
+  const handleSelectClientForSearch = (client: any) => {
+    setSelectedSearchClient(client);
+    setLoadingSearchApps(true);
+    fetch(`/api/appointments?clientId=${client.id}&allDates=true`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        setSearchedClientApps(Array.isArray(data) ? data : []);
+        setLoadingSearchApps(false);
+      })
+      .catch(() => {
+        setSearchedClientApps([]);
+        setLoadingSearchApps(false);
+      });
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const q = urlParams.get("searchClient") || urlParams.get("search");
+      if (q) {
+        setClientSearchQuery(q);
+        setShowClientSearchModal(true);
+      }
+    }
+  }, []);
 
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
@@ -424,33 +458,44 @@ export default function AgendaPage() {
           </p>
         </div>
 
-        {/* Botão de Bloqueio/Liberação de Almoço */}
-        {(() => {
-          const isLunchUnlocked = appointments.some(
-            (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
-          );
-          return (
-            <button
-              onClick={handleToggleLunchBlock}
-              className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
-                isLunchUnlocked
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
-                  : "bg-slate-900 text-amber-300 border-2 border-amber-400 hover:bg-slate-800"
-              }`}
-              title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
-            >
-              <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
-            </button>
-          );
-        })()}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botão de Pesquisar Agendamentos por Cliente */}
+          <button
+            onClick={() => setShowClientSearchModal(true)}
+            className="flex items-center space-x-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2 text-xs font-extrabold text-rose-900 hover:bg-rose-100 transition shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-rose-200"
+          >
+            <Search className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            <span>🔍 Pesquisar Agendamentos da Cliente</span>
+          </button>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Novo Agendamento</span>
-        </button>
+          {/* Botão de Bloqueio/Liberação de Almoço */}
+          {(() => {
+            const isLunchUnlocked = appointments.some(
+              (a) => a.date === selectedDate && (a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO")
+            );
+            return (
+              <button
+                onClick={handleToggleLunchBlock}
+                className={`flex items-center space-x-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+                  isLunchUnlocked
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+                    : "bg-slate-900 text-amber-300 border-2 border-amber-400 hover:bg-slate-800"
+                }`}
+                title="Almoço é bloqueado por padrão (11h-13h). Clique para liberar ou bloquear nesta data."
+              >
+                <span>{isLunchUnlocked ? "🍱 Bloquear Almoço (11h-13h)" : "🔓 Liberar Almoço Manual (11h-13h)"}</span>
+              </button>
+            );
+          })()}
+
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Novo Agendamento</span>
+          </button>
+        </div>
       </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1572,6 +1617,194 @@ export default function AgendaPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PESQUISA DE AGENDAMENTOS DA CLIENTE */}
+      {showClientSearchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border-2 border-rose-200 dark:border-slate-800">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 border-rose-100 dark:border-slate-800">
+              <h3 className="font-serif text-lg font-extrabold text-[#6B1615] dark:text-amber-200 flex items-center space-x-2">
+                <Search className="h-5 w-5 text-rose-500" />
+                <span>🔍 Consultar Horários & Datas da Cliente</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setShowClientSearchModal(false);
+                  setSelectedSearchClient(null);
+                  setSearchedClientApps([]);
+                }}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Input de busca de cliente */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1">
+                  Digite o nome, telefone ou WhatsApp da cliente:
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={clientSearchQuery}
+                    onChange={(e) => {
+                      setClientSearchQuery(e.target.value);
+                      setSelectedSearchClient(null);
+                    }}
+                    placeholder="Ex: Valeria, Maria, 99999..."
+                    className="w-full rounded-2xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Lista de Clientes Encontradas (Sugestões/Seleção) */}
+              {!selectedSearchClient && clientSearchQuery.trim().length > 0 && (
+                <div className="max-h-48 overflow-y-auto rounded-2xl border border-rose-100 bg-rose-50/40 p-2 space-y-1.5 dark:border-slate-800 dark:bg-slate-800/40">
+                  {clients
+                    .filter(
+                      (c) =>
+                        c.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+                        (c.phone && c.phone.includes(clientSearchQuery)) ||
+                        (c.whatsapp && c.whatsapp.includes(clientSearchQuery))
+                    )
+                    .slice(0, 8)
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => handleSelectClientForSearch(c)}
+                        className="cursor-pointer flex items-center justify-between rounded-xl bg-white p-3 shadow-xs hover:border-rose-300 border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-400 to-amber-300 font-serif text-xs font-bold text-white shadow-xs">
+                            {c.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-serif text-xs font-bold text-slate-900 dark:text-white">{c.name}</h4>
+                            <p className="text-[10px] text-slate-500">📞 {c.phone || c.whatsapp}</p>
+                          </div>
+                        </div>
+                        <span className="rounded-xl bg-rose-500 px-3 py-1 text-[11px] font-bold text-white hover:bg-rose-600 shadow-xs">
+                          Ver Agendamentos &rarr;
+                        </span>
+                      </div>
+                    ))}
+                  {clients.filter(
+                    (c) =>
+                      c.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+                      (c.phone && c.phone.includes(clientSearchQuery))
+                  ).length === 0 && (
+                    <p className="p-3 text-center text-xs text-slate-500 italic">
+                      Nenhuma cliente encontrada com esse nome ou telefone.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Ficha & Lista de Agendamentos da Cliente Selecionada */}
+              {selectedSearchClient && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between rounded-2xl bg-amber-50 p-3.5 border border-amber-200 dark:bg-slate-800 dark:border-slate-700">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white font-serif font-bold text-base shadow-xs">
+                        {selectedSearchClient.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-slate-900 dark:text-white text-sm">{selectedSearchClient.name}</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">📞 {selectedSearchClient.phone || selectedSearchClient.whatsapp}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedSearchClient(null);
+                        setSearchedClientApps([]);
+                      }}
+                      className="text-xs font-bold text-rose-600 underline hover:text-rose-800 dark:text-rose-400"
+                    >
+                      Trocar Cliente
+                    </button>
+                  </div>
+
+                  <h4 className="font-serif text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                    <span>📅 Horários e Datas com Agendamento ({searchedClientApps.length})</span>
+                    {loadingSearchApps && <span className="text-[10px] text-amber-600 animate-pulse">Carregando...</span>}
+                  </h4>
+
+                  {searchedClientApps.length > 0 ? (
+                    <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                      {searchedClientApps.map((app) => {
+                        let formattedDate = app.date;
+                        if (app.date && app.date.includes("-")) {
+                          const parts = app.date.split("-");
+                          if (parts.length === 3) {
+                            formattedDate = parts[0].length === 4 ? `${parts[2]}/${parts[1]}/${parts[0]}` : `${parts[0]}/${parts[1]}/${parts[2]}`;
+                          }
+                        }
+                        return (
+                          <div
+                            key={app.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 p-3 shadow-xs dark:border-slate-800 dark:bg-slate-800/80 gap-2"
+                          >
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-serif font-extrabold text-slate-900 dark:text-white text-xs">
+                                  📅 {formattedDate} às {app.startTime}h
+                                </span>
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                  {app.status}
+                                </span>
+                              </div>
+                              <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                                💅 Serviços: {app.services?.map((s: any) => s.serviceName).join(", ")}
+                              </p>
+                              <p className="text-[10px] text-slate-500">
+                                👩 Profissional: {app.professionalName} | 💰 Total: R$ {(app.total || 0).toFixed(2)}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center space-x-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setSelectedDate(toISODateString(app.date));
+                                  setShowClientSearchModal(false);
+                                }}
+                                className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 shadow-xs"
+                                title="Ir para o dia deste agendamento na grade da agenda"
+                              >
+                                🎯 Ver na Agenda
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setShowClientSearchModal(false);
+                                  handleOpenEditModal(app);
+                                }}
+                                className="rounded-xl bg-amber-500 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-amber-600 shadow-xs"
+                                title="Editar valor ou serviços"
+                              >
+                                ✏️ Editar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    !loadingSearchApps && (
+                      <div className="rounded-2xl bg-slate-50 p-4 text-center text-xs text-slate-500 italic dark:bg-slate-800">
+                        Nenhum agendamento encontrado para esta cliente.
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
