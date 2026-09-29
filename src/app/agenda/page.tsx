@@ -159,6 +159,8 @@ export default function AgendaPage() {
 
   // Form de Agendamento (Criação)
   const [formClient, setFormClient] = useState("");
+  const [clientSelectSearch, setClientSelectSearch] = useState("");
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [formProf, setFormProf] = useState("");
   const [formDate, setFormDate] = useState(getTodayString());
   const [formTime, setFormTime] = useState("10:00");
@@ -290,8 +292,22 @@ export default function AgendaPage() {
     };
   }, [selectedDate, filterProf, viewMode]);
 
+  const selectedClientObj = clients.find((c) => c.id === formClient);
+  const filteredClientsForForm = clients.filter((c) => {
+    if (!clientSelectSearch.trim()) return true;
+    const q = clientSelectSearch.toLowerCase().trim();
+    const name = (c.name || "").toLowerCase();
+    const phone = (c.phone || "").toLowerCase();
+    const wa = (c.whatsapp || "").toLowerCase();
+    const tag = (c.tag || "").toLowerCase();
+    return name.includes(q) || phone.includes(q) || wa.includes(q) || tag.includes(q);
+  });
+
   const handleOpenModal = (presetDate?: string, presetTime?: string) => {
     refreshAllData();
+    setFormClient("");
+    setClientSelectSearch("");
+    setIsClientDropdownOpen(false);
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
     setShowModal(true);
@@ -327,6 +343,9 @@ export default function AgendaPage() {
         "/agenda"
       );
       setShowModal(false);
+      setFormClient("");
+      setClientSelectSearch("");
+      setIsClientDropdownOpen(false);
       setFormSelectedServices([]);
       setFormNotes("");
       setFormDiscount(0);
@@ -1253,22 +1272,144 @@ export default function AgendaPage() {
             </div>
 
             <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
-              {/* Cliente */}
-              <div>
-                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">Cliente *</label>
-                <select
+              {/* Cliente com Lupa de Pesquisa Rápida */}
+              <div className="relative">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block font-extrabold text-slate-900 dark:text-slate-100">
+                    Cliente *
+                  </label>
+                  {formClient && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormClient("");
+                        setClientSelectSearch("");
+                        setIsClientDropdownOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-rose-600 hover:underline dark:text-rose-400"
+                    >
+                      🔍 Trocar de cliente
+                    </button>
+                  )}
+                </div>
+
+                {formClient && selectedClientObj ? (
+                  <div className="flex items-center justify-between rounded-2xl border-2 border-rose-300 bg-rose-50/80 p-3 shadow-xs dark:border-rose-800 dark:bg-slate-800">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white font-black shadow-xs">
+                        👤
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-slate-900 dark:text-white text-sm">
+                          {selectedClientObj.name}
+                        </div>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold">
+                          📱 {selectedClientObj.whatsapp || selectedClientObj.phone || "Sem WhatsApp"} • <span className="font-extrabold text-rose-600 dark:text-rose-400">{selectedClientObj.tag || "CLIENTE"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormClient("");
+                        setClientSelectSearch("");
+                        setIsClientDropdownOpen(true);
+                      }}
+                      className="rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 dark:bg-slate-900 dark:border-slate-700 dark:text-rose-400 transition"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-3.5 h-4 w-4 text-rose-500 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={clientSelectSearch}
+                        onChange={(e) => {
+                          setClientSelectSearch(e.target.value);
+                          setIsClientDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsClientDropdownOpen(true)}
+                        placeholder="🔍 Pesquisa rápida: digite o nome ou WhatsApp da cliente..."
+                        className="w-full rounded-2xl border-2 border-rose-200 bg-white pl-10 pr-10 py-3 font-bold text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs placeholder:text-slate-400 placeholder:font-normal"
+                      />
+                      {clientSelectSearch ? (
+                        <button
+                          type="button"
+                          onClick={() => setClientSelectSearch("")}
+                          className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                          className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          <ChevronRight className={`h-4 w-4 transition-transform ${isClientDropdownOpen ? "rotate-90" : ""}`} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Dropdown com Lista de Pesquisa Rápida */}
+                    {isClientDropdownOpen && (
+                      <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-rose-200 bg-white p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+                        {filteredClientsForForm.length > 0 ? (
+                          filteredClientsForForm.map((c) => (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                setFormClient(c.id);
+                                setClientSelectSearch("");
+                                setIsClientDropdownOpen(false);
+                              }}
+                              className="flex cursor-pointer items-center justify-between p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-slate-800 transition"
+                            >
+                              <div className="flex items-center space-x-2.5">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-100 text-rose-800 font-bold text-xs dark:bg-slate-800 dark:text-rose-300">
+                                  👤
+                                </div>
+                                <div>
+                                  <span className="font-extrabold text-slate-900 dark:text-white text-xs block">{c.name}</span>
+                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                    📱 {c.whatsapp || c.phone || "Sem WhatsApp"}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                {c.tag || "CLIENTE"}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-xs text-slate-500 font-medium space-y-2">
+                            <p>Nenhuma cliente encontrada com "{clientSelectSearch}".</p>
+                            <a
+                              href="/clientes"
+                              target="_blank"
+                              className="inline-block text-xs font-bold text-rose-600 hover:underline"
+                            >
+                              + Cadastrar Nova Cliente
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Input escondido para validação HTML required */}
+                <input
+                  type="text"
                   value={formClient}
-                  onChange={(e) => setFormClient(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   required
-                >
-                  <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">Selecione a cliente...</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">
-                      {c.name} - {c.whatsapp} ({c.tag})
-                    </option>
-                  ))}
-                </select>
+                  onChange={() => {}}
+                  className="sr-only"
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity("Por favor, selecione uma cliente na pesquisa.")}
+                />
               </div>
 
               {/* Profissional & Data & Horário */}
