@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // 1. Tentar obter o salão real pelo ID real da Selma ou primeiro salão do banco
+    // 1. Obter salão real
     let salon: any = await prisma.salon
       .findUnique({ where: { id: sessionUser?.salonId || RECOVERY_SALON_ID } })
       .catch(() => null);
@@ -27,47 +27,40 @@ export async function GET(request: Request) {
       salon = await prisma.salon.findFirst().catch(() => null);
     }
 
-    // 2. Tentar obter a usuária administradora real da Selma
-    let adminUser: any = null;
-    if (sessionUser?.email) {
-      adminUser = await prisma.user
-        .findFirst({ where: { email: sessionUser.email } })
-        .catch(() => null);
-    }
-    if (!adminUser) {
-      adminUser = await prisma.user
-        .findFirst({ where: { OR: [{ email: "sfgloorwms078@gmail.com" }, { role: "ADMINISTRADOR" }] } })
-        .catch(() => null);
-    }
-
     const effectiveSalonId = salon?.id || RECOVERY_SALON_ID;
     const effectiveSalonName = salon?.name || "Estúdio de Unhas Selma Gloor";
-    const effectiveOwnerName = salon?.ownerName || adminUser?.name || "Selma Francyelle Gloor";
-    const effectiveEmail = adminUser?.email || "sfgloorwms078@gmail.com";
+    const effectiveOwnerName = salon?.ownerName || "Selma Francyelle Gloor";
 
+    // Se não houver sessão ativa, retornar authenticated: false
     if (!sessionUser) {
-      sessionUser = {
-        id: adminUser?.id || "USR-admin-master",
-        name: effectiveOwnerName,
-        email: effectiveEmail,
-        role: adminUser?.role || "ADMINISTRADOR",
-        salonId: effectiveSalonId,
-        salonName: effectiveSalonName,
-        subscriptionStatus: "ATIVO",
-      };
+      return NextResponse.json({
+        authenticated: false,
+        user: null,
+        salon: {
+          id: effectiveSalonId,
+          name: effectiveSalonName,
+          ownerName: effectiveOwnerName,
+          phone: salon?.phone || "(67) 99837-0966",
+          whatsapp: salon?.whatsapp || "5567998370966",
+          subscriptionStatus: "ATIVO",
+        },
+        trialDaysLeft: null,
+        isTrialExpired: false,
+        whatsappSupport: "5567998370966",
+      });
     }
 
     return NextResponse.json({
       authenticated: true,
       isDemo: false,
       user: {
-        ...sessionUser,
-        id: adminUser?.id || sessionUser.id || "USR-admin-master",
-        name: effectiveOwnerName,
-        email: effectiveEmail,
+        id: sessionUser.id || "usr-admin-master",
+        name: sessionUser.name || effectiveOwnerName,
+        email: sessionUser.email || "sfgloorwms078@gmail.com",
         role: sessionUser.role || "ADMINISTRADOR",
         salonId: effectiveSalonId,
         salonName: effectiveSalonName,
+        avatarUrl: sessionUser.avatarUrl || null,
       },
       salon: {
         ...(salon || {}),
@@ -84,26 +77,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      authenticated: true,
-      isDemo: false,
-      user: {
-        id: "USR-admin-master",
-        name: "Selma Francyelle Gloor",
-        email: "sfgloorwms078@gmail.com",
-        role: "ADMINISTRADOR",
-        salonId: RECOVERY_SALON_ID,
-        salonName: "Estúdio de Unhas Selma Gloor",
-      },
-      salon: {
-        id: RECOVERY_SALON_ID,
-        name: "Estúdio de Unhas Selma Gloor",
-        ownerName: "Selma Francyelle Gloor",
-        phone: "(67) 99837-0966",
-        whatsapp: "5567998370966",
-      },
-      trialDaysLeft: null,
-      isTrialExpired: false,
-      whatsappSupport: "5567998370966",
+      authenticated: false,
+      user: null,
+      salon: null,
     });
   }
 }
