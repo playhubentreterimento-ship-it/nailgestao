@@ -191,20 +191,20 @@ export function Header({ userRole }: HeaderProps) {
   return (
     <header
       style={{ backgroundColor: salon?.primaryColor || 'var(--primary-color, #6b1615)' }}
-      className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-white/20 px-4 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 shadow-md transition-colors duration-300"
+      className="sticky top-0 z-30 flex h-16 w-full max-w-full items-center justify-between border-b border-white/20 px-3 sm:px-6 text-white backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 shadow-md transition-colors duration-300 overflow-x-hidden"
     >
       {/* Branding / Salão */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         <img
           src={salon?.logoUrl && !salon.logoUrl.includes("logo.png") ? salon.logoUrl : "/luxe-logo.jpg"}
           alt={salonDisplayName}
-          className="h-10 w-10 rounded-xl object-cover bg-slate-900 border-2 border-amber-300/80 shadow-md"
+          className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-cover bg-slate-900 border-2 border-amber-300/80 shadow-md shrink-0"
         />
-        <div>
-          <h1 className="font-serif text-lg font-bold tracking-tight text-white sm:text-xl">
+        <div className="min-w-0">
+          <h1 className="font-serif text-base sm:text-xl font-bold tracking-tight text-white truncate max-w-[160px] sm:max-w-none">
             {salonDisplayName}
           </h1>
-          <p className="hidden text-xs text-amber-200/90 sm:block font-medium">
+          <p className="hidden text-xs text-amber-200/90 sm:block font-medium truncate">
             {salon?.slogan || "Especialista em Unhas & Nails Art"}
           </p>
         </div>

@@ -210,7 +210,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#FAF3F0] via-[#F6EBE5] to-[#EFE0D5] dark:from-[#0F172A] dark:to-[#020617] text-slate-900 dark:text-slate-100">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#FAF3F0] via-[#F6EBE5] to-[#EFE0D5] dark:from-[#0F172A] dark:to-[#020617] text-slate-900 dark:text-slate-100 overflow-x-hidden w-full max-w-full">
       {userRole === "DEMO" && (
         <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 px-4 py-2 text-center text-xs font-bold text-white shadow-md flex flex-wrap items-center justify-between gap-2 z-40">
           <div className="flex items-center gap-2 mx-auto sm:mx-0">
@@ -227,12 +227,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-
-
       <Header userRole={userRole} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-w-0 overflow-hidden w-full max-w-full">
         <Sidebar userRole={userRole} />
-        <main className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 md:pb-6">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-24 md:pb-6 w-full max-w-full">
           {children}
         </main>
       </div>

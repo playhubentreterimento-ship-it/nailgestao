@@ -252,11 +252,11 @@ export default function ClientesPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto w-full min-w-0">
       {/* Header & Controles */}
-      <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
+      <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0 w-full min-w-0">
         <div>
-          <h2 className="font-serif text-2xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl">
+          <h2 className="font-serif text-xl font-extrabold text-[#6B1615] dark:text-amber-200 sm:text-3xl break-words">
             Gestão de Clientes & CRM
           </h2>
           <p className="text-xs text-slate-700 dark:text-rose-100 font-semibold">
@@ -266,7 +266,7 @@ export default function ClientesPage() {
 
         <button
           onClick={() => setShowNewModal(true)}
-          className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
+          className="flex items-center justify-center space-x-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg hover:opacity-95 w-full sm:w-auto shrink-0"
         >
           <Plus className="h-4 w-4" />
           <span>Cadastrar Nova Cliente</span>
@@ -274,8 +274,8 @@ export default function ClientesPage() {
       </div>
 
       {/* Filtros e Busca */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+        <div className="relative flex-1 max-w-md w-full">
           <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
           <input
             type="text"
@@ -286,12 +286,12 @@ export default function ClientesPage() {
           />
         </div>
 
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 max-w-full min-w-0">
           {["all", "PACOTES", "VIP", "FREQUENTE", "NOVO", "INATIVO"].map((t) => (
             <button
               key={t}
               onClick={() => setFilterTag(t)}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap ${
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition whitespace-nowrap shrink-0 ${
                 filterTag === t
                   ? "bg-rose-500 text-white shadow-sm"
                   : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300"
@@ -304,25 +304,25 @@ export default function ClientesPage() {
       </div>
 
       {/* Lista de Clientes */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 w-full min-w-0">
         {filteredClients.map((client) => (
           <div
             key={client.id}
-            className="flex flex-col justify-between rounded-3xl border border-slate-100 bg-white p-5 shadow-sm transition hover:border-rose-300 dark:border-slate-800 dark:bg-slate-900"
+            className="flex flex-col justify-between rounded-3xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm transition hover:border-rose-300 dark:border-slate-800 dark:bg-slate-900 w-full min-w-0 overflow-hidden"
           >
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 to-amber-300 font-serif text-lg font-bold text-white shadow-md">
+            <div className="min-w-0">
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 to-amber-300 font-serif text-base font-bold text-white shadow-md">
                     {client.name.charAt(0)}
                   </div>
-                  <div>
-                    <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">{client.name}</h3>
-                    <p className="text-xs text-slate-500">{client.phone}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-[190px]">{client.name}</h3>
+                    <p className="text-xs text-slate-500 truncate">{client.phone}</p>
                   </div>
                 </div>
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     client.tag === "VIP"
                       ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                       : client.tag === "FREQUENTE"
@@ -338,29 +338,29 @@ export default function ClientesPage() {
 
               {/* Pacotes & Procedimentos Ativos da Cliente */}
               {client.packages && client.packages.length > 0 && (
-                <div className="mt-3 rounded-2xl bg-amber-50/90 p-3 border border-amber-200/90 dark:bg-slate-800/90 dark:border-amber-900/60 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-serif font-extrabold text-amber-900 dark:text-amber-300 flex items-center space-x-1">
-                      <span>📦 Pacote Ativo:</span>
+                <div className="mt-3 rounded-2xl bg-amber-50/90 p-2.5 sm:p-3 border border-amber-200/90 dark:bg-slate-800/90 dark:border-amber-900/60 shadow-xs min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-serif font-extrabold text-amber-900 dark:text-amber-300 truncate">
+                      📦 Pacote Ativo:
                     </span>
-                    <span className="rounded-md bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:text-amber-200">
+                    <span className="shrink-0 rounded-md bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:text-amber-200">
                       {client.packages[0].sessionsUsed} / {client.packages[0].totalSessions} sessões
                     </span>
                   </div>
-                  <p className="mt-1 font-bold text-xs text-slate-900 dark:text-white">
+                  <p className="mt-1 font-bold text-xs text-slate-900 dark:text-white truncate">
                     💅 {client.packages[0].packageName || "Pacote de Sessões"}
                   </p>
                 </div>
               )}
 
               {/* Ficha Técnica de Unhas */}
-              <div className="mt-3 rounded-2xl bg-rose-50/60 p-3 text-xs dark:bg-slate-800/60">
+              <div className="mt-3 rounded-2xl bg-rose-50/60 p-2.5 sm:p-3 text-xs dark:bg-slate-800/60 min-w-0 overflow-hidden">
                 <p className="font-bold text-rose-700 dark:text-rose-400">💅 Ficha de Unhas Atual:</p>
-                <div className="mt-1 grid grid-cols-2 gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-                  <div>Formato: <span className="font-semibold text-slate-900 dark:text-white">{client.nailForm || "Amendoado"}</span></div>
-                  <div>Material: <span className="font-semibold text-slate-900 dark:text-white">{client.nailMaterial || "Gel"}</span></div>
-                  <div>Cor: <span className="font-semibold text-slate-900 dark:text-white">{client.nailColor || "Nude"}</span></div>
-                  <div>Tamanho: <span className="font-semibold text-slate-900 dark:text-white">{client.nailSize || "Médio"}</span></div>
+                <div className="mt-1 grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-300 min-w-0">
+                  <div className="truncate min-w-0">Formato: <span className="font-semibold text-slate-900 dark:text-white">{client.nailForm || "Amendoado"}</span></div>
+                  <div className="truncate min-w-0">Material: <span className="font-semibold text-slate-900 dark:text-white">{client.nailMaterial || "Gel"}</span></div>
+                  <div className="truncate min-w-0">Cor: <span className="font-semibold text-slate-900 dark:text-white">{client.nailColor || "Nude"}</span></div>
+                  <div className="truncate min-w-0">Tamanho: <span className="font-semibold text-slate-900 dark:text-white">{client.nailSize || "Médio"}</span></div>
                 </div>
                 {client.notes && (
                   <p className="mt-2 border-t border-rose-200/60 pt-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 italic truncate">
@@ -370,18 +370,18 @@ export default function ClientesPage() {
               </div>
 
               {/* Métricas do Cliente */}
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                  <span className="block text-[10px] text-slate-400">TOTAL GASTO</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">R$ {(client.totalSpent || 0).toFixed(0)}</span>
+              <div className="mt-3 grid grid-cols-3 gap-1.5 text-center text-xs min-w-0">
+                <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2 dark:bg-slate-800 min-w-0">
+                  <span className="block text-[9px] sm:text-[10px] text-slate-400 font-medium truncate">TOTAL GASTO</span>
+                  <span className="font-serif text-xs sm:text-sm font-bold text-slate-900 dark:text-white block truncate">R$ {(client.totalSpent || 0).toFixed(0)}</span>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                  <span className="block text-[10px] text-slate-400">VISITAS</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">{client.attendanceCount || 0}x</span>
+                <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2 dark:bg-slate-800 min-w-0">
+                  <span className="block text-[9px] sm:text-[10px] text-slate-400 font-medium truncate">VISITAS</span>
+                  <span className="font-serif text-xs sm:text-sm font-bold text-slate-900 dark:text-white block truncate">{client.attendanceCount || 0}x</span>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-800">
-                  <span className="block text-[10px] text-slate-400">TICKET MÉDIO</span>
-                  <span className="font-serif font-bold text-slate-900 dark:text-white">
+                <div className="rounded-xl bg-slate-50 p-1.5 sm:p-2 dark:bg-slate-800 min-w-0">
+                  <span className="block text-[9px] sm:text-[10px] text-slate-400 font-medium truncate">TICKET MÉDIO</span>
+                  <span className="font-serif text-xs sm:text-sm font-bold text-slate-900 dark:text-white block truncate">
                     R$ {client.attendanceCount > 0 ? ((client.totalSpent || 0) / client.attendanceCount).toFixed(0) : "0"}
                   </span>
                 </div>
@@ -389,20 +389,20 @@ export default function ClientesPage() {
             </div>
 
             {/* Ações do Card */}
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800 min-w-0">
               <a
                 href={`https://wa.me/${(client.whatsapp || client.phone || "").replace(/\D/g, "")}`}
                 target="_blank"
-                className="flex items-center space-x-1.5 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
+                className="flex items-center space-x-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
               >
-                <MessageSquare className="h-4 w-4" />
+                <MessageSquare className="h-3.5 w-3.5" />
                 <span>WhatsApp</span>
               </a>
 
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center space-x-1.5 shrink-0">
                 <button
                   onClick={() => handleStartEdit(client)}
-                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex items-center space-x-1 rounded-xl border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <Edit className="h-3.5 w-3.5 text-amber-600" />
                   <span>Editar</span>
@@ -410,7 +410,7 @@ export default function ClientesPage() {
 
                 <button
                   onClick={() => setSelectedClient(client)}
-                  className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                  className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
                 >
                   Ver Ficha &rarr;
                 </button>
