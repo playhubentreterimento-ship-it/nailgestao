@@ -380,3 +380,13 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model BlockedDate {
+  id             String   @id @default(uuid())
+  salonId        String   @default("default-salon")
+  date           String
+  reason         String   @default("Feriado / Recesso do Salão")
+  professionalId String?  @default("ALL")
+  createdAt      DateTime @default(now())
+}
+

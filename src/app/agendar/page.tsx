@@ -11,6 +11,7 @@ export default function AgendarPublicPage() {
   const [services, setServices] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<any[]>([]);
+  const [blockedDates, setBlockedDates] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [selectedProf, setSelectedProf] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
@@ -31,6 +32,10 @@ export default function AgendarPublicPage() {
       setProfessionals(res || []);
       if (res && res.length > 0) setSelectedProf(res[0]);
     });
+    fetch("/api/blocked-dates")
+      .then((r) => r.json())
+      .then((res) => setBlockedDates(Array.isArray(res) ? res : []))
+      .catch(() => setBlockedDates([]));
   }, []);
 
   // Buscar agendamentos existentes quando a data ou a profissional selecionada muda
@@ -76,8 +81,13 @@ export default function AgendarPublicPage() {
     );
   };
 
+  const activeBlockDate = blockedDates.find(
+    (b) => b.date === selectedDate && (b.professionalId === "ALL" || b.professionalId === selectedProf?.id)
+  );
+
   // Verificar se o slot (e sua duração) está 100% livre sem sobreposição
   const isSlotAvailable = (slot: string) => {
+    if (activeBlockDate) return false;
     if (!selectedProf) return true;
     const duration = selectedService?.durationMinutes || 60;
     const slotStart = timeToMins(slot);
@@ -340,6 +350,27 @@ export default function AgendarPublicPage() {
               </div>
 
               {(() => {
+                if (activeBlockDate) {
+                  return (
+                    <div className="rounded-3xl border-2 border-rose-300 bg-gradient-to-br from-rose-500/10 via-amber-500/10 to-rose-500/10 p-6 text-center shadow-lg space-y-3 dark:border-rose-800 my-2">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-600 text-2xl text-white font-bold shadow-md">
+                        🚫
+                      </div>
+                      <h3 className="font-serif text-lg font-extrabold text-slate-900 dark:text-white">
+                        Estúdio Fechado nesta Data
+                      </h3>
+                      <div className="inline-block rounded-xl bg-rose-100 dark:bg-slate-800 px-4 py-2 border border-rose-200 dark:border-slate-700">
+                        <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                          Motivo: {activeBlockDate.reason || "Feriado / Recesso do Salão"}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto font-medium">
+                        Não teremos atendimentos nesta data. Por favor, escolha outro dia no calendário para realizar o seu agendamento!
+                      </p>
+                    </div>
+                  );
+                }
+
                 const dayOfWeek = getDayOfWeek(selectedDate);
 
                 if (dayOfWeek === 0) {

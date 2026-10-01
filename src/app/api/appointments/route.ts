@@ -189,6 +189,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Dados incompletos para criação de agendamento." }, { status: 400 });
     }
 
+    // Verificar se a data está bloqueada por Feriado / Recesso do Salão
+    const isBlockedDate = await prisma.blockedDate.findFirst({
+      where: {
+        salonId: "default-salon",
+        date,
+        OR: [
+          { professionalId: "ALL" },
+          { professionalId: professionalId }
+        ]
+      }
+    });
+
+    if (isBlockedDate) {
+      const dateFormatted = date.split("-").reverse().join("/");
+      return NextResponse.json(
+        { error: `A data ${dateFormatted} está BLOQUEADA para atendimentos (${isBlockedDate.reason}).` },
+        { status: 400 }
+      );
+    }
+
     let services = await prisma.service.findMany({
       where: { id: { in: serviceIds } },
     });

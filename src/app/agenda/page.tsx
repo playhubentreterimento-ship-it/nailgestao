@@ -20,6 +20,8 @@ import {
   Phone,
   Check,
   Search,
+  Ban,
+  Trash2,
 } from "lucide-react";
 import { sendLocalPushNotification } from "@/lib/notifications";
 
@@ -130,6 +132,58 @@ export default function AgendaPage() {
   const [selectedSearchClient, setSelectedSearchClient] = useState<any>(null);
   const [searchedClientApps, setSearchedClientApps] = useState<any[]>([]);
   const [loadingSearchApps, setLoadingSearchApps] = useState(false);
+
+  // Modal de Bloqueio de Atendimento (Feriados / Outros Motivos)
+  const [blockedDates, setBlockedDates] = useState<any[]>([]);
+  const [showBlockedDatesModal, setShowBlockedDatesModal] = useState<boolean>(false);
+  const [blockMode, setBlockMode] = useState<"SINGLE" | "RANGE">("SINGLE");
+  const [blockSingleDate, setBlockSingleDate] = useState<string>(getTodayString());
+  const [blockStartDate, setBlockStartDate] = useState<string>(getTodayString());
+  const [blockEndDate, setBlockEndDate] = useState<string>(getTodayString());
+  const [blockReason, setBlockReason] = useState<string>("Feriado / Recesso do Salão");
+  const [blockProf, setBlockProf] = useState<string>("ALL");
+
+  const loadBlockedDates = () => {
+    fetch("/api/blocked-dates", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => setBlockedDates(Array.isArray(data) ? data : []))
+      .catch(() => setBlockedDates([]));
+  };
+
+  useEffect(() => {
+    loadBlockedDates();
+  }, []);
+
+  const handleCreateBlockedDate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = blockMode === "RANGE"
+      ? { startDate: blockStartDate, endDate: blockEndDate, reason: blockReason, professionalId: blockProf }
+      : { date: blockSingleDate, reason: blockReason, professionalId: blockProf };
+
+    const res = await fetch("/api/blocked-dates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      loadBlockedDates();
+      loadAgenda();
+      alert("Bloqueio de atendimento salvo com sucesso!");
+    } else {
+      const err = await res.json();
+      alert(err.error || "Erro ao salvar bloqueio.");
+    }
+  };
+
+  const handleDeleteBlockedDate = async (id: string) => {
+    if (!confirm("Tem certeza que deseja desbloquear esta data?")) return;
+    const res = await fetch(`/api/blocked-dates?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      loadBlockedDates();
+      loadAgenda();
+    }
+  };
 
   const handleSelectClientForSearch = (client: any) => {
     setSelectedSearchClient(client);
@@ -507,6 +561,16 @@ export default function AgendaPage() {
             );
           })()}
 
+          {/* Botão de Bloqueio de Feriados / Recessos */}
+          <button
+            onClick={() => setShowBlockedDatesModal(true)}
+            className="flex items-center space-x-1.5 rounded-xl border border-rose-400 bg-rose-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-rose-700 transition shadow-sm"
+            title="Bloquear dia inteiro ou período por feriado, folga ou motivo pessoal"
+          >
+            <Ban className="h-4 w-4" />
+            <span>⛔ Bloquear Feriado / Recesso</span>
+          </button>
+
           <button
             onClick={() => handleOpenModal()}
             className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-rose-200 hover:opacity-95 dark:shadow-none"
@@ -600,6 +664,37 @@ export default function AgendaPage() {
               {appointments.length} agendamentos na grade
             </span>
           </div>
+
+          {/* Banner de Data Bloqueada */}
+          {(() => {
+            const currentDayBlock = blockedDates.find(
+              (b) => b.date === selectedDate && (b.professionalId === "ALL" || b.professionalId === filterProf)
+            );
+            if (!currentDayBlock) return null;
+            return (
+              <div className="mb-4 rounded-2xl border-2 border-rose-400 bg-rose-500/10 p-4 text-slate-900 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-white font-bold text-lg shadow-sm">
+                    🚫
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-extrabold text-rose-900 dark:text-rose-200 text-sm">
+                      ATENDIMENTOS BLOQUEADOS NESTA DATA
+                    </h4>
+                    <p className="text-xs text-rose-800 dark:text-rose-300 font-semibold">
+                      Motivo: {currentDayBlock.reason} • ({currentDayBlock.professionalId === "ALL" ? "Todo o Salão" : "Atendente Especificada"})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDeleteBlockedDate(currentDayBlock.id)}
+                  className="rounded-xl border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:bg-slate-900 dark:border-slate-700 dark:text-rose-300 transition shadow-xs"
+                >
+                  🔓 Desbloquear Data
+                </button>
+              </div>
+            );
+          })()}
 
           {/* Linha do Tempo Visual */}
           <div className="space-y-3">
@@ -1945,6 +2040,180 @@ export default function AgendaPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL DE GERENCIAMENTO DE FERIADOS & BLOQUEIOS ==================== */}
+      {showBlockedDatesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-rose-300 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-5">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-white font-bold text-lg shadow-sm">
+                  ⛔
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-extrabold text-slate-900 dark:text-amber-200">
+                    Bloqueio de Atendimento (Feriados & Recessos)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Bloqueie dias ou períodos inteiros para feriados, folgas ou motivos pessoais. As clientes verão um aviso na agenda online!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBlockedDatesModal(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Form de Criação de Bloqueio */}
+            <form onSubmit={handleCreateBlockedDate} className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/40 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-rose-900 dark:text-rose-300 uppercase tracking-wide text-[11px]">
+                  📌 Cadastrar Novo Bloqueio
+                </span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setBlockMode("SINGLE")}
+                    className={`px-3 py-1 rounded-lg font-bold ${blockMode === "SINGLE" ? "bg-rose-600 text-white" : "bg-white text-slate-700 border border-slate-200"}`}
+                  >
+                    Data Única
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBlockMode("RANGE")}
+                    className={`px-3 py-1 rounded-lg font-bold ${blockMode === "RANGE" ? "bg-rose-600 text-white" : "bg-white text-slate-700 border border-slate-200"}`}
+                  >
+                    Intervalo de Datas
+                  </button>
+                </div>
+              </div>
+
+              {blockMode === "SINGLE" ? (
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Data a Bloquear</label>
+                  <input
+                    type="date"
+                    value={blockSingleDate}
+                    onChange={(e) => setBlockSingleDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 p-2.5 font-bold outline-none dark:bg-slate-800 dark:border-slate-700"
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Data Inicial</label>
+                    <input
+                      type="date"
+                      value={blockStartDate}
+                      onChange={(e) => setBlockStartDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 p-2.5 font-bold outline-none dark:bg-slate-800 dark:border-slate-700"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Data Final</label>
+                    <input
+                      type="date"
+                      value={blockEndDate}
+                      onChange={(e) => setBlockEndDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 p-2.5 font-bold outline-none dark:bg-slate-800 dark:border-slate-700"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Motivo / Descrição do Bloqueio</label>
+                <input
+                  type="text"
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="Ex: Feriado de Finados, Recesso de Fim de Ano, Evento..."
+                  className="w-full rounded-xl border border-slate-300 p-2.5 font-bold outline-none dark:bg-slate-800 dark:border-slate-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Aplicar Bloqueio para:</label>
+                <select
+                  value={blockProf}
+                  onChange={(e) => setBlockProf(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-2.5 font-bold outline-none dark:bg-slate-800 dark:border-slate-700"
+                >
+                  <option value="ALL">🏢 Todo o Salão (Todas as Atendentes)</option>
+                  {professionals.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      👩‍🎨 Apenas para: {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="rounded-xl bg-rose-600 px-5 py-2.5 font-bold text-white shadow-md hover:bg-rose-700 transition"
+                >
+                  Confirmar Bloqueio &rarr;
+                </button>
+              </div>
+            </form>
+
+            {/* Lista de Bloqueios Cadastrados */}
+            <div className="space-y-3 text-xs">
+              <h4 className="font-serif font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                <span>📋 Datas Bloqueadas no Sistema ({blockedDates.length})</span>
+              </h4>
+
+              <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+                {blockedDates.length > 0 ? (
+                  blockedDates.map((b) => {
+                    const profName = b.professionalId === "ALL"
+                      ? "Todo o Salão"
+                      : professionals.find((p) => p.id === b.professionalId)?.name || "Atendente";
+                    const dateFormatted = b.date ? b.date.split("-").reverse().join("/") : b.date;
+
+                    return (
+                      <div key={b.id} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-extrabold text-slate-900 dark:text-white text-xs">
+                              🗓️ {dateFormatted}
+                            </span>
+                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                              {profName}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                            Motivo: <strong>{b.reason}</strong>
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteBlockedDate(b.id)}
+                          className="rounded-xl p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition"
+                          title="Remover Bloqueio"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-6 text-center text-slate-400 font-medium italic">
+                    Nenhum bloqueio de feriado ou recesso cadastrado no momento.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
