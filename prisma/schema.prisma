@@ -136,21 +136,29 @@ model Package {
   salonId       String   @default("default-salon")
   name          String
   price         Float
-  totalSessions Int
+  originalPrice Float?   @default(0.0)
+  discountType  String?  @default("VALUE")
+  discountValue Float?   @default(0.0)
+  totalSessions Int      @default(4)
   validityDays  Int      @default(90)
   description   String?
+  servicesJson  String?
   active        Boolean  @default(true)
 }
 
 model ClientPackage {
-  id            String   @id @default(uuid())
-  clientId      String
-  packageId     String
-  sessionsUsed  Int      @default(0)
-  totalSessions Int
-  purchaseDate  DateTime @default(now())
-  expiryDate    DateTime
-  active        Boolean  @default(true)
+  id                        String   @id @default(uuid())
+  clientId                  String
+  packageId                 String
+  packageName               String?
+  price                     Float?   @default(0.0)
+  totalSessions             Int
+  sessionsUsed              Int      @default(0)
+  servicesJson              String?
+  firstSessionAppointmentId String?
+  purchaseDate              DateTime @default(now())
+  expiryDate                DateTime
+  active                    Boolean  @default(true)
 }
 
 model GiftCard {

@@ -341,15 +341,33 @@ export default function ClientesPage() {
                 <div className="mt-3 rounded-2xl bg-amber-50/90 p-2.5 sm:p-3 border border-amber-200/90 dark:bg-slate-800/90 dark:border-amber-900/60 shadow-xs min-w-0">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[11px] font-serif font-extrabold text-amber-900 dark:text-amber-300 truncate">
-                      📦 Pacote Ativo:
+                      📦 Pacote Ativo: {client.packages[0].packageName || "Combo de Sessões"}
                     </span>
                     <span className="shrink-0 rounded-md bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 dark:bg-amber-950 dark:text-amber-200">
                       {client.packages[0].sessionsUsed} / {client.packages[0].totalSessions} sessões
                     </span>
                   </div>
-                  <p className="mt-1 font-bold text-xs text-slate-900 dark:text-white truncate">
-                    💅 {client.packages[0].packageName || "Pacote de Sessões"}
-                  </p>
+
+                  {(() => {
+                    let srvs: any[] = [];
+                    try {
+                      if (client.packages[0].servicesJson) srvs = JSON.parse(client.packages[0].servicesJson);
+                    } catch (e) {}
+
+                    if (srvs.length === 0) return null;
+                    return (
+                      <div className="mt-2 space-y-1 bg-white/80 p-2 rounded-xl text-[10px] dark:bg-slate-900/80">
+                        {srvs.map((s: any) => (
+                          <div key={s.sessionNumber} className="flex justify-between text-slate-700 dark:text-slate-200">
+                            <span>Sessão {s.sessionNumber}: {s.serviceName}</span>
+                            <span className="font-semibold text-rose-600 dark:text-rose-400">
+                              {s.sessionNumber <= client.packages[0].sessionsUsed ? "✅ Concluída" : "⏳ Pendente"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
