@@ -248,6 +248,11 @@ export default function PacotesPage() {
   const handleOpenAssign = (pkg: any) => {
     setSelectedPackage(pkg);
     
+    const defaultProf = firstSessionProfId || (professionals[0]?.id || "");
+    if (!firstSessionProfId && defaultProf) {
+      setFirstSessionProfId(defaultProf);
+    }
+
     // Inicializar agenda das sessões adicionais (2 a N)
     const initialSchedule = [];
     for (let i = 2; i <= pkg.totalSessions; i++) {
@@ -255,7 +260,7 @@ export default function PacotesPage() {
         sessionNumber: i,
         date: "",
         time: "10:00",
-        profId: firstSessionProfId || (professionals[0]?.id || ""),
+        profId: defaultProf,
       });
     }
     setSessionsSchedule(initialSchedule);
@@ -265,6 +270,12 @@ export default function PacotesPage() {
   const handleAssignPackage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPackage || !selectedClientId) return;
+
+    // Garantir que todas as sessões em sessionsSchedule utilizem a profissional selecionada (se não informada individualmente)
+    const formattedSessionsSchedule = sessionsSchedule.map((s) => ({
+      ...s,
+      profId: s.profId || firstSessionProfId,
+    }));
 
     const res = await fetch("/api/packages", {
       method: "POST",
@@ -276,7 +287,7 @@ export default function PacotesPage() {
         firstSessionDate,
         firstSessionTime,
         firstSessionProfId,
-        sessionsSchedule,
+        sessionsSchedule: formattedSessionsSchedule,
       }),
     });
 
@@ -890,10 +901,16 @@ export default function PacotesPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200">Profissional Responsável</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200">Profissional Responsável (Aplica a todas as sessões)</label>
                   <select
                     value={firstSessionProfId}
-                    onChange={(e) => setFirstSessionProfId(e.target.value)}
+                    onChange={(e) => {
+                      const newProfId = e.target.value;
+                      setFirstSessionProfId(newProfId);
+                      setSessionsSchedule((prev) =>
+                        prev.map((s) => ({ ...s, profId: newProfId }))
+                      );
+                    }}
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2 font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-rose-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                   >
                     {professionals.map((p: any) => (
@@ -940,6 +957,24 @@ export default function PacotesPage() {
                           }}
                           className="w-full rounded-lg border border-slate-200 p-1.5 text-xs font-medium text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                         />
+                      </div>
+                      <div>
+                        <select
+                          value={sched.profId || firstSessionProfId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSessionsSchedule((prev) =>
+                              prev.map((s) => (s.sessionNumber === sched.sessionNumber ? { ...s, profId: val } : s))
+                            );
+                          }}
+                          className="w-full rounded-lg border border-slate-200 p-1.5 text-xs font-medium text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        >
+                          {professionals.map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              Profissional: {p.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   ))}

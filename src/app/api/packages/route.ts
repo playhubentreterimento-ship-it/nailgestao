@@ -214,7 +214,7 @@ export async function POST(req: Request) {
             if (item.sessionNumber > 1 && item.date) {
               const srvN = servicesList.find((s: any) => s.sessionNumber === item.sessionNumber) || {};
               const srvNameN = srvN.serviceName || `Sessão ${item.sessionNumber}`;
-              const itemProfId = item.profId || profId;
+              const itemProfId = (item.profId && item.profId.trim() !== "") ? item.profId : profId;
 
               const appN = await prisma.appointment.create({
                 data: {
