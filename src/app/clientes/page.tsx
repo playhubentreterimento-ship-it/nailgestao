@@ -241,6 +241,34 @@ export default function ClientesPage() {
     }
   };
 
+  const handleRemoveClientPackage = async (clientPackageId: string, pkgName: string) => {
+    if (
+      !confirm(
+        `⚠️ Deseja realmente REMOVER / DESVINCULAR o pacote "${pkgName}" desta cliente?\n\nEsta opção corrige um pacote vinculado por engano, cancela os agendamentos pendentes desse pacote e permite vinculá-lo à cliente correta!`
+      )
+    ) {
+      return;
+    }
+
+    const res = await fetch("/api/packages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "REMOVE_CLIENT_PACKAGE",
+        clientPackageId,
+      }),
+    });
+
+    if (res.ok) {
+      alert("✨ Pacote desvinculado e removido da cliente com sucesso!");
+      setSelectedClient(null);
+      loadClients();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Erro ao remover pacote.");
+    }
+  };
+
   const safeClients = Array.isArray(clients) ? clients : [];
   const filteredClients = safeClients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
@@ -506,6 +534,14 @@ export default function ClientesPage() {
                             <span className="rounded-md bg-amber-100 px-2.5 py-1 text-[11px] font-extrabold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
                               {cp.sessionsUsed} / {cp.totalSessions} sessões usadas ({remaining > 0 ? `${remaining} restantes` : "Concluído"})
                             </span>
+                            <button
+                              onClick={() => handleRemoveClientPackage(cp.id, cp.packageName || "Pacote")}
+                              className="flex items-center space-x-1 rounded-lg bg-rose-50 px-2.5 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 border border-rose-200 transition"
+                              title="Remover este pacote vinculado por engano"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Desvincular</span>
+                            </button>
                           </div>
                         </div>
                       );

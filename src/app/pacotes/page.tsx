@@ -307,6 +307,33 @@ export default function PacotesPage() {
     }
   };
 
+  const handleRemoveClientPackage = async (clientPackageId: string, clientName: string) => {
+    if (
+      !confirm(
+        `⚠️ Deseja realmente REMOVER / DESVINCULAR este pacote da cliente "${clientName}"?\n\nEsta opção remove o vínculo associado por engano e limpa os agendamentos futuros para você poder vincular à cliente correta!`
+      )
+    ) {
+      return;
+    }
+
+    const res = await fetch("/api/packages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "REMOVE_CLIENT_PACKAGE",
+        clientPackageId,
+      }),
+    });
+
+    if (res.ok) {
+      alert("✨ Pacote desvinculado e removido da cliente com sucesso! Agora você pode vinculá-lo à cliente correta.");
+      loadData();
+    } else {
+      const err = await res.json();
+      alert(err.error || "Erro ao desvincular pacote.");
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto w-full min-w-0">
       {/* Header */}
@@ -483,15 +510,20 @@ export default function PacotesPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-amber-200/60 pt-2 dark:border-slate-800">
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      {remaining > 0 ? `Restam ${remaining} sessões` : "Pacote Concluído"}
-                    </span>
+                  <div className="mt-4 flex flex-wrap items-center justify-between border-t border-amber-200/60 pt-2 dark:border-slate-800 gap-2">
+                    <button
+                      onClick={() => handleRemoveClientPackage(cp.id, clientObj?.name || "Cliente")}
+                      className="rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1 text-[11px] font-extrabold text-rose-700 hover:bg-rose-100 flex items-center space-x-1 transition"
+                      title="Desvincular pacote associado à cliente errada"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Desvincular Pacote</span>
+                    </button>
 
                     {remaining > 0 && (
                       <button
                         onClick={() => handleUseSession(cp.id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-extrabold text-white shadow-sm hover:bg-emerald-700"
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-extrabold text-white shadow-sm hover:bg-emerald-700 shrink-0"
                       >
                         ⚡ Abater 1 Sessão
                       </button>

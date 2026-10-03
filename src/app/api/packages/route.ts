@@ -279,7 +279,50 @@ export async function POST(req: Request) {
       return NextResponse.json(updated);
     }
 
-    // 3. CRIAR NOVO PACOTE
+    // 4. DESVINCULAR / REMOVER PACOTE DA CLIENTE
+    if (body.action === "REMOVE_CLIENT_PACKAGE") {
+      const { clientPackageId } = body;
+      if (!clientPackageId) {
+        return NextResponse.json({ error: "ID do Pacote da Cliente é obrigatório." }, { status: 400 });
+      }
+
+      const targetCp = await prisma.clientPackage.findUnique({ where: { id: clientPackageId } });
+      if (!targetCp) {
+        return NextResponse.json({ error: "Pacote da cliente não encontrado." }, { status: 404 });
+      }
+
+      // Remover o pacote vinculado da cliente
+      await prisma.clientPackage.delete({ where: { id: clientPackageId } });
+
+      // Cancelar/remover agendamentos pendentes associados ao pacote desta cliente
+      const pendingApps = await prisma.appointment.findMany({
+        where: {
+          clientId: targetCp.clientId,
+          status: "AGENDADO",
+          notes: { contains: "📦 Pacote" },
+        },
+      });
+
+      for (const app of pendingApps) {
+        await prisma.appointment.delete({ where: { id: app.id } }).catch(() => {});
+      }
+
+      // Se a cliente não tiver mais nenhum pacote ativo, alterar a tag dela para "FREQUENTE"
+      const remainingPkgs = await prisma.clientPackage.findMany({
+        where: { clientId: targetCp.clientId, active: true },
+      });
+
+      if (remainingPkgs.length === 0) {
+        await prisma.client.update({
+          where: { id: targetCp.clientId },
+          data: { tag: "FREQUENTE" },
+        }).catch(() => {});
+      }
+
+      return NextResponse.json({ success: true, message: "Pacote desvinculado e removido da cliente com sucesso." });
+    }
+
+    // 5. CRIAR NOVO PACOTE
     const {
       name,
       price,
@@ -363,6 +406,41 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const clientPackageId = searchParams.get("clientPackageId");
+
+    if (clientPackageId) {
+      const targetCp = await prisma.clientPackage.findUnique({ where: { id: clientPackageId } });
+      if (!targetCp) {
+        return NextResponse.json({ error: "Pacote da cliente não encontrado." }, { status: 404 });
+      }
+
+      await prisma.clientPackage.delete({ where: { id: clientPackageId } });
+
+      const pendingApps = await prisma.appointment.findMany({
+        where: {
+          clientId: targetCp.clientId,
+          status: "AGENDADO",
+          notes: { contains: "📦 Pacote" },
+        },
+      });
+
+      for (const app of pendingApps) {
+        await prisma.appointment.delete({ where: { id: app.id } }).catch(() => {});
+      }
+
+      const remainingPkgs = await prisma.clientPackage.findMany({
+        where: { clientId: targetCp.clientId, active: true },
+      });
+
+      if (remainingPkgs.length === 0) {
+        await prisma.client.update({
+          where: { id: targetCp.clientId },
+          data: { tag: "FREQUENTE" },
+        }).catch(() => {});
+      }
+
+      return NextResponse.json({ success: true, message: "Pacote desvinculado e removido da cliente." });
+    }
 
     if (!id) {
       return NextResponse.json({ error: "ID é obrigatório para exclusão." }, { status: 400 });
