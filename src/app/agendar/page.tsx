@@ -100,9 +100,9 @@ export default function AgendarPublicPage() {
       return false;
     }
 
-    // 2. Sábado funciona somente até as 15:00 (900 minutos)
+    // 2. Sábado funciona somente até as 14:00 (840 minutos)
     if (dayOfWeek === 6) {
-      if (slotStart >= 900 || slotEnd > 900) {
+      if (slotStart >= 840 || slotEnd > 840) {
         return false;
       }
     }
@@ -388,8 +388,8 @@ export default function AgendarPublicPage() {
                 const visibleSlots = timeSlots.filter((slot) => {
                   const slotStart = timeToMins(slot);
 
-                  // Se for sábado, só exibe horários de início antes das 15:00 (900 minutos)
-                  if (dayOfWeek === 6 && slotStart >= 900) {
+                  // Se for sábado, só exibe horários de início antes das 14:00 (840 minutos)
+                  if (dayOfWeek === 6 && slotStart >= 840) {
                     return false;
                   }
 
@@ -405,7 +405,7 @@ export default function AgendarPublicPage() {
                   return (
                     <div className="rounded-2xl bg-amber-50 p-4 text-center text-xs font-bold text-amber-900 border border-amber-200">
                       {dayOfWeek === 6
-                        ? `⏰ Os horários de atendimento de sábado (até as 15:00) para hoje já encerraram. Por favor, selecione outra data de Segunda a Sábado!`
+                        ? `⏰ Os horários de atendimento de sábado (até as 14:00) para hoje já encerraram. Por favor, selecione outra data de Segunda a Sábado!`
                         : `⏰ Os horários de atendimento para hoje (${selectedDate.split("-").reverse().join("/")}) já encerraram. Por favor, selecione uma nova data no calendário acima!`}
                     </div>
                   );
