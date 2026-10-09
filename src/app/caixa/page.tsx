@@ -25,11 +25,13 @@ import {
   Filter,
   Eye,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Trash2
 } from "lucide-react";
 
 export default function CaixaPage() {
   const [data, setData] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"today" | "report">("today");
 
   // Modais de Ação
@@ -65,7 +67,72 @@ export default function CaixaPage() {
 
   useEffect(() => {
     loadCaixa();
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.authenticated && res?.user) {
+          setCurrentUser(res.user);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  // Verificar se o usuário logado é Administradora
+  const isAdmin = currentUser
+    ? currentUser.role === "ADMINISTRADOR" ||
+      currentUser.role === "ADMIN" ||
+      currentUser.email === "sfgloorwms078@gmail.com" ||
+      currentUser.email === "selma@studioluxe.com.br"
+    : true;
+
+  const handleDeleteTransaction = async (txId: string, description: string, amount: number) => {
+    if (!isAdmin) {
+      alert("🛑 Acesso negado: Apenas a Administradora tem permissão para excluir lançamentos do caixa.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `⚠️ ATENÇÃO ADMINISTRADORA!\n\n` +
+        `Deseja realmente EXCLUIR este lançamento do caixa?\n\n` +
+        `📌 Descrição: ${description}\n` +
+        `💰 Valor: R$ ${amount.toFixed(2)}\n\n` +
+        `Esta ação removerá o lançamento duplicado/incorreto e recalculará automaticamente os totais e a diferença do fechamento do caixa.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/cash?id=${txId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        alert("✨ Lançamento excluído com sucesso!\n\nOs valores e o saldo do caixa foram recalculados automaticamente.");
+
+        if (selectedRegisterDetails) {
+          if (result.updatedRegister) {
+            setSelectedRegisterDetails(result.updatedRegister);
+          } else {
+            const updatedTxs = (selectedRegisterDetails.transactions || []).filter((t: any) => t.id !== txId);
+            setSelectedRegisterDetails({
+              ...selectedRegisterDetails,
+              transactions: updatedTxs,
+            });
+          }
+        }
+
+        loadCaixa();
+      } else {
+        const err = await res.json();
+        alert("Erro ao excluir lançamento: " + (err.error || "Ação não permitida."));
+      }
+    } catch (error: any) {
+      alert("Erro na requisição: " + error.message);
+    }
+  };
 
   const handleOpenCaixa = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,6 +439,7 @@ export default function CaixaPage() {
                     <th className="px-4 py-3 text-right">Valor Bruto</th>
                     <th className="px-4 py-3 text-right">Taxa Card</th>
                     <th className="px-4 py-3 text-right">Valor Líquido</th>
+                    {isAdmin && <th className="px-4 py-3 text-center">Ações</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -390,11 +458,23 @@ export default function CaixaPage() {
                         <td className="px-4 py-3 text-right font-bold">R$ {(tx.amount || 0).toFixed(2)}</td>
                         <td className="px-4 py-3 text-right text-rose-500 font-semibold">R$ {(tx.feeAmount || 0).toFixed(2)}</td>
                         <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400">R$ {(tx.netAmount || tx.amount || 0).toFixed(2)}</td>
+                        {isAdmin && (
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => handleDeleteTransaction(tx.id, tx.description, tx.netAmount || tx.amount || 0)}
+                              className="inline-flex items-center space-x-1 rounded-lg bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-400 dark:hover:bg-rose-900 transition"
+                              title="Excluir lançamento (Apenas Administradora)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Excluir</span>
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-medium">Nenhum lançamento registrado no caixa atual até o momento.</td>
+                      <td colSpan={isAdmin ? 9 : 8} className="px-4 py-8 text-center text-slate-400 font-medium">Nenhum lançamento registrado no caixa atual até o momento.</td>
                     </tr>
                   )}
                 </tbody>
@@ -747,6 +827,7 @@ export default function CaixaPage() {
                       <th className="px-3 py-2.5">Descrição</th>
                       <th className="px-3 py-2.5">Forma Pgto</th>
                       <th className="px-3 py-2.5 text-right">Valor Líquido</th>
+                      {isAdmin && <th className="px-3 py-2.5 text-center">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -759,11 +840,23 @@ export default function CaixaPage() {
                           <td className="px-3 py-2">{tx.description}</td>
                           <td className="px-3 py-2 font-bold">{tx.paymentMethod}</td>
                           <td className="px-3 py-2 text-right font-bold text-emerald-600">R$ {(tx.netAmount || tx.amount || 0).toFixed(2)}</td>
+                          {isAdmin && (
+                            <td className="px-3 py-2 text-center">
+                              <button
+                                onClick={() => handleDeleteTransaction(tx.id, tx.description, tx.netAmount || tx.amount || 0)}
+                                className="inline-flex items-center space-x-1 rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-400 dark:hover:bg-rose-900 transition"
+                                title="Excluir lançamento (Apenas Administradora)"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>Excluir</span>
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-3 py-4 text-center text-slate-400">Nenhuma movimentação avulsa registrada.</td>
+                        <td colSpan={isAdmin ? 7 : 6} className="px-3 py-4 text-center text-slate-400">Nenhuma movimentação avulsa registrada.</td>
                       </tr>
                     )}
                   </tbody>

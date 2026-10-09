@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+
+async function getSessionUser() {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("nailgestao_session");
+    if (sessionCookie?.value) {
+      return JSON.parse(sessionCookie.value);
+    }
+  } catch (e) {}
+  return null;
+}
 
 async function reconcileMaiaraTransactions() {
   try {
@@ -322,6 +334,146 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: "Ação não reconhecida." }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "ID da transação é obrigatório." }, { status: 400 });
+    }
+
+    // 1. Validar permissão de Administradora
+    const sessionUser = await getSessionUser();
+    if (sessionUser) {
+      const isAdmin =
+        sessionUser.role === "ADMINISTRADOR" ||
+        sessionUser.role === "ADMIN" ||
+        sessionUser.email === "sfgloorwms078@gmail.com" ||
+        sessionUser.email === "selma@studioluxe.com.br";
+
+      if (!isAdmin) {
+        return NextResponse.json(
+          { error: "Acesso restrito: Apenas a Administradora pode excluir lançamentos do caixa." },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 2. Buscar a transação
+    const tx = await prisma.cashTransaction.findUnique({
+      where: { id },
+    });
+
+    if (!tx) {
+      return NextResponse.json({ error: "Lançamento de caixa não encontrado." }, { status: 404 });
+    }
+
+    const cashRegisterId = tx.cashRegisterId;
+
+    // 3. Excluir a transação
+    await prisma.cashTransaction.delete({
+      where: { id },
+    });
+
+    // 4. Se pertencia a um caixa, recalcular expectedAmount e difference do caixa
+    let updatedEnrichedRegister: any = null;
+    if (cashRegisterId) {
+      const remainingTxs = await prisma.cashTransaction.findMany({
+        where: { cashRegisterId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const totalEntradas = remainingTxs
+        .filter((t) => t.type === "ENTRADA" || t.type === "SUPRIMENTO")
+        .reduce((acc, t) => acc + (t.netAmount ?? t.amount ?? 0), 0);
+
+      const totalSaidas = remainingTxs
+        .filter((t) => t.type === "SANGRIA" || t.type === "DESPESA")
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
+
+      const reg = await prisma.cashRegister.findUnique({
+        where: { id: cashRegisterId },
+      });
+
+      if (reg) {
+        const newExpected = (reg.initialAmount || 0) + totalEntradas - totalSaidas;
+        const updateData: any = {
+          expectedAmount: newExpected,
+        };
+
+        if (reg.status === "FECHADO" && reg.finalAmount !== null) {
+          updateData.difference = reg.finalAmount - newExpected;
+        }
+
+        const updatedReg = await prisma.cashRegister.update({
+          where: { id: cashRegisterId },
+          data: updateData,
+          include: {
+            transactions: {
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        });
+
+        const byPaymentMethod: Record<string, number> = {
+          DINHEIRO: 0,
+          PIX: 0,
+          CREDITO: 0,
+          DEBITO: 0,
+          OUTRO: 0,
+        };
+        let totalEntradasBruto = 0;
+        let totalTaxas = 0;
+        let totalEntradasLiquido = 0;
+        let totalSangrias = 0;
+        let totalSuprimentos = 0;
+
+        for (const t of updatedReg.transactions || []) {
+          const isOut = t.type === "SANGRIA" || t.type === "DESPESA";
+          const isEntrada = t.type === "ENTRADA" || t.type === "SUPRIMENTO";
+          const method = (t.paymentMethod || "DINHEIRO").toUpperCase();
+
+          if (isEntrada) {
+            const amt = t.amount || 0;
+            const net = t.netAmount ?? amt;
+            totalEntradasBruto += amt;
+            totalTaxas += t.feeAmount || 0;
+            totalEntradasLiquido += net;
+            if (byPaymentMethod[method] !== undefined) {
+              byPaymentMethod[method] += net;
+            } else {
+              byPaymentMethod.OUTRO += net;
+            }
+            if (t.type === "SUPRIMENTO") {
+              totalSuprimentos += amt;
+            }
+          } else if (isOut) {
+            totalSangrias += t.amount || 0;
+          }
+        }
+
+        updatedEnrichedRegister = {
+          ...updatedReg,
+          byPaymentMethod,
+          totalEntradasBruto,
+          totalTaxas,
+          totalEntradasLiquido,
+          totalSangrias,
+          totalSuprimentos,
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      updatedRegister: updatedEnrichedRegister,
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
