@@ -223,6 +223,14 @@ export default function AgendaPage() {
   const [formDeposit, setFormDeposit] = useState<number>(0);
   const [formNotes, setFormNotes] = useState("");
 
+  // Modal Rápido de Cadastrar Nova Cliente (no agendamento)
+  const [showQuickNewClientModal, setShowQuickNewClientModal] = useState<boolean>(false);
+  const [quickClientName, setQuickClientName] = useState("");
+  const [quickClientPhone, setQuickClientPhone] = useState("");
+  const [quickClientTag, setQuickClientTag] = useState("NOVO");
+  const [quickClientNotes, setQuickClientNotes] = useState("");
+  const [savingQuickClient, setSavingQuickClient] = useState(false);
+
   // Form de Edição de Agendamento
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editingApp, setEditingApp] = useState<any>(null);
@@ -384,6 +392,51 @@ export default function AgendaPage() {
     setFormDate(presetDate || selectedDate);
     if (presetTime) setFormTime(presetTime);
     setShowModal(true);
+  };
+
+  const handleQuickCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickClientName.trim()) {
+      alert("Por favor, informe o nome da cliente.");
+      return;
+    }
+    setSavingQuickClient(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickClientName.trim(),
+          phone: quickClientPhone.trim() || undefined,
+          whatsapp: quickClientPhone.trim() || undefined,
+          tag: quickClientTag || "NOVO",
+          notes: quickClientNotes.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Erro ao cadastrar cliente.");
+        setSavingQuickClient(false);
+        return;
+      }
+
+      const newCli = await res.json();
+      setClients((prev) => [newCli, ...prev]);
+      setFormClient(newCli.id);
+      setClientSelectSearch("");
+      setIsClientDropdownOpen(false);
+      setShowQuickNewClientModal(false);
+      setQuickClientName("");
+      setQuickClientPhone("");
+      setQuickClientTag("NOVO");
+      setQuickClientNotes("");
+      alert("✨ Cliente cadastrada com sucesso e selecionada para o agendamento!");
+    } catch (e: any) {
+      alert("Erro ao conectar com o servidor.");
+    } finally {
+      setSavingQuickClient(false);
+    }
   };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
@@ -1396,19 +1449,35 @@ export default function AgendaPage() {
                   <label className="block font-extrabold text-slate-900 dark:text-slate-100">
                     Cliente *
                   </label>
-                  {formClient && (
+                  <div className="flex items-center gap-2">
+                    {formClient && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormClient("");
+                          setClientSelectSearch("");
+                          setIsClientDropdownOpen(true);
+                        }}
+                        className="text-[11px] font-bold text-rose-600 hover:underline dark:text-rose-400"
+                      >
+                        🔍 Trocar de cliente
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        setFormClient("");
-                        setClientSelectSearch("");
-                        setIsClientDropdownOpen(true);
+                        setQuickClientName(clientSelectSearch.trim());
+                        setQuickClientPhone("");
+                        setQuickClientTag("NOVO");
+                        setQuickClientNotes("");
+                        setShowQuickNewClientModal(true);
                       }}
-                      className="text-[11px] font-bold text-rose-600 hover:underline dark:text-rose-400"
+                      className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-2.5 py-1 text-[11px] font-extrabold shadow-xs transition active:scale-95"
                     >
-                      🔍 Trocar de cliente
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Nova Cliente</span>
                     </button>
-                  )}
+                  </div>
                 </div>
 
                 {formClient && selectedClientObj ? (
@@ -1474,44 +1543,69 @@ export default function AgendaPage() {
 
                     {/* Dropdown com Lista de Pesquisa Rápida */}
                     {isClientDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-rose-200 bg-white p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+                      <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-rose-200 bg-white p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredClientsForForm.length > 0 ? (
-                          filteredClientsForForm.map((c) => (
-                            <div
-                              key={c.id}
-                              onClick={() => {
-                                setFormClient(c.id);
-                                setClientSelectSearch("");
-                                setIsClientDropdownOpen(false);
-                              }}
-                              className="flex cursor-pointer items-center justify-between p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-slate-800 transition"
-                            >
-                              <div className="flex items-center space-x-2.5">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-100 text-rose-800 font-bold text-xs dark:bg-slate-800 dark:text-rose-300">
-                                  👤
+                          <>
+                            {filteredClientsForForm.map((c) => (
+                              <div
+                                key={c.id}
+                                onClick={() => {
+                                  setFormClient(c.id);
+                                  setClientSelectSearch("");
+                                  setIsClientDropdownOpen(false);
+                                }}
+                                className="flex cursor-pointer items-center justify-between p-2.5 rounded-xl hover:bg-rose-50 dark:hover:bg-slate-800 transition"
+                              >
+                                <div className="flex items-center space-x-2.5">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-100 text-rose-800 font-bold text-xs dark:bg-slate-800 dark:text-rose-300">
+                                    👤
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-slate-900 dark:text-white text-xs block">{c.name}</span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                      📱 {c.whatsapp || c.phone || "Sem WhatsApp"}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span className="font-extrabold text-slate-900 dark:text-white text-xs block">{c.name}</span>
-                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                                    📱 {c.whatsapp || c.phone || "Sem WhatsApp"}
-                                  </span>
-                                </div>
+                                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+                                  {c.tag || "CLIENTE"}
+                                </span>
                               </div>
-                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
-                                {c.tag || "CLIENTE"}
-                              </span>
+                            ))}
+                            <div className="sticky bottom-0 p-2 border-t border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setQuickClientName(clientSelectSearch.trim());
+                                  setQuickClientPhone("");
+                                  setQuickClientTag("NOVO");
+                                  setQuickClientNotes("");
+                                  setShowQuickNewClientModal(true);
+                                }}
+                                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-xs font-extrabold transition"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>+ Cadastrar Nova Cliente</span>
+                              </button>
                             </div>
-                          ))
+                          </>
                         ) : (
-                          <div className="p-4 text-center text-xs text-slate-500 font-medium space-y-2">
+                          <div className="p-4 text-center text-xs text-slate-500 font-medium space-y-2.5">
                             <p>Nenhuma cliente encontrada com "{clientSelectSearch}".</p>
-                            <a
-                              href="/clientes"
-                              target="_blank"
-                              className="inline-block text-xs font-bold text-rose-600 hover:underline"
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickClientName(clientSelectSearch.trim());
+                                setQuickClientPhone("");
+                                setQuickClientTag("NOVO");
+                                setQuickClientNotes("");
+                                setShowQuickNewClientModal(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm transition active:scale-95"
                             >
-                              + Cadastrar Nova Cliente
-                            </a>
+                              <Plus className="h-4 w-4" />
+                              <span>Cadastrar {clientSelectSearch ? `"${clientSelectSearch}"` : "Nova Cliente"} agora</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -2238,6 +2332,122 @@ export default function AgendaPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL RÁPIDO: CADASTRAR NOVA CLIENTE ==================== */}
+      {showQuickNewClientModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/75 p-4 backdrop-blur-md">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border-2 border-emerald-400 bg-white p-6 shadow-2xl dark:border-emerald-700 dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 font-bold dark:bg-emerald-950 dark:text-emerald-300">
+                  <User className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+                    Cadastrar Nova Cliente
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Preencha os dados e ela será selecionada para o agendamento
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickNewClientModal(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickCreateClient} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                  Nome Completo da Cliente *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={quickClientName}
+                  onChange={(e) => setQuickClientName(e.target.value)}
+                  placeholder="Ex: Maria Eduarda Silva"
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                  WhatsApp / Celular *
+                </label>
+                <div className="relative flex items-center">
+                  <Phone className="absolute left-3.5 h-4 w-4 text-emerald-600 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={quickClientPhone}
+                    onChange={(e) => setQuickClientPhone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-3 py-3 font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                  Perfil / Tag
+                </label>
+                <select
+                  value={quickClientTag}
+                  onChange={(e) => setQuickClientTag(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="NOVO">NOVO (Primeira Visita)</option>
+                  <option value="RECORRENTE">RECORRENTE / FREQUENTE</option>
+                  <option value="VIP">VIP</option>
+                  <option value="PACOTES">PACOTES</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-900 dark:text-slate-100 mb-1">
+                  Anotações / Preferências (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={quickClientNotes}
+                  onChange={(e) => setQuickClientNotes(e.target.value)}
+                  placeholder="Ex: Prefere formato amendoado, indicação de amiga..."
+                  className="w-full rounded-2xl border border-slate-300 bg-white p-3 font-medium text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickNewClientModal(false)}
+                  className="rounded-2xl px-4 py-2.5 font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingQuickClient}
+                  className="flex items-center gap-1.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 font-extrabold text-white shadow-lg hover:opacity-95 active:scale-95 disabled:opacity-50 transition"
+                >
+                  {savingQuickClient ? (
+                    <span>Salvando...</span>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>Salvar e Selecionar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

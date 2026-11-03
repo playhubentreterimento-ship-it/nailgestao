@@ -67,9 +67,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Se for colaboradora / profissional, restringir rotas exclusivamente para /agenda e /caixa
+        // Se for colaboradora / profissional, restringir rotas para /agenda, /clientes e /caixa
         if (role === "PROFISSIONAL" || role === "COLABORADORA" || role === "ATENDENTE") {
-          if (pathname !== "/agenda" && pathname !== "/caixa") {
+          if (pathname !== "/agenda" && pathname !== "/caixa" && pathname !== "/clientes") {
             router.push("/agenda");
           }
         }

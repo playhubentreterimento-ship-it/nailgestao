@@ -39,6 +39,7 @@ export function MobileNav({ userRole }: MobileNavProps) {
   const mainItems = isCollaborator
     ? [
         { href: "/agenda", label: "Agenda", icon: Calendar },
+        { href: "/clientes", label: "Clientes", icon: Users },
         { href: "/caixa", label: "Caixa", icon: Receipt },
       ]
     : [
