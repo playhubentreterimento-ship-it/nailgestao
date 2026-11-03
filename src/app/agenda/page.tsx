@@ -239,7 +239,29 @@ export default function AgendaPage() {
     setEditProf(app.professionalId);
     setEditDate(app.date);
     setEditTime(app.startTime);
-    setEditSelectedServices(app.services ? app.services.map((s: any) => s.serviceId) : []);
+
+    const mappedServiceIds: string[] = [];
+    if (app.services && Array.isArray(app.services)) {
+      for (const as of app.services) {
+        const directMatch = services.find((cs: any) => cs.id === as.serviceId);
+        if (directMatch) {
+          mappedServiceIds.push(directMatch.id);
+        } else {
+          const rawName = (as.serviceName || "").trim().toLowerCase();
+          const cleanName = rawName.includes(":") ? rawName.split(":").pop()!.trim() : rawName;
+          const nameMatch = services.find(
+            (cs: any) => (cs.name || "").trim().toLowerCase() === cleanName || (cs.name || "").trim().toLowerCase() === rawName
+          );
+          if (nameMatch) {
+            mappedServiceIds.push(nameMatch.id);
+          } else if (as.serviceId) {
+            mappedServiceIds.push(as.serviceId);
+          }
+        }
+      }
+    }
+
+    setEditSelectedServices(mappedServiceIds);
     setEditDiscount(app.discount || 0);
     setEditDeposit(app.depositPaid || 0);
     setEditNotes(app.notes || "");
@@ -248,10 +270,7 @@ export default function AgendaPage() {
 
   const handleSaveEditAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingApp || editSelectedServices.length === 0) {
-      alert("Por favor, selecione ao menos 1 serviço.");
-      return;
-    }
+    if (!editingApp) return;
 
     const res = await fetch("/api/appointments", {
       method: "PUT",
@@ -708,7 +727,9 @@ export default function AgendaPage() {
               const ongoingApps = appointments.filter((a) => {
                 if (a.status === "CANCELADO" || a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO") return false;
                 const startMins = timeToMins(a.startTime);
-                const endMins = a.endTime ? timeToMins(a.endTime) : startMins + (a.totalDurationMinutes || 60);
+                const rawEnd = a.endTime ? timeToMins(a.endTime) : 0;
+                const expectedEnd = startMins + (a.totalDurationMinutes || 60);
+                const endMins = rawEnd > startMins ? Math.max(rawEnd, expectedEnd) : expectedEnd;
                 return slotMins > startMins && slotMins < endMins;
               });
 
@@ -900,7 +921,9 @@ export default function AgendaPage() {
                           if (a.professionalId !== prof.id) return false;
                           if (a.status === "CANCELADO" || a.notes?.includes("LIBERADO_ALMOCO") || a.status === "ALMOCO_LIBERADO") return false;
                           const startMins = timeToMins(a.startTime);
-                          const endMins = a.endTime ? timeToMins(a.endTime) : startMins + (a.totalDurationMinutes || 60);
+                          const rawEnd = a.endTime ? timeToMins(a.endTime) : 0;
+                          const expectedEnd = startMins + (a.totalDurationMinutes || 60);
+                          const endMins = rawEnd > startMins ? Math.max(rawEnd, expectedEnd) : expectedEnd;
                           return slotMins > startMins && slotMins < endMins;
                         });
 

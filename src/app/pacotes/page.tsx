@@ -80,6 +80,7 @@ export default function PacotesPage() {
             serviceId: defaultSrv.id,
             serviceName: defaultSrv.name,
             price: defaultSrv.promoPrice || defaultSrv.price,
+            durationMinutes: defaultSrv.durationMinutes || 60,
           });
         }
       }
@@ -115,6 +116,7 @@ export default function PacotesPage() {
               serviceId: srv.id,
               serviceName: srv.name,
               price: srv.promoPrice || srv.price,
+              durationMinutes: srv.durationMinutes || 60,
             }
           : item
       )
@@ -134,6 +136,7 @@ export default function PacotesPage() {
               serviceId: srv.id,
               serviceName: srv.name,
               price: srv.promoPrice || srv.price,
+              durationMinutes: srv.durationMinutes || 60,
             }
           : item
       )
@@ -194,6 +197,7 @@ export default function PacotesPage() {
           serviceId: defaultSrv.id,
           serviceName: defaultSrv.name,
           price: defaultSrv.price,
+          durationMinutes: defaultSrv.durationMinutes || 60,
         });
       }
     }

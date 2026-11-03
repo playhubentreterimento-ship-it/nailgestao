@@ -32,6 +32,62 @@ function normalizeDateStr(raw: string | null | undefined): string | null {
   return trimmed;
 }
 
+function timeStrToMins(t: string | null | undefined): number {
+  if (!t || !t.includes(":")) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function minsToTimeStr(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function normText(s: string | null | undefined): string {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function inferServiceDuration(serviceId: string | undefined, serviceName: string | undefined, storedDur: number | undefined, catalogServices: any[]): number {
+  const rawNorm = normText(serviceName);
+  const cleanName = rawNorm.includes(":") ? rawNorm.split(":").pop()!.trim() : rawNorm;
+
+  if (serviceId) {
+    const byId = catalogServices.find((cs) => cs.id === serviceId);
+    if (byId && byId.durationMinutes) {
+      const idNorm = normText(byId.name);
+      if (!cleanName || idNorm === cleanName) {
+        return byId.durationMinutes;
+      }
+    }
+  }
+
+  if (cleanName) {
+    const byName = catalogServices.find(
+      (cs) => normText(cs.name) === cleanName || normText(cs.name) === rawNorm
+    );
+    if (byName && byName.durationMinutes) return byName.durationMinutes;
+
+    if (cleanName.includes("alongamento") && !cleanName.includes("manutencao")) return 180;
+    if (cleanName.includes("pe") && cleanName.includes("mao") && cleanName.includes("gel")) return 150;
+    if (cleanName.includes("adicional") && (cleanName.includes("manutencao") || cleanName.includes("soft gel"))) return 150;
+    if (cleanName.includes("pe") && cleanName.includes("mao")) return 120;
+    if (cleanName.includes("banho") || cleanName.includes("manutencao") || cleanName.includes("soft gel")) return 120;
+    if (cleanName.includes("gel")) return 90;
+  }
+
+  if (serviceId) {
+    const byId = catalogServices.find((cs) => cs.id === serviceId);
+    if (byId && byId.durationMinutes) return byId.durationMinutes;
+  }
+
+  return storedDur && storedDur > 0 ? storedDur : 60;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -100,15 +156,48 @@ export async function GET(req: Request) {
 
     const clients = await prisma.client.findMany();
     const professionals = await prisma.professional.findMany();
+    const catalogServices = await prisma.service.findMany().catch(() => []);
 
-    const populated = appointments.map((app) => ({
-      ...app,
-      date: normalizeDateStr(app.date) || app.date, // Garantir formato YYYY-MM-DD
-      clientName: clients.find((c) => c.id === app.clientId)?.name || "Cliente Desconhecido",
-      clientPhone: clients.find((c) => c.id === app.clientId)?.whatsapp || "",
-      professionalName: professionals.find((p) => p.id === app.professionalId)?.name || "Profissional",
-      professionalColor: professionals.find((p) => p.id === app.professionalId)?.color || "#E0A96D",
-    }));
+    const populated = appointments.map((app) => {
+      const isSpecialBlock =
+        app.status === "ALMOCO_LIBERADO" ||
+        app.status === "BLOQUEADO" ||
+        app.notes?.includes("LIBERADO_ALMOCO");
+
+      let effectiveDuration = app.totalDurationMinutes || 60;
+      let effectiveEndTime = app.endTime;
+
+      if (!isSpecialBlock) {
+        if (app.services && app.services.length > 0) {
+          const calcDur = app.services.reduce(
+            (acc, s) => acc + inferServiceDuration(s.serviceId, s.serviceName, s.durationMinutes, catalogServices),
+            0
+          );
+          if (calcDur > 0) {
+            effectiveDuration = calcDur;
+          }
+        }
+        const startMins = timeStrToMins(app.startTime);
+        const rawEndMins = app.endTime ? timeStrToMins(app.endTime) : 0;
+        const expectedEndMins = startMins + effectiveDuration;
+
+        // Se endTime estava incorreto (ex: "11:00" fixo de pacote ou menor que startTime + duração), corrigir
+        if (rawEndMins <= startMins || (app.endTime === "11:00" && expectedEndMins !== 660) || rawEndMins < expectedEndMins) {
+          effectiveEndTime = minsToTimeStr(expectedEndMins);
+        }
+      }
+
+      return {
+        ...app,
+        date: normalizeDateStr(app.date) || app.date, // Garantir formato YYYY-MM-DD
+        totalDurationMinutes: effectiveDuration,
+        endTime: effectiveEndTime,
+        clientName: clients.find((c) => c.id === app.clientId)?.name || "Cliente Desconhecido",
+        clientPhone: clients.find((c) => c.id === app.clientId)?.whatsapp || "",
+        professionalName: professionals.find((p) => p.id === app.professionalId)?.name || "Profissional",
+        professionalColor: professionals.find((p) => p.id === app.professionalId)?.color || "#E0A96D",
+      };
+    });
 
     return NextResponse.json(populated);
   } catch (error: any) {
@@ -258,19 +347,40 @@ export async function POST(req: Request) {
       return h * 60 + m;
     };
 
+    const finalDate = normalizeDateStr(date) || date;
+
     // Trava de Choque de Horários: Verificar agendamentos ativos que sobreponham o intervalo [startMinutes, endMinutesTotal)
     const existingApps = await prisma.appointment.findMany({
       where: {
-        salonId: "default-salon",
-        professionalId,
-        date,
-        status: { notIn: ["CANCELADO"] },
+        professionalId: { in: [professionalId, "ALL"] },
+        OR: [{ date: date }, { date: finalDate }],
+        status: { notIn: ["CANCELADO", "ALMOCO_LIBERADO"] },
       },
+      include: { services: true },
     });
 
+    const catalogServices = await prisma.service.findMany().catch(() => []);
+
     const hasConflict = existingApps.some((app) => {
-      const appStartMins = timeToMins(app.startTime);
-      const appEndMins = app.endTime ? timeToMins(app.endTime) : appStartMins + (app.totalDurationMinutes || 60);
+      if (app.notes?.includes("LIBERADO_ALMOCO") || app.status === "ALMOCO_LIBERADO") return false;
+      const appStartMins = timeStrToMins(app.startTime);
+
+      let effDur = app.totalDurationMinutes || 60;
+      if (app.services && app.services.length > 0 && app.status !== "BLOQUEADO") {
+        const calcDur = app.services.reduce(
+          (acc, s) => acc + inferServiceDuration(s.serviceId, s.serviceName, s.durationMinutes, catalogServices),
+          0
+        );
+        if (calcDur > 0) effDur = calcDur;
+      }
+
+      const rawEndMins = app.endTime ? timeStrToMins(app.endTime) : 0;
+      const expectedEndMins = appStartMins + effDur;
+      const appEndMins =
+        rawEndMins > appStartMins && !(app.endTime === "11:00" && expectedEndMins !== 660)
+          ? Math.max(rawEndMins, expectedEndMins)
+          : expectedEndMins;
+
       return startMinutes < appEndMins && endMinutesTotal > appStartMins;
     });
 
@@ -280,8 +390,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    const finalDate = normalizeDateStr(date) || date;
 
     const targetSalon = await prisma.salon.findFirst().catch(() => null);
     const activeSalonId = targetSalon?.id || "67998370966";
@@ -415,17 +523,16 @@ export async function PUT(req: Request) {
 
     if (status) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
-    if (date) updateData.date = date;
+    if (date) updateData.date = normalizeDateStr(date) || date;
     if (startTime) updateData.startTime = startTime;
     if (professionalId) updateData.professionalId = professionalId;
 
-    if (body.total !== undefined) {
-      const newTotal = Math.max(0, Number(body.total));
-      const dep = depositPaid !== undefined ? Number(depositPaid) : existingApp.depositPaid || 0;
-      updateData.total = newTotal;
-      updateData.subtotal = newTotal;
-      updateData.remainingAmount = Math.max(0, newTotal - dep);
-    }
+    const catalogServices = await prisma.service.findMany().catch(() => []);
+    const isZeroPackageSession =
+      existingApp.paymentStatus === "PACOTE" ||
+      (existingApp.total === 0 && (existingApp.notes?.includes("📦") || existingApp.notes?.includes("Pacote")));
+
+    let recalculatedEndTime = false;
 
     if (serviceIds && Array.isArray(serviceIds) && serviceIds.length > 0) {
       const services = await prisma.service.findMany({
@@ -434,19 +541,16 @@ export async function PUT(req: Request) {
 
       if (services.length > 0) {
         const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
-        const subtotal = services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+        const subtotal = isZeroPackageSession ? 0 : services.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
         const disc = discount !== undefined ? Number(discount) : existingApp.discount || 0;
         const dep = depositPaid !== undefined ? Number(depositPaid) : existingApp.depositPaid || 0;
-        const total = Math.max(0, subtotal - disc);
-        const remainingAmount = Math.max(0, total - dep);
+        const total = isZeroPackageSession ? 0 : Math.max(0, subtotal - disc);
+        const remainingAmount = isZeroPackageSession ? 0 : Math.max(0, total - dep);
 
         const currentStart = startTime || existingApp.startTime;
-        const [hours, minutes] = currentStart.split(":").map(Number);
-        const startMinutes = hours * 60 + minutes;
+        const startMinutes = timeStrToMins(currentStart);
         const endMinutesTotal = startMinutes + totalDuration;
-        const endHours = Math.floor(endMinutesTotal / 60);
-        const endMins = endMinutesTotal % 60;
-        const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+        const endTime = minsToTimeStr(endMinutesTotal);
 
         updateData.totalDurationMinutes = totalDuration;
         updateData.subtotal = subtotal;
@@ -455,6 +559,7 @@ export async function PUT(req: Request) {
         updateData.total = total;
         updateData.remainingAmount = remainingAmount;
         updateData.endTime = endTime;
+        recalculatedEndTime = true;
 
         await prisma.appointmentService.deleteMany({
           where: { appointmentId: id },
@@ -464,7 +569,7 @@ export async function PUT(req: Request) {
           create: services.map((s) => ({
             serviceId: s.id,
             serviceName: s.name,
-            price: s.promoPrice || s.price,
+            price: isZeroPackageSession ? 0 : s.promoPrice || s.price,
             durationMinutes: s.durationMinutes,
           })),
         };
@@ -472,6 +577,28 @@ export async function PUT(req: Request) {
     } else {
       if (discount !== undefined) updateData.discount = Number(discount);
       if (depositPaid !== undefined) updateData.depositPaid = Number(depositPaid);
+    }
+
+    if (!recalculatedEndTime && existingApp.status !== "ALMOCO_LIBERADO" && existingApp.status !== "BLOQUEADO") {
+      const currentStart = startTime || existingApp.startTime;
+      let effDur = existingApp.totalDurationMinutes || 60;
+      if (existingApp.services && existingApp.services.length > 0) {
+        const calcDur = existingApp.services.reduce(
+          (acc, s) => acc + inferServiceDuration(s.serviceId, s.serviceName, s.durationMinutes, catalogServices),
+          0
+        );
+        if (calcDur > 0) effDur = calcDur;
+      }
+      updateData.totalDurationMinutes = effDur;
+      updateData.endTime = minsToTimeStr(timeStrToMins(currentStart) + effDur);
+    }
+
+    if (body.total !== undefined) {
+      const newTotal = Math.max(0, Number(body.total));
+      const dep = depositPaid !== undefined ? Number(depositPaid) : existingApp.depositPaid || 0;
+      updateData.total = newTotal;
+      updateData.subtotal = newTotal;
+      updateData.remainingAmount = Math.max(0, newTotal - dep);
     }
 
     const updated = await prisma.appointment.update({

@@ -38,15 +38,14 @@ export default function AgendarPublicPage() {
       .catch(() => setBlockedDates([]));
   }, []);
 
-  // Buscar agendamentos existentes quando a data ou a profissional selecionada muda
+  // Buscar agendamentos existentes quando a data, a profissional ou a etapa muda
   useEffect(() => {
     if (!selectedDate) return;
-    const profId = selectedProf?.id || "all";
-    fetch(`/api/appointments?date=${selectedDate}&professionalId=${profId}`, { cache: "no-store" })
+    fetch(`/api/appointments?date=${selectedDate}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setExistingAppointments(Array.isArray(data) ? data : []))
       .catch(() => setExistingAppointments([]));
-  }, [selectedDate, selectedProf]);
+  }, [selectedDate, selectedProf, step]);
 
   const getBrowserTodayString = () => {
     const d = new Date();
@@ -63,8 +62,9 @@ export default function AgendarPublicPage() {
 
   // Converter horário "HH:mm" para minutos desde 00:00
   const timeToMins = (t: string) => {
+    if (!t || !t.includes(":")) return 0;
     const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
+    return (h || 0) * 60 + (m || 0);
   };
 
   // Obter o dia da semana (0 = Domingo, 1 = Segunda, ..., 6 = Sábado)
@@ -123,14 +123,20 @@ export default function AgendarPublicPage() {
       }
     }
 
-    // 5. Verificar choque com agendamentos ativos da profissional
+    // 5. Verificar choque com agendamentos ativos da profissional (incluindo sessões de pacotes)
     const hasConflict = existingAppointments.some((app) => {
       if (app.status === "CANCELADO") return false;
       if (app.notes?.includes("LIBERADO_ALMOCO") || app.status === "ALMOCO_LIBERADO") return false;
       if (app.professionalId !== selectedProf.id && app.professionalId !== "ALL") return false;
 
       const appStart = timeToMins(app.startTime);
-      const appEnd = app.endTime ? timeToMins(app.endTime) : appStart + (app.totalDurationMinutes || 60);
+      const rawEnd = app.endTime ? timeToMins(app.endTime) : 0;
+      const appDuration = app.totalDurationMinutes || 60;
+      const expectedEnd = appStart + appDuration;
+      const appEnd =
+        rawEnd > appStart && !(app.endTime === "11:00" && expectedEnd !== 660)
+          ? Math.max(rawEnd, expectedEnd)
+          : expectedEnd;
 
       return slotStart < appEnd && slotEnd > appStart;
     });

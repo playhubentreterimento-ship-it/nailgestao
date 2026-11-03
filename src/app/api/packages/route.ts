@@ -163,11 +163,65 @@ export async function POST(req: Request) {
         profId = firstProf?.id || "prof-default";
       }
 
+      // Buscar serviços do catálogo para obter a duração real de cada sessão do pacote
+      const catalogServices = await prisma.service.findMany().catch(() => []);
+
+      const normText = (s: string | null | undefined) =>
+        (s || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase();
+
+      const resolveSessionDuration = (srvItem: any): number => {
+        if (!srvItem) return 60;
+        if (srvItem.durationMinutes && Number(srvItem.durationMinutes) > 0) {
+          return Number(srvItem.durationMinutes);
+        }
+        const rawNorm = normText(srvItem.serviceName);
+        if (srvItem.serviceId) {
+          const byId = catalogServices.find((cs: any) => cs.id === srvItem.serviceId);
+          if (byId && byId.durationMinutes && (!rawNorm || normText(byId.name) === rawNorm)) {
+            return byId.durationMinutes;
+          }
+        }
+        if (rawNorm) {
+          const byName = catalogServices.find(
+            (cs: any) => normText(cs.name) === rawNorm
+          );
+          if (byName && byName.durationMinutes) return byName.durationMinutes;
+
+          // Inferência inteligente caso o ID antigo tenha mudado
+          if (rawNorm.includes("alongamento") && !rawNorm.includes("manutencao")) return 180;
+          if (rawNorm.includes("pe") && rawNorm.includes("mao") && rawNorm.includes("gel")) return 150;
+          if (rawNorm.includes("adicional") && (rawNorm.includes("manutencao") || rawNorm.includes("soft gel"))) return 150;
+          if (rawNorm.includes("pe") && rawNorm.includes("mao")) return 120;
+          if (rawNorm.includes("banho") || rawNorm.includes("manutencao") || rawNorm.includes("soft gel")) return 120;
+          if (rawNorm.includes("gel")) return 90;
+        }
+        if (srvItem.serviceId) {
+          const byId = catalogServices.find((cs: any) => cs.id === srvItem.serviceId);
+          if (byId && byId.durationMinutes) return byId.durationMinutes;
+        }
+        return 60;
+      };
+
+      const computeEndTime = (startStr: string, durationMins: number): string => {
+        const cleanStart = startStr && startStr.includes(":") ? startStr : "10:00";
+        const [sH, sM] = cleanStart.split(":").map(Number);
+        const totalEndMins = (sH || 0) * 60 + (sM || 0) + (durationMins || 60);
+        const endH = Math.floor(totalEndMins / 60);
+        const endM = totalEndMins % 60;
+        return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+      };
+
       // 3. Se foi informada data para a 1ª sessão, criar agendamento futuro para a 1ª sessão
       let createdApps: any[] = [];
       if (firstSessionDate) {
         const srv1 = servicesList.find((s: any) => s.sessionNumber === 1) || servicesList[0];
         const srvName1 = srv1?.serviceName || "Sessão de Pacote";
+        const dur1 = resolveSessionDuration(srv1);
+        const endTime1 = computeEndTime(firstSessionTime, dur1);
         const pkgPrice = targetPackage.price;
 
         const firstApp = await prisma.appointment.create({
@@ -177,8 +231,8 @@ export async function POST(req: Request) {
             professionalId: profId,
             date: firstSessionDate,
             startTime: firstSessionTime,
-            endTime: "11:00",
-            totalDurationMinutes: 60,
+            endTime: endTime1,
+            totalDurationMinutes: dur1,
             subtotal: pkgPrice,
             discount: 0,
             depositPaid: 0,
@@ -193,7 +247,7 @@ export async function POST(req: Request) {
                   serviceId: srv1?.serviceId || "srv-combo",
                   serviceName: `📦 ${targetPackage.name} - 1ª Sessão: ${srvName1}`,
                   price: pkgPrice,
-                  durationMinutes: 60,
+                  durationMinutes: dur1,
                 },
               ],
             },
@@ -214,6 +268,9 @@ export async function POST(req: Request) {
             if (item.sessionNumber > 1 && item.date) {
               const srvN = servicesList.find((s: any) => s.sessionNumber === item.sessionNumber) || {};
               const srvNameN = srvN.serviceName || `Sessão ${item.sessionNumber}`;
+              const durN = resolveSessionDuration(srvN);
+              const startTimeN = item.time || "10:00";
+              const endTimeN = computeEndTime(startTimeN, durN);
               const itemProfId = (item.profId && item.profId.trim() !== "") ? item.profId : profId;
 
               const appN = await prisma.appointment.create({
@@ -222,9 +279,9 @@ export async function POST(req: Request) {
                   clientId,
                   professionalId: itemProfId,
                   date: item.date,
-                  startTime: item.time || "10:00",
-                  endTime: "11:00",
-                  totalDurationMinutes: 60,
+                  startTime: startTimeN,
+                  endTime: endTimeN,
+                  totalDurationMinutes: durN,
                   subtotal: 0,
                   discount: 0,
                   depositPaid: 0,
@@ -239,7 +296,7 @@ export async function POST(req: Request) {
                         serviceId: srvN.serviceId || "srv-combo",
                         serviceName: `📦 ${targetPackage.name} - Sessão ${item.sessionNumber}: ${srvNameN}`,
                         price: 0,
-                        durationMinutes: 60,
+                        durationMinutes: durN,
                       },
                     ],
                   },
