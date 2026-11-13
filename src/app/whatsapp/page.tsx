@@ -402,17 +402,14 @@ export default function WhatsAppHubPage() {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-extrabold text-sm text-slate-900 dark:text-amber-200">
-                  Chave Pix Configurada para Lembretes de Sinal (50%):
+                  Chave Pix para Lembretes de Sinal (50%):
                 </span>
                 <span className="rounded-lg bg-amber-200/90 px-2.5 py-0.5 text-xs font-black text-amber-950 dark:bg-amber-900 dark:text-amber-100">
-                  CPF: {PIX_INFO.cpf}
-                </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Titular: <strong>{PIX_INFO.titular}</strong> ({PIX_INFO.cidade})
+                  🔑 Pix Copia e Cola
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                Ao disparar o <strong>Sinal 50% Pix</strong>, o sistema calcula a metade do valor de cada agendamento e envia a mensagem pronta com a chave Pix Copia e Cola para a cliente reservar o horário com segurança.
+                Ao disparar o <strong>Sinal 50% Pix</strong>, o sistema calcula a metade do valor do procedimento e envia a mensagem com emojis e a <strong>Chave Pix Copia e Cola</strong> pronta para a cliente pagar e reservar a vaga.
               </p>
             </div>
           </div>

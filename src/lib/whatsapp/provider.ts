@@ -48,7 +48,7 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
 
     // Gerar link direto wa.me para abertura manual rápida
     const encodedText = encodeURIComponent(payload.bodyText);
-    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedText}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedText}`;
 
     // Tentar disparo via API externa configurada (Evolution API / Z-API / WhatsApp Cloud API)
     const apiUrl = process.env.WHATSAPP_API_URL;
@@ -114,7 +114,17 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
       }
     }
 
-    const text = `Olá, ${client.name}! ✨\nPassando para lembrar do seu atendimento no ${salon?.name || "Selma Gloor Nails Studio"}.\n\n📅 Data: ${formattedDate}\n⏰ Horário: ${app.startTime}\n💅 Serviço: ${serviceNames}\n👩‍🎨 Profissional: ${prof?.name || "Nail Designer"}\n\nResponda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`;
+    const text = [
+      `Olá, ${client.name}! ✨💖`,
+      `Passando para lembrar do seu atendimento no ${salon?.name || "Selma Gloor Nails Studio"}.`,
+      ``,
+      `📅 *Data:* ${formattedDate}`,
+      `⏰ *Horário:* ${app.startTime}`,
+      `💅 *Serviço:* ${serviceNames}`,
+      `👩 *Profissional:* ${prof?.name || "Selma Gloor"}`,
+      ``,
+      `Responda *CONFIRMAR* para garantir sua vaga ou *REAGENDAR* para alterar.`,
+    ].join("\n");
 
     const sendRes = await this.sendMessage({
       to: formattedPhone,
@@ -182,7 +192,25 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
     const depositFormatted = depositAmount > 0 ? `R$ ${depositAmount.toFixed(2).replace(".", ",")}` : "R$ 0,00";
     const totalFormatted = totalValue > 0 ? `R$ ${totalValue.toFixed(2).replace(".", ",")}` : "R$ 0,00";
 
-    const text = `Olá, ${client.name}! ✨💕\nPassando para lembrar do seu atendimento agendado no ${salon?.name || "Selma Gloor Nails Studio"}.\n\n📅 *Data:* ${formattedDate}\n⏰ *Horário:* ${app.startTime}\n💅 *Serviço:* ${serviceNames}\n👩‍🎨 *Profissional:* ${prof?.name || "Selma Gloor"}\n💰 *Valor Total:* ${totalFormatted}\n\n💳 *Sinal de ${percentage}% para confirmação:* *${depositFormatted}*\n\nPara garantir e confirmar sua vaga na agenda, solicitamos a transferência do sinal de ${percentage}% via Pix:\n\n🔑 *Chave Pix (Copia e Cola):*\n${PIX_CONFIG.copiaECola}\n\nOu pela chave CPF:\n*${PIX_CONFIG.chaveCpf}*\nTitular: *${PIX_CONFIG.titular}*\n\n📌 *Importante:* Após realizar o Pix, por favor envie o comprovante de pagamento por aqui para validarmos sua vaga com carinho! ✨ Muito obrigada!`;
+    const text = [
+      `Olá, ${client.name}! ✨💖`,
+      `Passando para lembrar do seu atendimento agendado no ${salon?.name || "Selma Gloor Nails Studio"}.`,
+      ``,
+      `📅 *Data:* ${formattedDate}`,
+      `⏰ *Horário:* ${app.startTime}`,
+      `💅 *Serviço:* ${serviceNames}`,
+      `👩 *Profissional:* ${prof?.name || "Selma Gloor"}`,
+      `💰 *Valor Total:* ${totalFormatted}`,
+      ``,
+      `💳 *Sinal de ${percentage}% para confirmação:* *${depositFormatted}*`,
+      ``,
+      `Para garantir e confirmar sua vaga na agenda, solicitamos a transferência do sinal de ${percentage}% via Pix:`,
+      ``,
+      `🔑 *Chave Pix (Copia e Cola):*`,
+      `${PIX_CONFIG.copiaECola}`,
+      ``,
+      `📌 *Importante:* Após realizar o Pix, por favor envie o comprovante de pagamento por aqui para validarmos sua vaga com carinho! ✨ Muito obrigada!`,
+    ].join("\n");
 
     const sendRes = await this.sendMessage({
       to: formattedPhone,

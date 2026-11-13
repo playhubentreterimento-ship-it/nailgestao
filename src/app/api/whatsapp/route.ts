@@ -23,8 +23,25 @@ export async function GET() {
             id: "tmpl-sinal-50-pix",
             name: "Lembrete de Sinal de 50% com Chave Pix",
             type: "LEMBRETE_SINAL_50_PIX",
-            content:
-              "Olá, {cliente}! ✨💕 Passando para lembrar do seu atendimento no Selma Gloor Nails Studio.\n\n📅 Data: {data}\n⏰ Horário: {horario}\n💅 Serviço: {servicos}\n👩‍🎨 Profissional: {profissional}\n💰 Valor Total: R$ {total}\n💳 Sinal de 50%: R$ {sinal}\n\nChave Pix Copia e Cola:\n00020126330014BR.GOV.BCB.PIX0111055663959615204000053039865802BR5922SELMA FRANCYELLE GLOOR6009SAO PAULO62290525YzIzZWViMWItODAyNS00MTRkL6304ED4A\n\nChave CPF: 055.663.959-61 (Selma Francyelle Gloor)\n\n📌 Por favor envie o comprovante por aqui para validarmos sua vaga com carinho! ✨",
+            content: [
+              "Olá, {cliente}! ✨💖",
+              "Passando para lembrar do seu atendimento agendado no Selma Gloor Nails Studio.",
+              "",
+              "📅 *Data:* {data}",
+              "⏰ *Horário:* {horario}",
+              "💅 *Serviço:* {servicos}",
+              "👩 *Profissional:* {profissional}",
+              "💰 *Valor Total:* R$ {total}",
+              "",
+              "💳 *Sinal de 50% para confirmação:* *R$ {sinal}*",
+              "",
+              "Para garantir e confirmar sua vaga na agenda, solicitamos a transferência do sinal de 50% via Pix:",
+              "",
+              "🔑 *Chave Pix (Copia e Cola):*",
+              "00020126330014BR.GOV.BCB.PIX0111055663959615204000053039865802BR5922SELMA FRANCYELLE GLOOR6009SAO PAULO62290525YzIzZWViMWItODAyNS00MTRkL6304ED4A",
+              "",
+              "📌 *Importante:* Após realizar o Pix, por favor envie o comprovante de pagamento por aqui para validarmos sua vaga com carinho! ✨ Muito obrigada!",
+            ].join("\n"),
           },
         ];
 
