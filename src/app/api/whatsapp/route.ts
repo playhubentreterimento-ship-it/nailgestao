@@ -14,7 +14,21 @@ export async function GET() {
       take: 50,
     });
 
-    return NextResponse.json({ templates, messages });
+    const hasDepositTmpl = templates.some((t) => t.type === "LEMBRETE_SINAL_50_PIX");
+    const allTemplates = hasDepositTmpl
+      ? templates
+      : [
+          ...templates,
+          {
+            id: "tmpl-sinal-50-pix",
+            name: "Lembrete de Sinal de 50% com Chave Pix",
+            type: "LEMBRETE_SINAL_50_PIX",
+            content:
+              "Olá, {cliente}! ✨💕 Passando para lembrar do seu atendimento no Selma Gloor Nails Studio.\n\n📅 Data: {data}\n⏰ Horário: {horario}\n💅 Serviço: {servicos}\n👩‍🎨 Profissional: {profissional}\n💰 Valor Total: R$ {total}\n💳 Sinal de 50%: R$ {sinal}\n\nChave Pix Copia e Cola:\n00020126330014BR.GOV.BCB.PIX0111055663959615204000053039865802BR5922SELMA FRANCYELLE GLOOR6009SAO PAULO62290525YzIzZWViMWItODAyNS00MTRkL6304ED4A\n\nChave CPF: 055.663.959-61 (Selma Francyelle Gloor)\n\n📌 Por favor envie o comprovante por aqui para validarmos sua vaga com carinho! ✨",
+          },
+        ];
+
+    return NextResponse.json({ templates: allTemplates, messages });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -45,6 +59,16 @@ export async function POST(req: Request) {
 
       const ok = await whatsAppService.sendAppointmentReminder(appointmentId, hoursBefore || 24);
       return NextResponse.json({ success: ok });
+
+    }
+
+    // Disparar lembrete de SINAL DE 50% com chave Pix para 1 agendamento
+    if (action === "SEND_DEPOSIT_REMINDER") {
+      if (!appointmentId) return NextResponse.json({ error: "ID do agendamento é obrigatório." }, { status: 400 });
+
+      const res = await whatsAppService.sendDepositReminder(appointmentId, 50);
+      return NextResponse.json(res);
+
     }
 
     // Disparar lembretes para TODOS os agendamentos de amanhã (24h antes)
@@ -86,7 +110,8 @@ export async function POST(req: Request) {
     }
 
     // Disparar lembretes para QUALQUER DATA ou MÚLTIPLAS DATAS selecionadas
-    if (action === "SEND_DATE_REMINDERS") {
+    if (action === "SEND_DATE_REMINDERS" || action === "SEND_DEPOSIT_REMINDERS") {
+      const isDepositReminder = action === "SEND_DEPOSIT_REMINDERS" || body.type === "DEPOSIT_50";
       const rawDates = Array.isArray(body.dates) ? body.dates : body.date ? [body.date] : [];
       if (rawDates.length === 0) {
         return NextResponse.json({ error: "Selecione ao menos uma data válida." }, { status: 400 });
@@ -102,7 +127,9 @@ export async function POST(req: Request) {
 
       const items: any[] = [];
       for (const app of targetApps) {
-        const res = await whatsAppService.sendAppointmentReminder(app.id, 24);
+        const res = isDepositReminder
+          ? await whatsAppService.sendDepositReminder(app.id, 50)
+          : await whatsAppService.sendAppointmentReminder(app.id, 24);
         if (res.success) {
           items.push({
             ...res,

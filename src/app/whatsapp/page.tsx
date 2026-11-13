@@ -16,6 +16,9 @@ import {
   Calendar,
   X,
   Trash2,
+  CreditCard,
+  Copy,
+  Check,
 } from "lucide-react";
 
 export default function WhatsAppHubPage() {
@@ -25,6 +28,23 @@ export default function WhatsAppHubPage() {
   const [webhookLog, setWebhookLog] = useState<string[]>([]);
   const [reminderResults, setReminderResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
+
+  const PIX_INFO = {
+    copiaECola:
+      "00020126330014BR.GOV.BCB.PIX0111055663959615204000053039865802BR5922SELMA FRANCYELLE GLOOR6009SAO PAULO62290525YzIzZWViMWItODAyNS00MTRkL6304ED4A",
+    cpf: "055.663.959-61",
+    titular: "Selma Francyelle Gloor",
+    cidade: "São Paulo",
+  };
+
+  const handleCopyPix = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(PIX_INFO.copiaECola);
+      setPixCopied(true);
+      setTimeout(() => setPixCopied(false), 2500);
+    }
+  };
 
   // Seleção de Múltiplas Datas para Envio de Lembretes
   const getTomorrowString = () => {
@@ -138,6 +158,45 @@ export default function WhatsAppHubPage() {
     }
   };
 
+  const handleDispatchDepositReminders = async () => {
+    if (selectedDates.length === 0) {
+      alert("Por favor, selecione ao menos 1 data para enviar o lembrete de sinal de 50%.");
+      return;
+    }
+
+    const formattedDatesList = selectedDates
+      .map((d) => d.split("-").reverse().join("/"))
+      .join(", ");
+
+    if (
+      confirm(
+        `Deseja disparar cobrança/lembrete de SINAL DE 50% via Pix para as clientes agendadas nas seguintes datas?\n\n📅 ${formattedDatesList}\n\n🔑 Chave Pix: CPF 055.663.959-61 (Selma Francyelle Gloor)\n💰 O valor de cada sinal (50%) será calculado automaticamente com base no atendimento.`
+      )
+    ) {
+      setLoading(true);
+      const res = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SEND_DEPOSIT_REMINDERS",
+          dates: selectedDates,
+        }),
+      });
+
+      const resData = await res.json();
+      setLoading(false);
+
+      if (resData.items && resData.items.length > 0) {
+        setReminderResults(resData.items);
+      } else {
+        alert(
+          `✨ NENHUM agendamento pendente/confirmado encontrado para a(s) data(s) selecionada(s) (${formattedDatesList}).`
+        );
+      }
+      loadWhatsApp();
+    }
+  };
+
   const handleSimulateClientReply = async () => {
     const res = await fetch("/api/whatsapp", {
       method: "POST",
@@ -197,16 +256,33 @@ export default function WhatsAppHubPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleDispatchDateReminders}
-            disabled={loading || selectedDates.length === 0}
-            className="flex items-center justify-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3.5 text-xs font-extrabold text-white shadow-lg hover:opacity-95 disabled:opacity-50 shrink-0"
-          >
-            <Send className="h-4 w-4" />
-            <span>
-              {loading ? "Disparando..." : `Disparar Lembretes (${selectedDates.length} Data${selectedDates.length > 1 ? "s" : ""}) &rarr;`}
-            </span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
+            {/* Botão Tradicional */}
+            <button
+              onClick={handleDispatchDateReminders}
+              disabled={loading || selectedDates.length === 0}
+              className="flex items-center justify-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-xs font-extrabold text-white shadow-lg hover:opacity-95 disabled:opacity-50"
+              title="Disparar lembrete tradicional de confirmação de horário"
+            >
+              <Send className="h-4 w-4" />
+              <span>
+                {loading ? "Disparando..." : `Lembrete Padrão (${selectedDates.length}) &rarr;`}
+              </span>
+            </button>
+
+            {/* Novo Botão Sinal 50% Pix */}
+            <button
+              onClick={handleDispatchDepositReminders}
+              disabled={loading || selectedDates.length === 0}
+              className="flex items-center justify-center space-x-2 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600 px-5 py-3 text-xs font-extrabold text-white shadow-lg hover:opacity-95 disabled:opacity-50"
+              title="Disparar cobrança e lembrete de Sinal de 50% com chave Pix"
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>
+                {loading ? "Disparando..." : `💳 Sinal 50% Pix (${selectedDates.length}) &rarr;`}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Seleção Rápida (Presets) & Seletor Customizado */}
@@ -316,6 +392,52 @@ export default function WhatsAppHubPage() {
         </div>
       </div>
 
+      {/* CARD INFORMATIVO DA CHAVE PIX DE SINAL 50% */}
+      <div className="rounded-3xl border-2 border-amber-300/80 bg-gradient-to-r from-amber-50/90 via-rose-50/70 to-amber-50/90 p-5 shadow-sm dark:border-amber-700/60 dark:bg-slate-900">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start space-x-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 text-white font-bold text-xl shadow-md">
+              💳
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-extrabold text-sm text-slate-900 dark:text-amber-200">
+                  Chave Pix Configurada para Lembretes de Sinal (50%):
+                </span>
+                <span className="rounded-lg bg-amber-200/90 px-2.5 py-0.5 text-xs font-black text-amber-950 dark:bg-amber-900 dark:text-amber-100">
+                  CPF: {PIX_INFO.cpf}
+                </span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Titular: <strong>{PIX_INFO.titular}</strong> ({PIX_INFO.cidade})
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                Ao disparar o <strong>Sinal 50% Pix</strong>, o sistema calcula a metade do valor de cada agendamento e envia a mensagem pronta com a chave Pix Copia e Cola para a cliente reservar o horário com segurança.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCopyPix}
+            className="flex items-center justify-center space-x-2 rounded-2xl bg-slate-900 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 transition active:scale-95 shrink-0"
+            title="Copiar Código Pix Copia e Cola"
+          >
+            {pixCopied ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-400 dark:text-emerald-600" />
+                <span className="text-emerald-400 dark:text-emerald-600 font-extrabold">Pix Copiado! ✅</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                <span>Copiar Código Pix</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* PAINEL DE LINKS DIRETOS PARA WHATSAPP WEB */}
       {reminderResults.length > 0 && (
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-800 dark:bg-slate-900 space-y-3">
@@ -341,6 +463,15 @@ export default function WhatsAppHubPage() {
                     {item.appointmentDate && (
                       <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
                         {item.appointmentDate.split("-").reverse().join("/")} às {item.appointmentTime}h
+                      </span>
+                    )}
+                    {item.type === "DEPOSIT_50" ? (
+                      <span className="rounded-md bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200">
+                        💳 Sinal 50%: R$ {Number(item.depositAmount || 0).toFixed(2).replace(".", ",")}
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        🗓️ Lembrete Padrão
                       </span>
                     )}
                   </div>

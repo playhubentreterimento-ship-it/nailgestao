@@ -23,6 +23,8 @@ import {
   Ban,
   Trash2,
   Package,
+  CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { sendLocalPushNotification } from "@/lib/notifications";
 
@@ -275,6 +277,70 @@ export default function AgendaPage() {
     setEditDeposit(app.depositPaid || 0);
     setEditNotes(app.notes || "");
     setShowEditModal(true);
+  };
+
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+
+  const handleSendDepositReminder = async (app: any) => {
+    if (!app || !app.id) return;
+    const clientName = app.clientName || app.client?.name || "Cliente";
+    if (confirm(`Deseja enviar cobrança/lembrete de SINAL DE 50% via Pix no WhatsApp para ${clientName}?`)) {
+      setSendingReminderId(app.id);
+      try {
+        const res = await fetch("/api/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "SEND_DEPOSIT_REMINDER",
+            appointmentId: app.id,
+          }),
+        });
+        const data = await res.json();
+        if (data.whatsappUrl) {
+          window.open(data.whatsappUrl, "_blank");
+        } else if (data.success) {
+          alert("Lembrete de Sinal 50% Pix disparado com sucesso!");
+        } else {
+          alert("Não foi possível gerar o link de WhatsApp para esta cliente.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao disparar lembrete de sinal.");
+      } finally {
+        setSendingReminderId(null);
+      }
+    }
+  };
+
+  const handleSendTraditionalReminder = async (app: any) => {
+    if (!app || !app.id) return;
+    const clientName = app.clientName || app.client?.name || "Cliente";
+    if (confirm(`Deseja enviar lembrete tradicional de horário via WhatsApp para ${clientName}?`)) {
+      setSendingReminderId(app.id);
+      try {
+        const res = await fetch("/api/whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "SEND_REMINDER",
+            appointmentId: app.id,
+          }),
+        });
+        const data = await res.json();
+        if (data.whatsappUrl) {
+          window.open(data.whatsappUrl, "_blank");
+        } else if (data.success) {
+          alert("Lembrete tradicional disparado com sucesso!");
+        } else {
+          alert("Não foi possível gerar o link de WhatsApp.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao disparar lembrete.");
+      } finally {
+        setSendingReminderId(null);
+      }
+    }
   };
 
   const handleSaveEditAppointment = async (e: React.FormEvent) => {
@@ -840,6 +906,13 @@ export default function AgendaPage() {
                                   ✏️ Editar
                                 </button>
                                 <button
+                                  onClick={() => handleSendDepositReminder(app)}
+                                  className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-amber-200 hover:text-amber-100' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
+                                  title="Cobrar Sinal de 50% via Pix no WhatsApp"
+                                >
+                                  💳 Sinal Pix
+                                 </button>
+                                <button
                                   onClick={() => handleCancelAppointment(app)}
                                   className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-800 dark:text-rose-400'}`}
                                   title="Cancelar e liberar este horário"
@@ -1005,9 +1078,15 @@ export default function AgendaPage() {
                                         <button
                                           onClick={() => handleOpenEditModal(app)}
                                           className="text-amber-700 hover:text-amber-900 dark:text-amber-300 underline"
-                                          title="Editar serviços ou valores"
                                         >
                                           ✏️ Editar
+                                        </button>
+                                        <button
+                                          onClick={() => handleSendDepositReminder(app)}
+                                          className="text-rose-600 hover:text-rose-800 dark:text-rose-400 underline font-bold"
+                                          title="Cobrar Sinal 50% via Pix no WhatsApp"
+                                        >
+                                          💳 Sinal Pix
                                         </button>
                                         <button
                                           onClick={() => handleCancelAppointment(app)}
@@ -1834,6 +1913,45 @@ export default function AgendaPage() {
                 <Package className="h-4 w-4" />
                 <span>📦 Vincular Pacote</span>
               </button>
+            </div>
+
+            {/* Ação Rápida de WhatsApp: Lembrete Tradicional e Sinal 50% Pix */}
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 p-2.5 sm:p-3 border border-emerald-200/80 dark:bg-slate-800/80 dark:border-emerald-800/50 shadow-xs">
+              <div className="flex items-center space-x-2">
+                <span className="text-base">📲</span>
+                <div>
+                  <div className="font-extrabold text-slate-900 dark:text-white text-xs">
+                    Disparar Lembrete WhatsApp para {editingApp.clientName}
+                  </div>
+                  <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+                    Envie mensagem com horário ou cobre o sinal de 50% com chave Pix
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSendTraditionalReminder(editingApp)}
+                  disabled={sendingReminderId === editingApp.id}
+                  className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs transition active:scale-95 disabled:opacity-50"
+                  title="Enviar lembrete tradicional de confirmação"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>{sendingReminderId === editingApp.id ? "Enviando..." : "Lembrete Horário"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSendDepositReminder(editingApp)}
+                  disabled={sendingReminderId === editingApp.id}
+                  className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-xs transition active:scale-95 disabled:opacity-50"
+                  title="Cobrar Sinal de 50% com Chave Pix"
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>{sendingReminderId === editingApp.id ? "Enviando..." : "💳 Sinal 50% Pix"}</span>
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSaveEditAppointment} className="mt-4 space-y-4 text-xs font-semibold">
