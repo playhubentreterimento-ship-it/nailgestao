@@ -22,6 +22,7 @@ import {
   Search,
   Ban,
   Trash2,
+  Package,
 } from "lucide-react";
 import { sendLocalPushNotification } from "@/lib/notifications";
 
@@ -1805,6 +1806,36 @@ export default function AgendaPage() {
               </button>
             </div>
 
+            {/* Ação Rápida: Vincular Pacote à Cliente */}
+            <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-purple-50 via-pink-50 to-amber-50 p-3 sm:p-3.5 border border-purple-200/90 dark:bg-slate-800/90 dark:border-purple-900/50 shadow-xs">
+              <div className="flex items-center space-x-2.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xs">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm">
+                    Deseja transformar este atendimento em Pacote?
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                    Abre a área de pacotes para vincular com os pacotes criados, editar ou criar um novo
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `/pacotes?clientId=${editingApp.clientId}&clientName=${encodeURIComponent(
+                    editingApp.clientName || ""
+                  )}&date=${editDate}&time=${editTime}&profId=${editProf}&appointmentId=${editingApp.id}`;
+                  window.location.href = url;
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-rose-600 hover:from-purple-700 hover:to-rose-700 px-4 py-2.5 text-xs font-black text-white shadow-md transition active:scale-95 shrink-0"
+              >
+                <Package className="h-4 w-4" />
+                <span>📦 Vincular Pacote</span>
+              </button>
+            </div>
+
             <form onSubmit={handleSaveEditAppointment} className="mt-4 space-y-4 text-xs font-semibold">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {/* Profissional */}
@@ -1967,6 +1998,19 @@ export default function AgendaPage() {
                   className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 px-6 py-2.5 font-bold text-white shadow-md shadow-amber-200 hover:opacity-95"
                 >
                   💾 Salvar Alterações &rarr;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `/pacotes?clientId=${editingApp.clientId}&clientName=${encodeURIComponent(
+                      editingApp.clientName || ""
+                    )}&date=${editDate}&time=${editTime}&profId=${editProf}&appointmentId=${editingApp.id}`;
+                    window.location.href = url;
+                  }}
+                  className="rounded-xl border-2 border-purple-400 bg-purple-50 hover:bg-purple-100 px-4 py-2.5 text-xs font-black text-purple-700 dark:bg-purple-950 dark:border-purple-800 dark:text-purple-300 transition active:scale-95 shadow-xs flex items-center gap-1.5"
+                >
+                  <Package className="h-4 w-4" />
+                  <span>📦 Vincular Pacote</span>
                 </button>
               </div>
             </form>

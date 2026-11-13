@@ -40,12 +40,14 @@ export function MobileNav({ userRole }: MobileNavProps) {
     ? [
         { href: "/agenda", label: "Agenda", icon: Calendar },
         { href: "/clientes", label: "Clientes", icon: Users },
+        { href: "/pacotes", label: "Pacotes", icon: Package },
         { href: "/caixa", label: "Caixa", icon: Receipt },
       ]
     : [
         { href: "/dashboard", label: "Início", icon: LayoutDashboard },
         { href: "/agenda", label: "Agenda", icon: Calendar },
         { href: "/clientes", label: "Clientes", icon: Users },
+        { href: "/pacotes", label: "Pacotes", icon: Package },
         { href: "/caixa", label: "Caixa", icon: Receipt },
       ];
 

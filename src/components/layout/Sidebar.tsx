@@ -109,6 +109,7 @@ export function Sidebar({ userRole }: SidebarProps) {
       items: [
         { href: "/agenda", label: "Agenda Visual", icon: Calendar },
         { href: "/clientes", label: "Clientes & Cadastros", icon: Users },
+        { href: "/pacotes", label: "Pacotes & Sessões", icon: Package },
         { href: "/caixa", label: "Caixa do Dia", icon: Receipt },
       ],
     },

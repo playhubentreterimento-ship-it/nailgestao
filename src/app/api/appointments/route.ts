@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { whatsAppService } from "@/lib/whatsapp/provider";
-import { sendWebPushToAll } from "@/app/api/push-subscribe/route";
+import { sendWebPushToAll } from "@/lib/webpush";
 
 function normalizeDateStr(raw: string | null | undefined): string | null {
   if (!raw) return null;

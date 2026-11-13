@@ -1,29 +1,5 @@
 import { NextResponse } from "next/server";
-import { PUBLIC_VAPID_KEY, webpush } from "@/lib/webpush";
-import fs from "fs";
-import path from "path";
-
-const SUBSCRIPTIONS_FILE = path.join(process.cwd(), "scratch", "push_subscriptions.json");
-
-function getStoredSubscriptions(): any[] {
-  try {
-    if (!fs.existsSync(SUBSCRIPTIONS_FILE)) return [];
-    const content = fs.readFileSync(SUBSCRIPTIONS_FILE, "utf-8");
-    return JSON.parse(content);
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveSubscriptions(subs: any[]) {
-  try {
-    const dir = path.dirname(SUBSCRIPTIONS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subs, null, 2));
-  } catch (e) {
-    console.error("Erro ao salvar push_subscriptions.json:", e);
-  }
-}
+import { PUBLIC_VAPID_KEY, webpush, getStoredSubscriptions, saveSubscriptions } from "@/lib/webpush";
 
 export async function GET() {
   return NextResponse.json({ publicKey: PUBLIC_VAPID_KEY });
@@ -63,29 +39,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, count: currentSubs.length });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function sendWebPushToAll(title: string, message: string, url: string = "/agenda") {
-  const currentSubs = getStoredSubscriptions();
-  if (currentSubs.length === 0) return;
-
-  const payload = JSON.stringify({ title, message, url });
-  const validSubs: any[] = [];
-
-  for (const sub of currentSubs) {
-    try {
-      await webpush.sendNotification(sub, payload);
-      validSubs.push(sub);
-    } catch (err: any) {
-      // Remover inscricoes expiradas ou revogadas (HTTP 404 / 410)
-      if (err.statusCode !== 404 && err.statusCode !== 410) {
-        validSubs.push(sub);
-      }
-    }
-  }
-
-  if (validSubs.length !== currentSubs.length) {
-    saveSubscriptions(validSubs);
   }
 }

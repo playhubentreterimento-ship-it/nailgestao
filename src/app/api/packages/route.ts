@@ -111,7 +111,8 @@ export async function POST(req: Request) {
         firstSessionDate,
         firstSessionTime = "10:00",
         firstSessionProfId,
-        sessionsSchedule = [] // Array de { sessionNumber, date, time, profId }
+        sessionsSchedule = [], // Array de { sessionNumber, date, time, profId }
+        existingAppointmentId,
       } = body;
 
       if (!clientId || !packageId) {
@@ -224,35 +225,77 @@ export async function POST(req: Request) {
         const endTime1 = computeEndTime(firstSessionTime, dur1);
         const pkgPrice = targetPackage.price;
 
-        const firstApp = await prisma.appointment.create({
-          data: {
-            salonId: "default-salon",
-            clientId,
-            professionalId: profId,
-            date: firstSessionDate,
-            startTime: firstSessionTime,
-            endTime: endTime1,
-            totalDurationMinutes: dur1,
-            subtotal: pkgPrice,
-            discount: 0,
-            depositPaid: 0,
-            remainingAmount: pkgPrice,
-            total: pkgPrice, // 100% do valor do pacote na 1ª sessão
-            paymentStatus: "PENDENTE",
-            status: "AGENDADO",
-            notes: `📦 Pacote ${targetPackage.name} (Sessão 1/${targetPackage.totalSessions}: ${srvName1} - Valor Integral)`,
-            services: {
-              create: [
-                {
-                  serviceId: srv1?.serviceId || "srv-combo",
-                  serviceName: `📦 ${targetPackage.name} - 1ª Sessão: ${srvName1}`,
-                  price: pkgPrice,
-                  durationMinutes: dur1,
+        let firstApp: any = null;
+        if (existingAppointmentId) {
+          const found = await prisma.appointment.findUnique({
+            where: { id: existingAppointmentId },
+          });
+          if (found) {
+            await prisma.appointmentService.deleteMany({
+              where: { appointmentId: found.id },
+            });
+            firstApp = await prisma.appointment.update({
+              where: { id: found.id },
+              data: {
+                clientId,
+                professionalId: profId,
+                date: firstSessionDate,
+                startTime: firstSessionTime,
+                endTime: endTime1,
+                totalDurationMinutes: dur1,
+                subtotal: pkgPrice,
+                discount: 0,
+                depositPaid: 0,
+                remainingAmount: pkgPrice,
+                total: pkgPrice,
+                paymentStatus: "PENDENTE",
+                notes: `📦 Pacote ${targetPackage.name} (Sessão 1/${targetPackage.totalSessions}: ${srvName1} - Valor Integral)`,
+                services: {
+                  create: [
+                    {
+                      serviceId: srv1?.serviceId || "srv-combo",
+                      serviceName: `📦 ${targetPackage.name} - 1ª Sessão: ${srvName1}`,
+                      price: pkgPrice,
+                      durationMinutes: dur1,
+                    },
+                  ],
                 },
-              ],
+              },
+            });
+          }
+        }
+
+        if (!firstApp) {
+          firstApp = await prisma.appointment.create({
+            data: {
+              salonId: "default-salon",
+              clientId,
+              professionalId: profId,
+              date: firstSessionDate,
+              startTime: firstSessionTime,
+              endTime: endTime1,
+              totalDurationMinutes: dur1,
+              subtotal: pkgPrice,
+              discount: 0,
+              depositPaid: 0,
+              remainingAmount: pkgPrice,
+              total: pkgPrice, // 100% do valor do pacote na 1ª sessão
+              paymentStatus: "PENDENTE",
+              status: "AGENDADO",
+              notes: `📦 Pacote ${targetPackage.name} (Sessão 1/${targetPackage.totalSessions}: ${srvName1} - Valor Integral)`,
+              services: {
+                create: [
+                  {
+                    serviceId: srv1?.serviceId || "srv-combo",
+                    serviceName: `📦 ${targetPackage.name} - 1ª Sessão: ${srvName1}`,
+                    price: pkgPrice,
+                    durationMinutes: dur1,
+                  },
+                ],
+              },
             },
-          },
-        });
+          });
+        }
 
         // Guardar o ID da 1ª sessão no ClientPackage
         await prisma.clientPackage.update({

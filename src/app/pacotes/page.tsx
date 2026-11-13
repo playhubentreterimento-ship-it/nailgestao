@@ -43,16 +43,56 @@ export default function PacotesPage() {
   const [firstSessionProfId, setFirstSessionProfId] = useState("");
   const [sessionsSchedule, setSessionsSchedule] = useState<{ sessionNumber: number; date: string; time: string; profId: string }[]>([]);
 
+  // Contexto vindo de um Agendamento da Agenda
+  const [appointmentContext, setAppointmentContext] = useState<{
+    clientId: string;
+    clientName: string;
+    appointmentId: string;
+    date: string;
+    time: string;
+    profId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const cId = p.get("clientId");
+      if (cId) {
+        const ctx = {
+          clientId: cId,
+          clientName: p.get("clientName") || "",
+          appointmentId: p.get("appointmentId") || "",
+          date: p.get("date") || "",
+          time: p.get("time") || "",
+          profId: p.get("profId") || "",
+        };
+        setAppointmentContext(ctx);
+        setSelectedClientId(cId);
+        if (ctx.date) setFirstSessionDate(ctx.date);
+        if (ctx.time) setFirstSessionTime(ctx.time);
+        if (ctx.profId) setFirstSessionProfId(ctx.profId);
+      }
+    }
+  }, []);
+
   const loadData = () => {
     fetch("/api/packages", { cache: "no-store" })
       .then((r) => r.json())
       .then((res) => {
         setData(res);
-        if (res.clients && res.clients.length > 0 && !selectedClientId) {
-          setSelectedClientId(res.clients[0].id);
+        if (res.clients && res.clients.length > 0) {
+          if (appointmentContext?.clientId) {
+            setSelectedClientId(appointmentContext.clientId);
+          } else if (!selectedClientId) {
+            setSelectedClientId(res.clients[0].id);
+          }
         }
-        if (res.professionals && res.professionals.length > 0 && !firstSessionProfId) {
-          setFirstSessionProfId(res.professionals[0].id);
+        if (res.professionals && res.professionals.length > 0) {
+          if (appointmentContext?.profId) {
+            setFirstSessionProfId(appointmentContext.profId);
+          } else if (!firstSessionProfId) {
+            setFirstSessionProfId(res.professionals[0].id);
+          }
         }
       });
   };
@@ -252,9 +292,18 @@ export default function PacotesPage() {
   const handleOpenAssign = (pkg: any) => {
     setSelectedPackage(pkg);
     
-    const defaultProf = firstSessionProfId || (professionals[0]?.id || "");
-    if (!firstSessionProfId && defaultProf) {
-      setFirstSessionProfId(defaultProf);
+    const profToUse = appointmentContext?.profId || firstSessionProfId || (professionals[0]?.id || "");
+    if (profToUse) {
+      setFirstSessionProfId(profToUse);
+    }
+    if (appointmentContext?.clientId) {
+      setSelectedClientId(appointmentContext.clientId);
+    }
+    if (appointmentContext?.date) {
+      setFirstSessionDate(appointmentContext.date);
+    }
+    if (appointmentContext?.time) {
+      setFirstSessionTime(appointmentContext.time);
     }
 
     // Inicializar agenda das sessões adicionais (2 a N)
@@ -263,8 +312,8 @@ export default function PacotesPage() {
       initialSchedule.push({
         sessionNumber: i,
         date: "",
-        time: "10:00",
-        profId: defaultProf,
+        time: appointmentContext?.time || "10:00",
+        profId: profToUse,
       });
     }
     setSessionsSchedule(initialSchedule);
@@ -292,13 +341,28 @@ export default function PacotesPage() {
         firstSessionTime,
         firstSessionProfId,
         sessionsSchedule: formattedSessionsSchedule,
+        existingAppointmentId: appointmentContext?.appointmentId || undefined,
       }),
     });
 
     if (res.ok) {
-      alert(`✨ Pacote "${selectedPackage.name}" vinculado à cliente com sucesso!\n\n🏷️ A cliente foi alterada para a categoria "PACOTES".\n\n📅 Os agendamentos futuros foram lançados. O valor do pacote (R$ ${selectedPackage.price.toFixed(2)}) entrará no caixa SOMENTE quando você realizar o checkout da 1ª sessão!`);
-      setShowAssignModal(false);
-      loadData();
+      if (appointmentContext?.appointmentId) {
+        alert(
+          `✨ Pacote "${selectedPackage.name}" vinculado ao agendamento de ${
+            appointmentContext.clientName || "cliente"
+          } com sucesso!\n\n🏷️ A cliente foi alterada para a categoria "PACOTES".\n\n📅 Agendamentos sincronizados na agenda! Retornando para a Agenda...`
+        );
+        setShowAssignModal(false);
+        window.location.href = `/agenda?date=${firstSessionDate}`;
+      } else {
+        alert(
+          `✨ Pacote "${selectedPackage.name}" vinculado à cliente com sucesso!\n\n🏷️ A cliente foi alterada para a categoria "PACOTES".\n\n📅 Os agendamentos futuros foram lançados. O valor do pacote (R$ ${selectedPackage.price.toFixed(
+            2
+          )}) entrará no caixa SOMENTE quando você realizar o checkout da 1ª sessão!`
+        );
+        setShowAssignModal(false);
+        loadData();
+      }
     } else {
       alert("Erro ao vincular pacote à cliente.");
     }
@@ -351,6 +415,43 @@ export default function PacotesPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto w-full min-w-0">
+      {/* Banner de Contexto de Agendamento da Agenda */}
+      {appointmentContext && (
+        <div className="rounded-3xl bg-gradient-to-r from-purple-700 via-indigo-700 to-rose-700 p-4 sm:p-5 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-purple-400/30">
+          <div className="flex items-center space-x-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl shadow-inner">
+              📦
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase">
+                  Vínculo com Agendamento
+                </span>
+                <span className="text-xs text-purple-200 font-bold">
+                  {appointmentContext.date ? appointmentContext.date.split("-").reverse().join("/") : ""} às {appointmentContext.time}
+                </span>
+              </div>
+              <h3 className="font-serif text-lg sm:text-xl font-black">
+                Cliente: {appointmentContext.clientName || "Cliente Selecionada"}
+              </h3>
+              <p className="text-xs text-purple-100">
+                Escolha um pacote abaixo e clique em <strong>"Vincular a Cliente"</strong>, ou <strong>edite</strong> um pacote existente, ou <strong>crie um novo</strong> combo.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => {
+                setAppointmentContext(null);
+                window.location.href = "/agenda";
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-extrabold text-xs transition text-center"
+            >
+              ← Voltar para a Agenda
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0 w-full min-w-0">
         <div>
@@ -463,7 +564,7 @@ export default function PacotesPage() {
                     onClick={() => handleOpenAssign(pkg)}
                     className="rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 px-3 py-1.5 font-extrabold text-white shadow-sm hover:opacity-95 shrink-0"
                   >
-                    🤝 Vincular a Cliente
+                    {appointmentContext ? `🤝 Vincular a ${appointmentContext.clientName || "Cliente"}` : "🤝 Vincular a Cliente"}
                   </button>
                 </div>
               </div>
@@ -849,6 +950,15 @@ export default function PacotesPage() {
               </button>
             </div>
 
+            {appointmentContext && (
+              <div className="mb-3 rounded-2xl bg-purple-50 p-3 border border-purple-200 dark:bg-purple-950/60 dark:border-purple-850 text-purple-900 dark:text-purple-200 text-xs font-bold flex items-center gap-2">
+                <span>📌</span>
+                <span>
+                  Vinculando ao agendamento de <strong>{appointmentContext.clientName}</strong> no dia <strong>{firstSessionDate ? firstSessionDate.split("-").reverse().join("/") : ""}</strong> às <strong>{firstSessionTime}</strong>.
+                </span>
+              </div>
+            )}
+
             <form onSubmit={handleAssignPackage} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-800 dark:text-slate-200">Selecione a Cliente *</label>
@@ -994,7 +1104,7 @@ export default function PacotesPage() {
                 type="submit"
                 className="mt-4 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg hover:opacity-95"
               >
-                CONFIRMAR VÍNCULO E LANÇAR SESSÕES 🤝
+                {appointmentContext?.appointmentId ? "CONFIRMAR E ATUALIZAR AGENDAMENTO COM O PACOTE ✨" : "CONFIRMAR VÍNCULO E LANÇAR SESSÕES 🤝"}
               </button>
             </form>
           </div>
