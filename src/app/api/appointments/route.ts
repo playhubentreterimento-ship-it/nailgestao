@@ -426,25 +426,38 @@ export async function POST(req: Request) {
       },
     });
 
-    // Se houve cobrança de sinal, lançar no caixa se houver um caixa aberto
+    // Se houve cobrança de sinal, lançar no caixa se houver um caixa aberto (somente para agendamentos de hoje ou passados)
+    // Para agendamentos futuros, o sinal fica registrado no agendamento e será contabilizado no caixa na data do atendimento/checkout
     if (depositPaid > 0) {
-      const openCash = await prisma.cashRegister.findFirst({
-        where: { salonId: "default-salon", status: "ABERTO" },
-      });
-      if (openCash) {
-        await prisma.cashTransaction.create({
-          data: {
-            cashRegisterId: openCash.id,
-            salonId: "default-salon",
-            appointmentId: appointment.id,
-            type: "ENTRADA",
-            category: "SINAL_AGENDAMENTO",
-            amount: depositPaid,
-            paymentMethod: "PIX",
-            netAmount: depositPaid,
-            description: `Sinal recebido para agendamento dia ${date} às ${startTime}`,
-          },
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+      if (date <= todayStr) {
+        const openCash = await prisma.cashRegister.findFirst({
+          where: { salonId: "default-salon", status: "ABERTO" },
         });
+        if (openCash) {
+          await prisma.cashTransaction.create({
+            data: {
+              cashRegisterId: openCash.id,
+              salonId: "default-salon",
+              appointmentId: appointment.id,
+              type: "ENTRADA",
+              category: "SINAL_AGENDAMENTO",
+              amount: depositPaid,
+              paymentMethod: "PIX",
+              netAmount: depositPaid,
+              description: `Sinal recebido para agendamento dia ${date} às ${startTime}`,
+            },
+          });
+
+          await prisma.cashRegister.update({
+            where: { id: openCash.id },
+            data: {
+              expectedAmount: { increment: depositPaid },
+            },
+          });
+        }
       }
     }
 

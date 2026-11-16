@@ -266,7 +266,7 @@ export default function WhatsAppHubPage() {
             >
               <Send className="h-4 w-4" />
               <span>
-                {loading ? "Disparando..." : `Lembrete Padrão (${selectedDates.length}) &rarr;`}
+                {loading ? "Disparando..." : `Lembrete Padrão (${selectedDates.length}) →`}
               </span>
             </button>
 
@@ -279,7 +279,7 @@ export default function WhatsAppHubPage() {
             >
               <CreditCard className="h-4 w-4" />
               <span>
-                {loading ? "Disparando..." : `💳 Sinal 50% Pix (${selectedDates.length}) &rarr;`}
+                {loading ? "Disparando..." : `💳 Sinal 50% Pix (${selectedDates.length}) →`}
               </span>
             </button>
           </div>
@@ -535,7 +535,7 @@ export default function WhatsAppHubPage() {
               onClick={handleSimulateClientReply}
               className="w-full rounded-xl bg-emerald-600 p-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700"
             >
-              Simular Resposta & Alterar Status &rarr;
+              Simular Resposta & Alterar Status →
             </button>
           </div>
         </div>

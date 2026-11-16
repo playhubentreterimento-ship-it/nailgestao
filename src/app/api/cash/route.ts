@@ -333,6 +333,138 @@ export async function POST(req: Request) {
       return NextResponse.json(closed);
     }
 
+    // CHECKOUT DE ATENDIMENTO COM ABATIMENTO DE SINAL E ENTRADA NO CAIXA
+    if (action === "CHECKOUT_APPOINTMENT") {
+      const { appointmentId, paymentMethod, discount = 0 } = body;
+      if (!appointmentId) {
+        return NextResponse.json({ error: "ID do agendamento é obrigatório." }, { status: 400 });
+      }
+
+      const app = await prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        include: { services: true },
+      });
+
+      if (!app) {
+        return NextResponse.json({ error: "Agendamento não encontrado." }, { status: 404 });
+      }
+
+      const client = app.clientId
+        ? await prisma.client.findUnique({ where: { id: app.clientId } })
+        : null;
+      const clientName = client?.name || "Cliente";
+
+      // Localizar ou abrir caixa ativo
+      let activeRegister = await prisma.cashRegister.findFirst({
+        where: { salonId: "default-salon", status: "ABERTO" },
+      });
+
+      if (!activeRegister) {
+        activeRegister = await prisma.cashRegister.create({
+          data: {
+            salonId: "default-salon",
+            openedByUserId: "usr-admin",
+            initialAmount: 0,
+            expectedAmount: 0,
+            status: "ABERTO",
+            notes: "Caixa aberto automaticamente no checkout de atendimento",
+          },
+        });
+      }
+      const totalAmount = Number(app.total || 0);
+      const depositPaid = Number(app.depositPaid || 0);
+      const disc = Number(discount || 0);
+      const remainingToPay = Math.max(0, totalAmount - depositPaid - disc);
+
+      // Verificar se o sinal já foi lançado no caixa para este agendamento anteriormente
+      const existingDepositTx = await prisma.cashTransaction.findFirst({
+        where: {
+          appointmentId: app.id,
+          category: "SINAL_AGENDAMENTO",
+        },
+      });
+
+      let depositTx = null;
+      if (!existingDepositTx && depositPaid > 0) {
+        // Lançar o sinal no caixa ativo (data em que o atendimento está sendo realizado e quitado)
+        depositTx = await prisma.cashTransaction.create({
+          data: {
+            cashRegisterId: activeRegister.id,
+            salonId: "default-salon",
+            appointmentId: app.id,
+            type: "ENTRADA",
+            category: "SINAL_AGENDAMENTO",
+            amount: depositPaid,
+            netAmount: depositPaid,
+            feeAmount: 0,
+            paymentMethod: "PIX",
+            description: `Sinal recebido/abatido para atendimento: ${clientName} (${app.startTime}h)`,
+          },
+        });
+
+        await prisma.cashRegister.update({
+          where: { id: activeRegister.id },
+          data: {
+            expectedAmount: { increment: depositPaid },
+          },
+        });
+      }
+
+      // Lançar o restante recebido no salão (se maior que zero)
+      let remainingTx = null;
+      if (remainingToPay > 0) {
+        const salon = await prisma.salon.findFirst();
+        let feeAmount = 0;
+        const method = paymentMethod || "DINHEIRO";
+        if (method === "CREDITO") feeAmount = remainingToPay * ((salon?.creditFeePercent ?? 0) / 100);
+        if (method === "DEBITO") feeAmount = remainingToPay * ((salon?.debitFeePercent ?? 0) / 100);
+        const netAmount = remainingToPay - feeAmount;
+
+        remainingTx = await prisma.cashTransaction.create({
+          data: {
+            cashRegisterId: activeRegister.id,
+            salonId: "default-salon",
+            appointmentId: app.id,
+            type: "ENTRADA",
+            category: "ATENDIMENTO",
+            amount: remainingToPay,
+            paymentMethod: method,
+            feeAmount,
+            netAmount,
+            description: `Checkout do atendimento: ${clientName} (Total: R$ ${totalAmount.toFixed(2)} - Sinal: R$ ${depositPaid.toFixed(2)}${disc > 0 ? ` - Desc: R$ ${disc.toFixed(2)}` : ""})`,
+          },
+        });
+
+        await prisma.cashRegister.update({
+          where: { id: activeRegister.id },
+          data: {
+            expectedAmount: { increment: netAmount },
+          },
+        });
+      }
+
+      // Atualizar o agendamento como CONCLUIDO e PAGO com saldo zerado
+      const updatedApp = await prisma.appointment.update({
+        where: { id: app.id },
+        data: {
+          status: "CONCLUIDO",
+          paymentStatus: "PAGO",
+          remainingAmount: 0,
+          discount: disc > 0 ? (app.discount || 0) + disc : app.discount,
+          notes: (app.notes || "") + ` | Finalizado no caixa (${paymentMethod || "DINHEIRO"}). Restante pago: R$ ${remainingToPay.toFixed(2)}, Sinal abatido: R$ ${depositPaid.toFixed(2)}`,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        appointment: updatedApp,
+        depositTx,
+        remainingTx,
+        remainingPaid: remainingToPay,
+        depositDeducted: depositPaid,
+      });
+    }
+
     return NextResponse.json({ error: "Ação não reconhecida." }, { status: 400 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

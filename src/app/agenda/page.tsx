@@ -245,11 +245,29 @@ export default function AgendaPage() {
   const [editDeposit, setEditDeposit] = useState<number>(0);
   const [editNotes, setEditNotes] = useState("");
 
+  // Modal de Checkout & Finalização com Abatimento do Sinal
+  const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
+  const [checkoutApp, setCheckoutApp] = useState<any>(null);
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<string>("PIX");
+  const [checkoutDiscount, setCheckoutDiscount] = useState<number>(0);
+  const [checkoutLoading, setCheckoutLoading] = useState<boolean>(false);
+
   const handleOpenEditModal = (app: any) => {
     setEditingApp(app);
     setEditProf(app.professionalId);
     setEditDate(app.date);
     setEditTime(app.startTime);
+
+    const norm = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\bde gel\b/g, "")
+        .replace(/\bc\/\b/g, "com ")
+        .replace(/[^a-z0-9]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 
     const mappedServiceIds: string[] = [];
     if (app.services && Array.isArray(app.services)) {
@@ -258,11 +276,19 @@ export default function AgendaPage() {
         if (directMatch) {
           mappedServiceIds.push(directMatch.id);
         } else {
-          const rawName = (as.serviceName || "").trim().toLowerCase();
+          const rawName = (as.serviceName || "").trim();
           const cleanName = rawName.includes(":") ? rawName.split(":").pop()!.trim() : rawName;
-          const nameMatch = services.find(
-            (cs: any) => (cs.name || "").trim().toLowerCase() === cleanName || (cs.name || "").trim().toLowerCase() === rawName
-          );
+          const normClean = norm(cleanName);
+          const normRaw = norm(rawName);
+
+          const nameMatch = services.find((cs: any) => {
+            const csNorm = norm(cs.name || "");
+            if (csNorm === normClean || csNorm === normRaw) return true;
+            const words = normClean.split(" ").filter((w) => w.length > 2);
+            if (words.length > 0 && words.every((w) => csNorm.includes(w))) return true;
+            return false;
+          });
+
           if (nameMatch) {
             mappedServiceIds.push(nameMatch.id);
           } else if (as.serviceId) {
@@ -550,12 +576,59 @@ export default function AgendaPage() {
     }
   };
 
-  const handleFinishAppointment = (id: string) => {
-    fetch(`/api/appointments`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: "CONCLUIDO" }),
-    }).then(() => loadAgenda());
+  const handleFinishAppointment = (appOrId: any) => {
+    let app = typeof appOrId === "object" && appOrId !== null ? appOrId : null;
+    if (!app && typeof appOrId === "string") {
+      app =
+        appointments.find((a: any) => a.id === appOrId) ||
+        searchedClientApps.find((a: any) => a.id === appOrId);
+    }
+
+    if (app) {
+      setCheckoutApp(app);
+      setCheckoutPaymentMethod("PIX");
+      setCheckoutDiscount(0);
+      setShowCheckoutModal(true);
+    } else {
+      fetch(`/api/appointments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: appOrId, status: "CONCLUIDO" }),
+      }).then(() => loadAgenda());
+    }
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (!checkoutApp) return;
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CHECKOUT_APPOINTMENT",
+          appointmentId: checkoutApp.id,
+          paymentMethod: checkoutPaymentMethod,
+          discount: checkoutDiscount,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert("Erro ao finalizar atendimento: " + (err.error || "Erro desconhecido"));
+        setCheckoutLoading(false);
+        return;
+      }
+
+      setShowCheckoutModal(false);
+      setCheckoutApp(null);
+      loadAgenda();
+      alert("✨ Atendimento finalizado com sucesso! Sinal abatido e valor restante lançado no caixa.");
+    } catch (e: any) {
+      alert("Erro ao processar checkout: " + e.message);
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const handleCancelAppointment = async (app: any) => {
@@ -921,7 +994,7 @@ export default function AgendaPage() {
                                 </button>
                                 {app.status !== "CONCLUIDO" && (
                                   <button
-                                    onClick={() => handleFinishAppointment(app.id)}
+                                    onClick={() => handleFinishAppointment(app)}
                                     className={`font-extrabold underline ${app.status === 'BLOQUEADO' ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-800 dark:text-emerald-300'}`}
                                   >
                                     Finalizar &rarr;
@@ -1097,7 +1170,7 @@ export default function AgendaPage() {
                                       </div>
                                       {app.status !== "CONCLUIDO" && (
                                         <button
-                                          onClick={() => handleFinishAppointment(app.id)}
+                                          onClick={() => handleFinishAppointment(app)}
                                           className="text-emerald-800 hover:text-emerald-900 dark:text-emerald-300 underline"
                                         >
                                           Finalizar &rarr;
@@ -1255,7 +1328,7 @@ export default function AgendaPage() {
                             </button>
                             {app.status !== "CONCLUIDO" && (
                               <button
-                                onClick={() => handleFinishAppointment(app.id)}
+                                onClick={() => handleFinishAppointment(app)}
                                 className="text-emerald-800 dark:text-emerald-300 underline font-bold"
                               >
                                 Finalizar
@@ -1482,7 +1555,7 @@ export default function AgendaPage() {
                                 </button>
                                 {app.status !== "CONCLUIDO" && (
                                   <button
-                                    onClick={() => handleFinishAppointment(app.id)}
+                                    onClick={() => handleFinishAppointment(app)}
                                     className="text-emerald-700 dark:text-emerald-300 underline font-bold"
                                   >
                                     Finalizar
@@ -2044,8 +2117,14 @@ export default function AgendaPage() {
               {/* Resumo Financeiro Recalculado */}
               {(() => {
                 const selObjs = services.filter((s) => editSelectedServices.includes(s.id));
-                const dur = selObjs.reduce((acc, s) => acc + s.durationMinutes, 0);
-                const sub = selObjs.reduce((acc, s) => acc + (s.promoPrice || s.price), 0);
+                const dur =
+                  selObjs.length > 0
+                    ? selObjs.reduce((acc, s) => acc + s.durationMinutes, 0)
+                    : editingApp?.totalDurationMinutes || 60;
+                const sub =
+                  selObjs.length > 0
+                    ? selObjs.reduce((acc, s) => acc + (s.promoPrice || s.price), 0)
+                    : editingApp?.subtotal || editingApp?.total || 0;
                 const tot = Math.max(0, sub - editDiscount);
                 const rem = Math.max(0, tot - editDeposit);
 
@@ -2135,6 +2214,158 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE CHECKOUT & FINALIZAÇÃO COM ABATIMENTO DE SINAL */}
+      {showCheckoutModal && checkoutApp && (() => {
+        const total = Number(checkoutApp.total || 0);
+        const deposit = Number(checkoutApp.depositPaid || 0);
+        const disc = Number(checkoutDiscount || 0);
+        const remaining = Math.max(0, total - deposit - disc);
+        const profName =
+          professionals.find((p: any) => p.id === checkoutApp.professionalId)?.name ||
+          checkoutApp.professionalName ||
+          "Profissional";
+        const serviceNames =
+          checkoutApp.services?.map((s: any) => s.serviceName).join(", ") || "Atendimento Nails";
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
+            <div className="w-full max-w-lg rounded-3xl border-2 border-emerald-400 bg-white p-6 shadow-2xl dark:border-emerald-600 dark:bg-slate-900 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3 border-emerald-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-white font-bold shadow-md">
+                    💳
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-slate-900 dark:text-white">
+                      Finalizar Atendimento & Checkout
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
+                      Cliente: <strong>{checkoutApp.clientName}</strong> • {checkoutApp.startTime}h
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCheckoutModal(false)}
+                  className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Informações do Atendimento */}
+              <div className="rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+                <p className="font-bold text-slate-800 dark:text-slate-200">
+                  💅 <strong>Serviços:</strong> {serviceNames}
+                </p>
+                <p className="font-semibold text-slate-600 dark:text-slate-400">
+                  👩 <strong>Profissional:</strong> {profName}
+                </p>
+              </div>
+
+              {/* Demonstrativo Financeiro de Abatimento do Sinal */}
+              <div className="rounded-2xl border-2 border-emerald-300/80 bg-emerald-50/60 p-4 dark:border-emerald-700/60 dark:bg-slate-800 space-y-2 text-xs">
+                <div className="flex justify-between font-bold text-slate-700 dark:text-slate-300">
+                  <span>Valor Total do Procedimento:</span>
+                  <span className="font-serif text-sm">R$ {total.toFixed(2)}</span>
+                </div>
+
+                {deposit > 0 ? (
+                  <div className="flex justify-between font-extrabold text-emerald-700 dark:text-emerald-400">
+                    <span className="flex items-center space-x-1">
+                      <span>(-) Sinal Já Pago (Abatido):</span>
+                      <span className="rounded bg-emerald-200/90 px-1.5 py-0.2 text-[10px] text-emerald-950 font-black">
+                        PAGO VIA PIX
+                      </span>
+                    </span>
+                    <span className="font-serif text-sm">- R$ {deposit.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-slate-500 italic">
+                    <span>Sinal Pago:</span>
+                    <span>R$ 0,00</span>
+                  </div>
+                )}
+
+                {disc > 0 && (
+                  <div className="flex justify-between font-extrabold text-amber-600 dark:text-amber-400">
+                    <span>(-) Desconto Adicional:</span>
+                    <span className="font-serif text-sm">- R$ {disc.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t-2 border-emerald-200 pt-2.5 dark:border-emerald-800">
+                  <div>
+                    <span className="block text-xs font-black uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
+                      Restante a Cobrar da Cliente:
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      (Valor que entra hoje no caixa)
+                    </span>
+                  </div>
+                  <span className="font-serif text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    R$ {remaining.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Forma de Pagamento e Desconto */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Forma de Pagamento (Restante)
+                  </label>
+                  <select
+                    value={checkoutPaymentMethod}
+                    onChange={(e) => setCheckoutPaymentMethod(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    <option value="PIX">Pix (Sem taxa)</option>
+                    <option value="CREDITO">Cartão de Crédito</option>
+                    <option value="DEBITO">Cartão de Débito</option>
+                    <option value="DINHEIRO">Dinheiro em Espécie</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    Desconto Adicional (R$)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={checkoutDiscount}
+                    onChange={(e) => setCheckoutDiscount(Math.max(0, Number(e.target.value)))}
+                    className="w-full rounded-xl border border-slate-300 bg-white p-2.5 font-bold outline-none dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutModal(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={checkoutLoading}
+                  onClick={handleConfirmCheckout}
+                  className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg hover:opacity-95 disabled:opacity-50"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>
+                    {checkoutLoading ? "Lançando..." : `Confirmar & Lançar no Caixa (R$ ${remaining.toFixed(2)}) →`}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* MODAL PESQUISA DE AGENDAMENTOS DA CLIENTE */}
       {showClientSearchModal && (

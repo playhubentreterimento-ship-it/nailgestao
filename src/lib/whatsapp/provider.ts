@@ -60,14 +60,11 @@ export class HybridWhatsAppProvider implements WhatsAppProvider {
         await fetch(apiUrl, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json; charset=utf-8",
             "apikey": apiKey,
             "Authorization": `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            number: formattedPhone,
-            message: payload.bodyText,
-          }),
+          body: Buffer.from(JSON.stringify({ number: formattedPhone, message: payload.bodyText }), "utf-8"),
         });
         apiSent = true;
       } catch (err) {

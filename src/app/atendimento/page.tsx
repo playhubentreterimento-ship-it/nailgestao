@@ -53,38 +53,25 @@ export default function AtendimentoPage() {
     if (!activeApp) return;
 
     try {
-      // 1. Concluir agendamento no banco
-      const resApp = await fetch("/api/appointments", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: activeApp.id,
-          status: "CONCLUIDO",
-          paymentStatus: "PAGO",
-          notes: (activeApp.notes || "") + ` | Finalizado com pgto ${paymentMethod}`,
-        }),
-      });
-
-      if (!resApp.ok) {
-        const err = await resApp.json();
-        alert("Erro ao concluir agendamento: " + (err.error || "Erro desconhecido"));
-        return;
-      }
-
-      // 2. Lançar recebimento no caixa do dia
-      await fetch("/api/cash", {
+      // Finalizar agendamento e realizar checkout no caixa com desconto do sinal pago
+      const res = await fetch("/api/cash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "TRANSACTION",
-          category: "ATENDIMENTO",
-          amount: Math.max(0, activeApp.total - discount),
+          action: "CHECKOUT_APPOINTMENT",
+          appointmentId: activeApp.id,
           paymentMethod,
-          description: `Checkout do atendimento: ${activeApp.clientName}`,
+          discount,
         }),
       });
 
-      // 3. Atualizar estado local da tela
+      if (!res.ok) {
+        const err = await res.json();
+        alert("Erro ao finalizar atendimento: " + (err.error || "Erro desconhecido"));
+        return;
+      }
+
+      // Atualizar estado local da tela
       setActiveApp((prev: any) => (prev ? { ...prev, status: "CONCLUIDO", paymentStatus: "PAGO" } : null));
       setFinished(true);
 
@@ -188,15 +175,48 @@ export default function AtendimentoPage() {
                       <span>Atendimento em Andamento...</span>
                     </div>
 
-                    {/* Checkout & Pagamento */}
-                    <div className="rounded-2xl bg-white p-4 text-left shadow-sm dark:bg-slate-900 space-y-3 border border-slate-100">
-                      <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        💳 Checkout & Fechamento Financeiro
-                      </h4>
+                    {/* Checkout & Pagamento com Abatimento do Sinal */}
+                    <div className="rounded-2xl bg-white p-4 text-left shadow-sm dark:bg-slate-900 space-y-4 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between border-b pb-2 dark:border-slate-800">
+                        <h4 className="font-serif text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                          💳 Checkout & Fechamento Financeiro
+                        </h4>
+                        {(activeApp.depositPaid || 0) > 0 && (
+                          <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                            Sinal Pago: R$ {(activeApp.depositPaid || 0).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Demonstrativo de Valores */}
+                      <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5 text-xs">
+                        <div className="flex justify-between font-bold text-slate-600 dark:text-slate-300">
+                          <span>Valor Total do Atendimento:</span>
+                          <span>R$ {(activeApp.total || 0).toFixed(2)}</span>
+                        </div>
+                        {(activeApp.depositPaid || 0) > 0 && (
+                          <div className="flex justify-between font-extrabold text-emerald-600 dark:text-emerald-400">
+                            <span>(-) Sinal Já Pago (Abatido):</span>
+                            <span>- R$ {(activeApp.depositPaid || 0).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {discount > 0 && (
+                          <div className="flex justify-between font-extrabold text-amber-600 dark:text-amber-400">
+                            <span>(-) Desconto Adicional:</span>
+                            <span>- R$ {discount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t pt-1.5 text-sm font-extrabold text-slate-900 dark:text-white">
+                          <span>Restante a Pagar no Salão:</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-serif text-base">
+                            R$ {Math.max(0, (activeApp.total || 0) - (activeApp.depositPaid || 0) - discount).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
 
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                          <label className="block font-bold text-slate-600 dark:text-slate-400">Forma de Pagamento</label>
+                          <label className="block font-bold text-slate-600 dark:text-slate-400">Forma de Pagamento (Restante)</label>
                           <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value)}
@@ -222,9 +242,9 @@ export default function AtendimentoPage() {
 
                       <button
                         onClick={handleFinishAttendance}
-                        className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 py-3.5 text-xs font-bold text-white shadow-lg shadow-rose-200 hover:opacity-95"
+                        className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 py-3.5 text-xs font-extrabold text-white shadow-lg hover:opacity-95"
                       >
-                        FINALIZAR ATENDIMENTO & LANÇAR NO CAIXA ✨
+                        FINALIZAR & RECEBER RESTANTE (R$ {Math.max(0, (activeApp.total || 0) - (activeApp.depositPaid || 0) - discount).toFixed(2)}) ✨
                       </button>
                     </div>
                   </div>
