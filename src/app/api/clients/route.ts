@@ -197,8 +197,28 @@ export async function DELETE(req: Request) {
 
     if (!id) return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 });
 
+    // 1. Limpar dependências da cliente
+    await prisma.clientPhoto.deleteMany({ where: { clientId: id } }).catch(() => {});
+    await prisma.clientPackage.deleteMany({ where: { clientId: id } }).catch(() => {});
+    await prisma.loyaltyPoint.deleteMany({ where: { clientId: id } }).catch(() => {});
+    await prisma.waitlist.deleteMany({ where: { clientId: id } }).catch(() => {});
+
+    // 2. Limpar agendamentos e serviços da cliente (para permitir exclusão de duplicadas)
+    const clientApps = await prisma.appointment.findMany({
+      where: { clientId: id },
+      select: { id: true },
+    }).catch(() => []);
+
+    if (clientApps.length > 0) {
+      const appIds = clientApps.map((a) => a.id);
+      await prisma.appointmentService.deleteMany({ where: { appointmentId: { in: appIds } } }).catch(() => {});
+      await prisma.cashTransaction.deleteMany({ where: { appointmentId: { in: appIds } } }).catch(() => {});
+      await prisma.appointment.deleteMany({ where: { id: { in: appIds } } }).catch(() => {});
+    }
+
+    // 3. Excluir a cliente
     await prisma.client.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "Cliente excluída com sucesso." });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

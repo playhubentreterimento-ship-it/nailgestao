@@ -269,6 +269,39 @@ export default function ClientesPage() {
     }
   };
 
+  const handleDeleteClient = async (client: any) => {
+    if (!client || !client.id) return;
+    const clientName = client.name || "esta cliente";
+    const phone = client.phone || client.whatsapp || "";
+    const phoneInfo = phone ? ` (${phone})` : "";
+
+    const confirmMsg = `⚠️ Tem certeza que deseja EXCLUIR a cliente "${clientName}"${phoneInfo}?\n\nEsta opção apaga a cliente da lista e seus registros do sistema (ideal para remover cadastros duplicados ou clientes inativas).`;
+
+    if (window.confirm(confirmMsg)) {
+      try {
+        const res = await fetch(`/api/clients?id=${client.id}`, {
+          method: "DELETE",
+        });
+
+        if (res.ok) {
+          alert(`✨ Cliente "${clientName}" excluída com sucesso!`);
+          if (selectedClient?.id === client.id) {
+            setSelectedClient(null);
+          }
+          if (showEditModal && editId === client.id) {
+            setShowEditModal(false);
+          }
+          loadClients();
+        } else {
+          const err = await res.json();
+          alert("Erro ao excluir cliente: " + (err.error || "Erro desconhecido"));
+        }
+      } catch (err: any) {
+        alert("Erro ao excluir cliente: " + (err.message || "Erro de conexão"));
+      }
+    }
+  };
+
   const safeClients = Array.isArray(clients) ? clients : [];
   const filteredClients = safeClients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
@@ -455,6 +488,15 @@ export default function ClientesPage() {
                 </button>
 
                 <button
+                  onClick={() => handleDeleteClient(client)}
+                  className="flex items-center space-x-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/60 dark:text-rose-400 transition"
+                  title="Excluir Cliente"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Excluir</span>
+                </button>
+
+                <button
                   onClick={() => setSelectedClient(client)}
                   className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
                 >
@@ -493,6 +535,15 @@ export default function ClientesPage() {
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar Dados & Anotações</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteClient(selectedClient)}
+                  className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950 dark:text-rose-400 shadow-sm"
+                  title="Excluir esta cliente do sistema"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Excluir</span>
                 </button>
 
                 <button
@@ -892,20 +943,35 @@ export default function ClientesPage() {
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  onClick={() => {
+                    const clientToDelete = clients.find((c) => c.id === editId);
+                    if (clientToDelete) handleDeleteClient(clientToDelete);
+                  }}
+                  className="flex items-center space-x-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950 dark:text-rose-400 transition"
+                  title="Excluir esta cliente do sistema"
                 >
-                  Cancelar
+                  <Trash2 className="h-4 w-4" />
+                  <span>Excluir Cliente</span>
                 </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-6 py-2.5 font-bold text-white shadow-md hover:opacity-95"
-                >
-                  Salvar Alterações &rarr;
-                </button>
+
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 px-6 py-2.5 font-bold text-white shadow-md hover:opacity-95"
+                  >
+                    Salvar Alterações &rarr;
+                  </button>
+                </div>
               </div>
             </form>
           </div>
